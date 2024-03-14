@@ -1,0 +1,6 @@
+{
+    "type": "datamodel",
+    "datamodels": ["omop5-4"],
+    "entrypoint": "datamodel_plugin/flow.py"
+  }
+  
