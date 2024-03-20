@@ -17,6 +17,7 @@ class dataModelType(BaseModel):
     data_model: str = Field(...)
     schema_name: str = Field(...)
     cleansed_schema_option: bool = Field(False)
+    vocab_schema: str = Field(...)
 
     @property
     def flow_name(self) -> str:
