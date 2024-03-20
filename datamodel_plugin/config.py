@@ -13,7 +13,7 @@ class flowActionType(str, Enum):
 
 class dataModelType(BaseModel):
     flow_action_type: flowActionType
-    db_name: str = Field(...)
+    database_code: str = Field(...)
     data_model: str = Field(...)
     schema_name: str = Field(...)
     cleansed_schema_option: bool = Field(False)
