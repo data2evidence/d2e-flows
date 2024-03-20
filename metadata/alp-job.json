@@ -1,5 +1,5 @@
 {
-    "name": "create_update_datamodel",
+    "name": "datamodel_plugin",
     "type": "datamodel",
     "datamodels": ["omop5-4"],
     "entrypoint": "datamodel_plugin/flow.py"

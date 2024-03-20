@@ -4,7 +4,8 @@
 ### Modify the metadata of the package
 - Register the name of the new data model in `metadata/alp-job.json` e.g.:
     ```
-    {
+    {  
+        "name": "datamodel_plugin",
         "type": "datamodel",
         "datamodels": [..., "new-datamodel"],
         "entrypoint": "datamodel_plugin/flow.py"
