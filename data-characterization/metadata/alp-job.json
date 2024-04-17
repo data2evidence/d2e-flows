@@ -1,0 +1,8 @@
+{
+    "name": "data_characterization_plugin",
+    "type": "data_characterization",
+    "entrypoint": "data_characterization_plugin/flow.py",
+    "tags": [
+      "data_characterization"
+    ]
+  }

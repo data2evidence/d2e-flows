@@ -1,0 +1,7 @@
+{
+    "name": "cohort_generator_plugin",
+    "type": "cohort_generator",
+    "entrypoint": "cohort_generator_plugin/flow.py",
+    "tags": [
+    ]
+  }
