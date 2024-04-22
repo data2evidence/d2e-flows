@@ -8,9 +8,7 @@ setup(
     include_package_data=True,
     package_data={
         "": [
-            'CommonDataModel-5.4.1/**',
-            '5.3/**/*',
-            '5.4/**/*'
+            'CommonDataModel-5.4.1/**'
         ]
     },
     data_files=[('metadata', ['metadata/alp-job.json'])],
