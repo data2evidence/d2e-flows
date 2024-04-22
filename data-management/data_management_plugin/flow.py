@@ -2,7 +2,11 @@ from prefect import flow, task
 from prefect.task_runners import SequentialTaskRunner
 from data_management_plugin.config import dataModelType, flowActionType
 import importlib
+import sys
 
+def setup_plugin():
+    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
+    sys.path.append('/app/pysrc')
     
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def data_management_plugin(options: dataModelType):
@@ -20,8 +24,10 @@ def data_management_plugin(options: dataModelType):
             dbsvc_module.create_snapshot(options)
         case flowActionType.CREATE_PARQUET_SNAPSHOT:
             dbsvc_module.create_parquet_snapshot(options)
-        case flowActionType.FETCH_VERSION_INFO:
-            dbsvc_module.fetch_version_info(options)
+        case flowActionType.GET_VERSION_INFO:
+            setup_plugin()
+            portal_server_module = importlib.import_module('flows.portal_server.flow')
+            portal_server_module.get_version_info(options)
         case flowActionType.CREATE_QUESTIONNAIRE_DEFINITION:
             dbsvc_module.create_questionnaire_definition(options)
         case flowActionType.GET_QUESTIONNAIRE_RESPONSE:
