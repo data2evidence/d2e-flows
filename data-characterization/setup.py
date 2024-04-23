@@ -8,7 +8,8 @@ setup(
     include_package_data=True,
     package_data={
         "": [
-            'Achilles-1.7.2/**'
+            'Achilles-1.7.2/**',
+            'db/migrations/**/*'
         ]
     },
     data_files=[('metadata', ['metadata/alp-job.json'])],
