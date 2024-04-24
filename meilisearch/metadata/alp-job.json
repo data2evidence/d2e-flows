@@ -1,0 +1,8 @@
+{
+    "name": "meilisearch_plugin",
+    "type": "meilisearch",
+    "entrypoint": "meilisearch_plugin/flow.py",
+    "tags": [
+      "add_search_index"
+    ]
+  }
