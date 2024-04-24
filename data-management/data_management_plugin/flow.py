@@ -10,7 +10,8 @@ def setup_plugin():
     
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def data_management_plugin(options: dataModelType):
-    dbsvc_module = importlib.import_module('d2e_dbsvc')
+    setup_plugin()
+    dbsvc_module = importlib.import_module('flows.alp_db_svc.flow')
     match options.flow_action_type:
         case flowActionType.CREATE_DATA_MODEL:
             dbsvc_module.create_datamodel(options)
@@ -25,7 +26,6 @@ def data_management_plugin(options: dataModelType):
         case flowActionType.CREATE_PARQUET_SNAPSHOT:
             dbsvc_module.create_parquet_snapshot(options)
         case flowActionType.GET_VERSION_INFO:
-            setup_plugin()
             portal_server_module = importlib.import_module('flows.portal_server.flow')
             portal_server_module.get_version_info(options)
         case flowActionType.CREATE_QUESTIONNAIRE_DEFINITION:

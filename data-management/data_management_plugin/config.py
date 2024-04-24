@@ -21,8 +21,8 @@ class flowActionType(str, Enum):
 
 class dataModelType(BaseModel):
     flow_action_type: flowActionType
-    database_code: str = Field(...)
-    data_model: str = Field(...)
+    database_code: str
+    data_model: str
     schema_name: Optional[str]
     cleansed_schema_option: Optional[bool]
     vocab_schema: Optional[str]

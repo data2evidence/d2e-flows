@@ -9,10 +9,10 @@ from data_characterization_plugin.types import dcOptionsType
 
 async def drop_data_characterization_schema(flow, flow_run, state):
     options = dcOptionsType(**flow_run.parameters['options'])
-    
     try:
-        dbsvc_module = importlib.import_module('d2e_dbsvc')
-        await dbsvc_module.drop_data_characterization_schema(options)
+        setup_plugin()
+        dc_flow_module = importlib.import_module('flows.alp_data_characterization.hooks')
+        await dc_flow_module.drop_data_characterization_schema(options)
     except Exception as e:
         raise e
 
