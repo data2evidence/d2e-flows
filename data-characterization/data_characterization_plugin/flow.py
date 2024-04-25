@@ -19,15 +19,6 @@ async def drop_data_characterization_schema(flow, flow_run, state):
 def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
     sys.path.append('/app/pysrc')
-    # Install Achilles R package from plugin
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
-    if (r_libs_user_directory):
-        ShellOperation(
-            commands=[
-                f"Rscript -e \"install.packages('./data_characterization_plugin/Achilles-1.7.2', lib='{r_libs_user_directory}', repos = NULL, type='source')\""
-            ]).run()
-    else:
-        raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
 
 
 @flow(log_prints=True, 
