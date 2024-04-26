@@ -19,7 +19,15 @@ async def drop_data_characterization_schema(flow, flow_run, state):
 def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
     sys.path.append('/app/pysrc')
-
+    r_libs_user_directory = os.getenv("R_LIBS_USER")
+    # force=TRUE for fresh install everytime flow is run
+    if (r_libs_user_directory):
+        ShellOperation(
+            commands=[
+                f"Rscript -e \"remotes::install_github('OHDSI/Achilles@v1.7.2',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\""
+            ]).run()
+    else:
+        raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
 
 @flow(log_prints=True, 
       persist_result=True,
