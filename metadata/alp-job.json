@@ -1,7 +1,7 @@
 {
     "name": "datamodel_plugin",
     "type": "datamodel",
-    "datamodels": ["omop5-4"],
+    "datamodels": ["omop5-4", "medical-imaging"],
     "entrypoint": "datamodel_plugin/flow.py"
   }
   

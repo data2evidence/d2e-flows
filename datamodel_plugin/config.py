@@ -3,7 +3,8 @@ from enum import Enum
 
 FLOW_NAME = "datamodel_plugin"
 DATAMODEL_CHANGELOG_MAPPING = {
-            "omop5-4": "liquibase-changelog-5-4.xml"
+            "omop5-4": "liquibase-changelog-5-4.xml",
+            "medical-imaging": "liquibase-changelog-medical-imaging.xml"
         }
 
 class flowActionType(str, Enum):
