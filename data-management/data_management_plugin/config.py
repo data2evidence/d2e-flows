@@ -42,3 +42,7 @@ class dataModelType(BaseModel):
     @property
     def changelog_filepath(self) -> str:
         return DATAMODEL_CHANGELOG_MAPPING.get(self.data_model, None)
+    
+    @property
+    def changelog_filepath_list(self) -> Dict:
+        return DATAMODEL_CHANGELOG_MAPPING
