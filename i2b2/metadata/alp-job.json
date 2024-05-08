@@ -1,0 +1,6 @@
+{
+    "name": "i2b2_plugin",
+    "type": "i2b2",
+    "entrypoint": "i2b2_plugin/flow.py",
+    "tags": []
+  }
