@@ -8,8 +8,8 @@ CREATE TABLE image_occurrence(
   procedure_occurrence_id integer NOT NULL,
   visit_occurrence_id integer,
   anatomic_site_concept_id integer,
-  wadors_uri varchar,
-  local_path varchar,
+  wadors_uri text,
+  local_path text,
   image_occurrence_date date NOT NULL,
   image_study_uid varchar(250) NOT NULL,
   image_series_uid varchar(250) NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE image_feature(
   image_finding_concept_id integer,
   image_finding_id integer,
   anatomic_site_concept_id integer,
-  alg_system varchar,
+  alg_system text,
   alg_datetime timestamp
 );
 
