@@ -1,0 +1,7 @@
+{
+    "name": "data_management_plugin",
+    "type": "datamodel",
+    "datamodels": ["omop5-4", "medical-imaging"],
+    "entrypoint": "data_management_plugin/flow.py"
+  }
+  
