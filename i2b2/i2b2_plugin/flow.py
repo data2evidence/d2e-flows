@@ -7,7 +7,6 @@ import sys
 import os
 
 
-
 @task
 async def setup_plugin(tag_name):
     logger = get_run_logger()
@@ -84,7 +83,6 @@ def create_i2b2_schema(database_code, schema_name):
 def create_crc_tables(version):
     ShellOperation(
         commands=[
-            "cat db.properties",
             f"ant -f data_build.xml create_crcdata_tables_release_{version}"
         ]).run()
 
