@@ -1,6 +1,6 @@
 {
     "name": "i2b2_plugin",
-    "type": "i2b2",
+    "type": "datamodel",
     "entrypoint": "i2b2_plugin/flow.py",
-    "tags": []
+    "tags": ["id2b2"]
   }
