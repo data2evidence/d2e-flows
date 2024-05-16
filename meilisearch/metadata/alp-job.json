@@ -1,0 +1,8 @@
+{
+    "name": "add_search_index_plugin",
+    "type": "add_search_index",
+    "entrypoint": "add_search_index_plugin/flow.py",
+    "tags": [
+      "add_search_index"
+    ]
+  }
