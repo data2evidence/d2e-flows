@@ -1,0 +1,8 @@
+{
+    "name": "create_duckdb_file_plugin",
+    "type": "create_duckdb_file",
+    "entrypoint": "create_duckdb_file_plugin/flow.py",
+    "tags": [
+      "create_duckdb_file"
+    ]
+  }
