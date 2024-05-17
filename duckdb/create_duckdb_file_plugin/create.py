@@ -74,8 +74,8 @@ def copyPostgresToDuckdb(database_code: str, schema_name: str, duckdb_database_n
 if __name__ == '__main__':
     database_code = "alpdev_pg"
     schema_name = "cdmdefault"
-    options = CreateDuckdbDatabaseFileType.parse_obj({
-        'databaseCode': database_code,
-        'schemaName': schema_name,
-    })
+    options = CreateDuckdbDatabaseFileType(
+        databaseCode=database_code,
+        schemaName=schema_name,
+    )
     create_duckdb_database_file(options)
