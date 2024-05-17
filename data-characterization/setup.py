@@ -8,7 +8,6 @@ setup(
     include_package_data=True,
     package_data={
         "": [
-            'Achilles-1.7.2/**',
             'db/migrations/**/*'
         ]
     },
