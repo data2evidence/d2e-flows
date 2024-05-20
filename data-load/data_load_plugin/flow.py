@@ -37,7 +37,7 @@ def data_load_plugin(options: DataloadOptions):
                 data[common_columns].to_sql(table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize)
 
             else:
-                data.to_sql(table_name, engine, if_exists="append", index=False, schema=schema)
+                data.to_sql(table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
     except Exception as e:
         raise e
 
