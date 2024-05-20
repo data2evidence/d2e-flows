@@ -1,0 +1,6 @@
+{
+    "name": "data_load_plugin",
+    "type": "data_load",
+    "entrypoint": "data_load_plugin/flow.py",
+    "tags": ["data", "load", "data-load"]
+}
