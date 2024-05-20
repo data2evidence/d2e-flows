@@ -9,9 +9,9 @@ class File(BaseModel):
 class DataloadOptions(BaseModel):
     files: List[File]
     schema_name: str
-    header: Optional[bool]
-    delimiter: Optional[str]
-    escape_character: Optional[str]
-    encoding: Optional[str]
-    empty_string_to_null: Optional[bool]
+    header: Optional[bool] = True
+    delimiter: Optional[str] = ','
+    escape_character: Optional[str] = None
+    encoding: Optional[str] = None
+    empty_string_to_null: Optional[bool] = None
     chunksize: Optional[int] = None
