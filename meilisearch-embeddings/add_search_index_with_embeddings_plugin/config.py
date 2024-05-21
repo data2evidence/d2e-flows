@@ -100,7 +100,7 @@ MEILISEARCH_INDEX_CONFIG = {
     },
 }
 
-class meilisearchAddIndexType(BaseModel):
+class meilisearchAddIndexWithEmbeddingsType(BaseModel):
     token: str
     databaseCode: str
     vocabSchemaName: str
