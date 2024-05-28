@@ -1,6 +1,6 @@
 import importlib
 import pandas as pd
-from prefect import flow
+from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 from sqlalchemy import create_engine
 from utils.types import DataloadOptions
@@ -8,6 +8,7 @@ from utils.types import DataloadOptions
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def data_load_plugin(options: DataloadOptions):
 
+    logger = get_run_logger()
     files = options.files
     database_code = options.database_code
     header = 0 if options.header else None
@@ -30,8 +31,8 @@ def data_load_plugin(options: DataloadOptions):
     for t in tables_to_truncate:
         engine.execute(f"TRUNCATE TABLE %s", t)
 
-    try:
-        for file in files:
+    for file in files:
+        try:
             # Load data from CSV file
             data = pd.read_csv(file.path, escapechar=escape_char, header=header, delimiter=options.delimiter, encoding=options.encoding)
             table_name = file.table_name
@@ -45,8 +46,8 @@ def data_load_plugin(options: DataloadOptions):
 
             else:
                 data.to_sql(table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
-    except Exception as e:
-        raise e
+        except Exception as e:
+            logger.error(e)
 
 if __name__ == '__main__':
     options = {
