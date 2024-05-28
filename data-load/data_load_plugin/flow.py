@@ -1,28 +1,35 @@
+import importlib
 import pandas as pd
 from prefect import flow
-# from prefect_shell import ShellOperation
 from prefect.task_runners import SequentialTaskRunner
 from sqlalchemy import create_engine
 from utils.types import DataloadOptions
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def data_load_plugin(options: DataloadOptions):
-    # TODO
-    # empty_string_to_null: bool
 
     files = options.files
+    database_code = options.database_code
     header = 0 if options.header else None
     escape_char = options.escape_character
     schema = options.schema_name
-    truncate_tables = [f.name for f in files if f.truncate]
+    tables_to_truncate = [f.name for f in files if f.truncate]
     chunksize = options.chunksize
+    dbutils_module = importlib.import_module('alpconnection.dbutils')
+    conn_details = dbutils_module.extract_db_credentials(database_code)
+    database_name = conn_details["databaseName"]
+    pg_user = conn_details["adminUser"]
+    pg_password = conn_details["adminPassword"]
+    pg_host = conn_details["host"]
+    pg_port = conn_details["port"]
+
     # TODO: make below dialect agnostic
-    engine = create_engine('postgresql://postgres:Toor1234@alp-minerva-postgres-1:5432/alpdev_pg')
-    
+    engine = create_engine(f'postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{database_name}')
+
     # Truncating
-    for t in truncate_tables:
+    for t in tables_to_truncate:
         engine.execute(f"TRUNCATE TABLE %s", t)
-    
+
     try:
         for file in files:
             # Load data from CSV file
@@ -43,12 +50,12 @@ def data_load_plugin(options: DataloadOptions):
 
 if __name__ == '__main__':
     options = {
+        "database_code": "",
         "files": [
             {"name": "care_site", "path": "/tmp/data/care_site.csv", "truncate": True}
         ],
         "schema_name": "cdmvocab",
         "header": True,
         "delimiter": ","
-        # TODO: test chunksize, delimiter, encoding, escape_character, truncate, any error cases
     }
     data_load_plugin(options)
