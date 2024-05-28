@@ -9,7 +9,8 @@ MEILISEARCH_INDEX_GLOBAL_SETTINGS = {
     },
     "pagination": {
         "maxTotalHits": 999999999
-    }}
+    }
+}
 
 MEILISEARCH_INDEX_CONFIG = {
     "concept": {
