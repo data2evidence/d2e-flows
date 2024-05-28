@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class File(BaseModel):
     path: str
-    name: str
+    table_name: str
     truncate: Optional[bool] = False
 
 class DataloadOptions(BaseModel):

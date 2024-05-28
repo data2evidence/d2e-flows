@@ -13,7 +13,7 @@ def data_load_plugin(options: DataloadOptions):
     header = 0 if options.header else None
     escape_char = options.escape_character
     schema = options.schema_name
-    tables_to_truncate = [f.name for f in files if f.truncate]
+    tables_to_truncate = [f.table_name for f in files if f.truncate]
     chunksize = options.chunksize
     dbutils_module = importlib.import_module('alpconnection.dbutils')
     conn_details = dbutils_module.extract_db_credentials(database_code)
@@ -34,7 +34,7 @@ def data_load_plugin(options: DataloadOptions):
         for file in files:
             # Load data from CSV file
             data = pd.read_csv(file.path, escapechar=escape_char, header=header, delimiter=options.delimiter, encoding=options.encoding)
-            table_name = file.name
+            table_name = file.table_name
 
             if(header):
                 csv_column_names = data.columns.tolist()
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     options = {
         "database_code": "",
         "files": [
-            {"name": "care_site", "path": "/tmp/data/care_site.csv", "truncate": True}
+            {"table_name": "care_site", "path": "/tmp/data/care_site.csv", "truncate": True}
         ],
         "schema_name": "cdmvocab",
         "header": True,
