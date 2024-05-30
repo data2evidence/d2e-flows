@@ -86,6 +86,8 @@ MEILISEARCH_INDEX_CONFIG = {
         "index_settings": {
             "filterableAttributes": [
                 "ancestor_concept_id"
+                "descendant_concept_id",
+                "min_levels_of_separation"
             ],
             **MEILISEARCH_INDEX_GLOBAL_SETTINGS
         }
