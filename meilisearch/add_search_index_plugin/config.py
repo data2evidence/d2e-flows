@@ -85,7 +85,7 @@ MEILISEARCH_INDEX_CONFIG = {
         "meilisearch_primary_key": "meilisearch_id",
         "index_settings": {
             "filterableAttributes": [
-                "ancestor_concept_id"
+                "ancestor_concept_id",
                 "descendant_concept_id",
                 "min_levels_of_separation"
             ],
