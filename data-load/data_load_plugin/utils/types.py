@@ -8,6 +8,7 @@ class File(BaseModel):
 
 class DataloadOptions(BaseModel):
     files: List[File]
+    database_code: str
     schema_name: str
     header: Optional[bool] = True
     delimiter: Optional[str] = ','
