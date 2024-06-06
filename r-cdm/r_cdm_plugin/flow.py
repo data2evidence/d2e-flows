@@ -22,7 +22,7 @@ def setup_plugin():
 
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def r_cdm_plugin_test(options: rCDMOptionsType):
+def r_cdm_plugin(options: rCDMOptionsType):
     setup_plugin()
     # CommonDataModel has to be imported dynamically as dataflow-mgmt does not have flow source code files and prefect is validating file imports during creation of prefect deployments
     omop_cdm_flow_module = importlib.import_module('flows.omop_cdm.flow')
