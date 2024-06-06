@@ -43,7 +43,7 @@ def data_load_plugin(options: DataloadOptions):
     for file in files:
         try:
             # Load data from CSV file
-            for data in read_csv(file.path, escapechar=escape_char, header=header, delimiter=options.delimiter, encoding=options.encoding, chunksize=chunksize):
+            for i, data in read_csv(file.path, escapechar=escape_char, header=header, delimiter=options.delimiter, encoding=options.encoding, chunksize=chunksize):
                 table_name = file.table_name
 
                 if(header):
@@ -56,14 +56,14 @@ def data_load_plugin(options: DataloadOptions):
                 else:
                     data.to_sql(table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
         except Exception as e:
-            logger.error(f'Data load failed for the table {table_name} with error: {e}')
+            logger.error(f'Data load failed for the table {table_name} at the chunk index: {i}  with error: {e}')
 
 def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
     if chunksize:
-        for chunk in pd.read_csv(filepath, escapechar=escapechar, header=header, delimiter=delimiter, encoding=encoding, chunksize=chunksize):
-            yield chunk
+        for i, chunk in pd.read_csv(filepath, escapechar=escapechar, header=header, delimiter=delimiter, encoding=encoding, chunksize=chunksize):
+            yield i, chunk
     else:
-        yield pd.read_csv(filepath)
+        yield 1, pd.read_csv(filepath)
 
 if __name__ == '__main__':
     options = {
