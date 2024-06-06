@@ -59,11 +59,13 @@ def data_load_plugin(options: DataloadOptions):
             logger.error(f'Data load failed for the table {table_name} at the chunk index: {i}  with error: {e}')
 
 def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
+    i = 1
     if chunksize:
-        for i, chunk in pd.read_csv(filepath, escapechar=escapechar, header=header, delimiter=delimiter, encoding=encoding, chunksize=chunksize):
+        for chunk in pd.read_csv(filepath, escapechar=escapechar, header=header, delimiter=delimiter, encoding=encoding, chunksize=chunksize):
             yield i, chunk
+            i += 1
     else:
-        yield 1, pd.read_csv(filepath)
+        yield i, pd.read_csv(filepath)
 
 if __name__ == '__main__':
     options = {
@@ -75,4 +77,4 @@ if __name__ == '__main__':
         "header": True,
         "delimiter": ","
     }
-    data_load_plugin(options)
+    data_load_plugin(DataloadOptions(**options))
