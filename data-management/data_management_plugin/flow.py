@@ -22,11 +22,11 @@ def data_management_plugin(options: dataModelType):
         case flowActionType.ROLLBACK_TAG:
             dbsvc_module.rollback_tag_flow(options)
         case flowActionType.CREATE_SNAPSHOT:
-            dbsvc_module.create_snapshot(options)
+            dbsvc_module.create_snapshot_flow(options)
         case flowActionType.CREATE_PARQUET_SNAPSHOT:
-            dbsvc_module.create_snapshot(options)
+            dbsvc_module.create_snapshot_flow(options)
         case flowActionType.GET_VERSION_INFO:
-            dbsvc_module.get_version_flow(options)
+            dbsvc_module.get_version_info_flow(options)
         case flowActionType.CREATE_QUESTIONNAIRE_DEFINITION:
             dbsvc_module.create_questionnaire_definition_flow(options)
         case flowActionType.GET_QUESTIONNAIRE_RESPONSE:
