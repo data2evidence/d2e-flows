@@ -18,7 +18,7 @@ class flowActionType(str, Enum):
     GET_VERSION_INFO = "get_version_info"
     CREATE_QUESTIONNAIRE_DEFINITION = "create_questionnaire_definition"
     GET_QUESTIONNAIRE_RESPONSE = "get_questionnaire_response"
-
+    SEED_CDMVOCAB = "seed_cdmvocab"
 
 class dataModelType(BaseModel):
     flow_action_type: flowActionType
