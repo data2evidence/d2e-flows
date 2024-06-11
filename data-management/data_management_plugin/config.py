@@ -31,7 +31,7 @@ class dataModelType(BaseModel):
     source_schema: Optional[str]
     rollback_count: Optional[int]
     rollback_tag: Optional[str]
-    update_count: int = 0
+    update_count: Optional[int]
     questionnaire_definition: Optional[Dict]
     questionnaire_id: Optional[str]
     token: Optional[str]
