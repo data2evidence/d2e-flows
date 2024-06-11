@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Optional, Dict
+from pydantic import BaseModel
+from typing import Optional, Dict, List
 
 FLOW_NAME = "data_management_plugin"
 DATAMODEL_CHANGELOG_MAPPING = {
@@ -35,6 +35,7 @@ class dataModelType(BaseModel):
     questionnaire_definition: Optional[Dict]
     questionnaire_id: Optional[str]
     token: Optional[str]
+    datasets: Optional[List]
 
     @property
     def flow_name(self) -> str:
