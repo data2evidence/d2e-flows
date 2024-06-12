@@ -13,3 +13,5 @@ class dqdBaseOptionsType(BaseModel):
 class dqdOptionsType(dqdBaseOptionsType):
     cohortDefinitionId: Optional[str]
     checkNames: Optional[List[str]]
+    cohortDatabaseSchema: Optional[str]
+    cohortTableName: Optional[str]
