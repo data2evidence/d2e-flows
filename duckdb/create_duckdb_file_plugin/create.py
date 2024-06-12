@@ -5,16 +5,14 @@ from create_duckdb_file_plugin.config import CreateDuckdbDatabaseFileType, Creat
 
 
 # These imports are now coming in from dynamic imports as CreateDuckdbDatabaseFileModules
-# from utils.types import DATABASE_DIALECTS, PG_TENANT_USERS
-# from alpconnection.dbutils import extract_db_credentials, POSTGRES_DIALECT_OPTIONS
+# from utils.types import DATABASE_DIALECTS, PG_TENANT_USERS, DATABASE_DIALECTS
+# from alpconnection.dbutils import extract_db_credentials
 # from dao.DBDao import DBDao
 
 def get_supported_duckdb_dialetcs(modules: CreateDuckdbDatabaseFileModules):
-    # TODO: remove POSTGRES_DIALECT_OPTIONS and use DATABASE_DIALECTS instead after unifiying envConverter postgres dialect value
-    SUPPORTED_DUCKDB_DIALECTS = modules.alpconnection_dbutils.POSTGRES_DIALECT_OPTIONS
-    # SUPPORTED_DUCKDB_DIALECTS = [
-    #     DATABASE_DIALECTS.POSTGRES.value
-    # ]
+    SUPPORTED_DUCKDB_DIALECTS = [
+        modules.utils_types.DATABASE_DIALECTS.POSTGRES.value
+    ]
 
     return SUPPORTED_DUCKDB_DIALECTS
 
