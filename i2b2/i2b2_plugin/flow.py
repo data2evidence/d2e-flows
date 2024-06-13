@@ -132,7 +132,7 @@ def i2b2_plugin(options: i2b2PluginType):
         
         setup_plugin(tag_name)
         create_i2b2_schema(dbdao)
-        overwrite_db_properties(tag_name, database_code, schema_name)
+        overwrite_db_properties(tag_name, tenant_configs, schema_name)
         version = _get_version(tag_name)
         create_crc_tables(version)
         create_crc_stored_procedures(version)
