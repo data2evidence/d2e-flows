@@ -2,12 +2,13 @@ from prefect.task_runners import SequentialTaskRunner
 from prefect import flow, task, get_run_logger
 from prefect_shell import ShellOperation
 from i2b2_plugin.types import i2b2PluginType
+from typing import Dict
 import importlib
 import sys
 import os
 
 
-@task
+@task(log_prints=True)
 async def setup_plugin(tag_name: str):
     logger = get_run_logger()
     repo_dir = "i2b2_plugin/i2b2_data"
@@ -51,22 +52,19 @@ async def _setup_apache_ant(tag_name: str):
         ]).run()
 
 
-@task
-def overwrite_db_properties(tag_name: str, database_code: str, schema_name: str):
+@task(log_prints=True)
+def overwrite_db_properties(tag_name: str, tenant_configs: Dict, schema_name: str):
     logger = get_run_logger()
     try:
         new_install_dir = f"{_path_to_ant(tag_name)}/NewInstall/Crcdata"
         path = os.path.join(os.getcwd(), new_install_dir)
         os.chdir(f"{path}")
         
-        dbutils_module = importlib.import_module('alpconnection.dbutils')
-        conn_details = dbutils_module.extract_db_credentials(database_code)
-        
-        database_name = conn_details["databaseName"]
-        pg_user = conn_details["adminUser"]
-        pg_password = conn_details["adminPassword"]
-        host = conn_details["host"]
-        port = conn_details["port"]
+        database_name = tenant_configs["databaseName"]
+        pg_user = tenant_configs["adminUser"]
+        pg_password = tenant_configs["adminPassword"]
+        host = tenant_configs["host"]
+        port = tenant_configs["port"]
         
         with open('db.properties', 'w') as file:
             file.write(f'''
@@ -83,17 +81,6 @@ def overwrite_db_properties(tag_name: str, database_code: str, schema_name: str)
         raise(e)
 
 
-@task
-def create_i2b2_schema(database_code: str, schema_name: str):
-    sys.path.append('/app/pysrc')
-    dbdao_module = importlib.import_module('dao.DBDao')
-    types_modules = importlib.import_module('utils.types')
-    db_dao = dbdao_module.DBDao(database_code, schema_name, types_modules.PG_TENANT_USERS.ADMIN_USER)
-    schema_exists = db_dao.check_schema_exists()
-    if schema_exists == False:
-        db_dao.create_schema()
-    else:
-        raise Exception(f"Schema {schema_name} already exists in database {database_code}")
 
     
 
@@ -130,16 +117,47 @@ def i2b2_plugin(options: i2b2PluginType):
     schema_name = options.schema_name
     tag_name = options.tag_name
     try:
+        sys.path.append('/app/pysrc')
+        dbdao_module = importlib.import_module('dao.DBDao')
+        types_modules = importlib.import_module('utils.types')
+        userdao_module = importlib.import_module('dao.UserDao')
+        dbsvc_module = importlib.import_module('flows.alp_db_svc.dataset.main')
+        dbutils_module = importlib.import_module('alpconnection.dbutils')
+        
+        admin_user = types_modules.PG_TENANT_USERS.ADMIN_USER
+        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
+        userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
+        tenant_configs = dbutils_module.extract_db_credentials(database_code)
+        
+        
         setup_plugin(tag_name)
-        create_i2b2_schema(database_code, schema_name)
+        create_i2b2_schema(dbdao)
         overwrite_db_properties(tag_name, database_code, schema_name)
         version = _get_version(tag_name)
         create_crc_tables(version)
         create_crc_stored_procedures(version)
         #load_demo_data()
+        
+        # grant read privilege to tenant read user
+        dbsvc_module.create_and_assign_roles(
+            userdao=userdao,
+            tenant_configs=tenant_configs,
+            data_model="i2b2",
+            dialect=types_modules.DatabaseDialects.POSTGRES
+        )
     except Exception as e:
         logger.error(e)
         raise(e)
+
+
+@task(log_prints=True)
+def create_i2b2_schema(dbdao):
+    schema_exists = dbdao.check_schema_exists()
+    if schema_exists == False:
+        dbdao.create_schema()
+    else:
+        raise Exception(f"Schema {dbdao.schema_name} already exists in database {dbdao.database_code}")
+
 
 
 def _get_version(tag: str) -> str:
