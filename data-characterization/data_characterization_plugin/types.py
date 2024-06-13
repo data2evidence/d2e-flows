@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 FLOW_NAME = "data_characterization_plugin"
-CHANGELOG_MAPPING = "liquibase-characterization.xml"
+CHANGELOG_FILE = "liquibase-characterization.xml"
 
 
 class dcOptionsType(BaseModel):
@@ -18,5 +18,5 @@ class dcOptionsType(BaseModel):
         return FLOW_NAME
 
     @property
-    def changelogFilepath(self) -> str:
-        return CHANGELOG_MAPPING
+    def changelogFile(self) -> str:
+        return CHANGELOG_FILE
