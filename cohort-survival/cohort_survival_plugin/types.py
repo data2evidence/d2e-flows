@@ -6,3 +6,5 @@ class cohortSurvivalOptionsType(BaseModel):
     schema_name: str
     target_cohort_definition_id: int
     outcome_cohort_definition_id: int
+    # competing_outcome_cohort_definition_id: int
+    # strata: unsure
