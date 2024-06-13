@@ -1,3 +1,6 @@
+import sys
+print(sys.path)
+
 import importlib
 import pandas as pd
 from prefect import flow, get_run_logger
