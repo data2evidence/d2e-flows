@@ -136,7 +136,6 @@ def i2b2_plugin(options: i2b2PluginType):
         version = _get_version(tag_name)
         create_crc_tables(version)
         create_crc_stored_procedures(version)
-        #load_demo_data()
         
         # grant read privilege to tenant read user
         dbsvc_module.create_and_assign_roles(
@@ -145,6 +144,11 @@ def i2b2_plugin(options: i2b2PluginType):
             data_model="i2b2",
             dialect=types_modules.DatabaseDialects.POSTGRES
         )
+
+        # load demo data
+        if options.load_data:
+            load_demo_data()
+
     except Exception as e:
         logger.error(e)
         raise(e)
