@@ -14,23 +14,22 @@ def data_management_plugin(options: dataModelType):
     dbsvc_module = importlib.import_module('flows.alp_db_svc.flow')
     match options.flow_action_type:
         case flowActionType.CREATE_DATA_MODEL:
-            dbsvc_module.create_datamodel(options)
+            dbsvc_module.create_datamodel_flow(options)
         case flowActionType.UPDATE_DATA_MODEL:
-            dbsvc_module.update_datamodel(options)
+            dbsvc_module.update_datamodel_flow(options)
         case flowActionType.ROLLBACK_COUNT:
-            dbsvc_module.rollback_count(options)
+            dbsvc_module.rollback_count_flow(options)
         case flowActionType.ROLLBACK_TAG:
-            dbsvc_module.rollback_tag(options)
+            dbsvc_module.rollback_tag_flow(options)
         case flowActionType.CREATE_SNAPSHOT:
-            dbsvc_module.create_snapshot(options)
+            dbsvc_module.create_snapshot_flow(options)
         case flowActionType.CREATE_PARQUET_SNAPSHOT:
-            dbsvc_module.create_parquet_snapshot(options)
+            dbsvc_module.create_snapshot_flow(options)
         case flowActionType.GET_VERSION_INFO:
-            portal_server_module = importlib.import_module('flows.portal_server.flow')
-            portal_server_module.get_version_info(options)
+            dbsvc_module.get_version_info_flow(options)
         case flowActionType.CREATE_QUESTIONNAIRE_DEFINITION:
-            dbsvc_module.create_questionnaire_definition(options)
+            dbsvc_module.create_questionnaire_definition_flow(options)
         case flowActionType.GET_QUESTIONNAIRE_RESPONSE:
-            dbsvc_module.get_questionnaire_response(options)
+            dbsvc_module.get_questionnaire_response_flow(options)
         case flowActionType.SEED_CDMVOCAB:
             dbsvc_module.run_seed_postgres(options)
