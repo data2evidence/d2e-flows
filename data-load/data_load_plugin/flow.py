@@ -3,7 +3,7 @@ import pandas as pd
 from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 from sqlalchemy import create_engine, text
-from utils.types import DataloadOptions
+from data_load_plugin.utils.types import DataloadOptions
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def data_load_plugin(options: DataloadOptions):
