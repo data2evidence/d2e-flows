@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Optional, Dict
+from pydantic import BaseModel
+from typing import Optional, Dict, List
 
 FLOW_NAME = "data_management_plugin"
 DATAMODEL_CHANGELOG_MAPPING = {
@@ -18,7 +18,7 @@ class flowActionType(str, Enum):
     GET_VERSION_INFO = "get_version_info"
     CREATE_QUESTIONNAIRE_DEFINITION = "create_questionnaire_definition"
     GET_QUESTIONNAIRE_RESPONSE = "get_questionnaire_response"
-    SEED_CDMVOCAB = "seed_cdmvocab"
+    CREATE_CDMSCHEMA = "create_cdm_schema"
 
 class dataModelType(BaseModel):
     flow_action_type: flowActionType
@@ -31,10 +31,11 @@ class dataModelType(BaseModel):
     source_schema: Optional[str]
     rollback_count: Optional[int]
     rollback_tag: Optional[str]
-    update_count: int = 0
+    update_count: Optional[int]
     questionnaire_definition: Optional[Dict]
     questionnaire_id: Optional[str]
     token: Optional[str]
+    datasets: Optional[List]
 
     @property
     def flow_name(self) -> str:

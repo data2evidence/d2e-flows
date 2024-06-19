@@ -5,13 +5,13 @@ from create_duckdb_file_plugin.config import CreateDuckdbDatabaseFileType, Creat
 
 
 # These imports are now coming in from dynamic imports as CreateDuckdbDatabaseFileModules
-# from utils.types import DATABASE_DIALECTS, PG_TENANT_USERS, DATABASE_DIALECTS
+# from utils.types import DatabaseDialects, PG_TENANT_USERS, DatabaseDialects
 # from alpconnection.dbutils import extract_db_credentials
 # from dao.DBDao import DBDao
 
 def get_supported_duckdb_dialetcs(modules: CreateDuckdbDatabaseFileModules):
     SUPPORTED_DUCKDB_DIALECTS = [
-        modules.utils_types.DATABASE_DIALECTS.POSTGRES.value
+        modules.utils_types.DatabaseDialects.POSTGRES.value
     ]
 
     return SUPPORTED_DUCKDB_DIALECTS
