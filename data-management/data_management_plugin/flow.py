@@ -31,5 +31,5 @@ def data_management_plugin(options: dataModelType):
             dbsvc_module.create_questionnaire_definition_flow(options)
         case flowActionType.GET_QUESTIONNAIRE_RESPONSE:
             dbsvc_module.get_questionnaire_response_flow(options)
-        case flowActionType.SEED_CDMVOCAB:
-            dbsvc_module.run_seed_postgres(options)
+        case flowActionType.CREATE_CDMSCHEMA:
+            dbsvc_module.create_cdm_schema(options)
