@@ -128,9 +128,9 @@ def create_crc_stored_procedures(version: str):
 
 
 @flow
-def load_demo_data():
+def load_demo_data(dbdao):
     ingest_data()
-    update_ingestion_date()
+    dbdao.update_data_ingestion_date()
 
 
 @task
@@ -141,10 +141,7 @@ def ingest_data():
         ]
     ).run()
     
-@task
-def update_ingestion_date():
-    pass
-    
+
 
 def create_i2b2_datamodel(options: i2b2PluginType):
     logger = get_run_logger()
@@ -176,8 +173,6 @@ def create_i2b2_datamodel(options: i2b2PluginType):
         create_crc_tables(version)
         create_crc_stored_procedures(version)
         
-        dbdao.create_i2b2_metadata_table()
-        
         # grant read privilege to tenant read user
         dbsvc_module.create_and_assign_roles(
             userdao=userdao,
@@ -185,10 +180,20 @@ def create_i2b2_datamodel(options: i2b2PluginType):
             data_model="i2b2",
             dialect=types_modules.DatabaseDialects.POSTGRES
         )
+        
+        dbdao.create_i2b2_metadata_table()
+        values_to_insert = {
+            "schema_name": schema_name,
+            "created_date": datetime.now(),
+            "updated_date": datetime.now(),
+            "tag": tag_name,
+            "release_version": version
+        }
+        dbdao.insert_values_into_table('dataset_metadata', values_to_insert)
 
         # load demo data
         if options.load_data:
-            load_demo_data() # subflow
+            load_demo_data(dbdao) # subflow
 
     except Exception as e:
         logger.error(e)
