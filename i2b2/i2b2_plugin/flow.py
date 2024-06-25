@@ -25,7 +25,6 @@ def create_i2b2_dataset(options: i2b2PluginType):
     database_code = options.database_code
     schema_name = options.schema_name
     tag_name = options.tag_name
-    token = options.token
 
     try:
         sys.path.append('/app/pysrc')
@@ -192,75 +191,83 @@ def get_and_update_attributes(token: str, dataset: Dict):
     admin_user = types_modules.PG_TENANT_USERS.ADMIN_USER
         
     try:
+        dataset_id = dataset.get("id")
         database_code = dataset.get("databaseCode")
         schema_name = dataset.get("schemaName")
-        dataset_id = dataset.get("id")
-    except KeyError:
-        get_run_logger().error()     
+    except KeyError as ke:
+        missing_key = ke.args[0]
+        logger.error(f"'{missing_key} not found in dataset'")
     else:
-        
-        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
+        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user) 
         portal_server_api = portal_server_api_module.PortalServerAPI(token)
+        
+        # check if schema exists
+        schema_exists = dbdao.check_schema_exists()
+        if schema_exists == False:
+            error_msg = f"Schema '{schema_name}' does not exist in db {database_code} for dataset id '{dataset_id}'"
+            logger.error(error_msg)
+            portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", error_msg)
+            portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", error_msg)
+        else:
+            try:
+                # update patient count or error msg
+                patient_count = get_patient_count(dbdao)
+                portal_server_api.update_dataset_attributes_table(dataset_id, "patient_count", patient_count)
+            except Exception as e:
+                logger.error(f"Failed to update attribute 'patient count' for dataset '{dataset_id}': {e}")
+            else:
+                logger.info(f"Updated attribute 'patient count' for dataset '{dataset_id}' with value '{patient_count}'")
 
-        try:
-            # update patient count or error msg
-            patient_count = get_patient_count(dbdao)
-            portal_server_api.update_dataset_attributes_table(dataset_id, "patient_count", patient_count)
-        except Exception as e:
-            logger.error(f"Failed to update attribute 'patient count' for dataset '{dataset_id}': {e}")
-        else:
-            logger.info(f"Updated attribute 'patient count' for dataset '{dataset_id}' with value '{patient_count}'")
+            try:
+                # update release version or error msg
+                release_version = get_metadata_version(dbdao, "release_version")
+                portal_server_api.update_dataset_attributes_table(dataset_id, "version", release_version)
+            except Exception as e:
+                logger.error(f"Failed to update attribute 'version' for dataset '{dataset_id}': {e}")
+            else:
+                logger.info(f"Updated attribute 'version' for dataset '{dataset_id}' with value '{release_version}'")
 
-        try:
-            # update release version or error msg
-            release_version = get_metadata_version(dbdao, "release_version")
-            portal_server_api.update_dataset_attributes_table(dataset_id, "version", release_version)
-        except Exception as e:
-            logger.error(f"Failed to update attribute 'version' for dataset '{dataset_id}': {e}")
-        else:
-            logger.info(f"Updated attribute 'version' for dataset '{dataset_id}' with value '{release_version}'")
+            try:
+                # update release tag or error msg
+                tag = get_metadata_version(dbdao, "tag")
+                portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", tag)
+            except Exception as e:
+                logger.error(f"Failed to update attribute 'schema_version' for dataset '{dataset_id}': {e}")
+            else:
+                logger.info(f"Updated attribute 'schema_version' for dataset '{dataset_id}' with value '{tag}'")
+                
+            try:
+                # update created date or error msg
+                created_date = get_metadata_date(dbdao, "created_date")
+                portal_server_api.update_dataset_attributes_table(dataset_id, "created_date", created_date)
+            except Exception as e:
+                logger.error(f"Failed to update attribute 'created_date' for dataset '{dataset_id}': {e}")
+            else:
+                logger.info(f"Updated attribute 'created_date' for dataset '{dataset_id}' with value '{created_date}'")
+                
+            try:
+                # update updated date or error msg
+                updated_date = get_metadata_date(dbdao, "updated_date")
+                portal_server_api.update_dataset_attributes_table(dataset_id, "updated_date", updated_date)
+            except Exception as e:
+                logger.error(f"Failed to update attribute 'updated_date' for dataset '{dataset_id}': {e}")
+            else:
+                logger.info(f"Updated attribute 'updated_date' for dataset '{dataset_id}' with value '{updated_date}'")
+                            
+            try:
+                # update data ingestion date or error msg
+                data_ingestion_date = get_metadata_date(dbdao, "data_ingestion_date")
+                portal_server_api.update_dataset_attributes_table(dataset_id, "data_ingestion_date", data_ingestion_date)
+            except Exception as e:
+                logger.error(f"Failed to update attribute 'data_ingestion_date' for dataset '{dataset_id}': {e}")
+            else:
+                logger.info(f"Updated attribute 'data_ingestion_date' for dataset '{dataset_id}' with value '{data_ingestion_date}'")
 
-        try:
-            # update release tag or error msg
-            tag = get_metadata_version(dbdao, "tag")
-            portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", tag)
-        except Exception as e:
-            logger.error(f"Failed to update attribute 'schema_version' for dataset '{dataset_id}': {e}")
-        else:
-            logger.info(f"Updated attribute 'schema_version' for dataset '{dataset_id}' with value '{tag}'")
-            
-        try:
-            # update created date or error msg
-            created_date = get_metadata_date(dbdao, "created_date")
-            portal_server_api.update_dataset_attributes_table(dataset_id, "created_date", created_date)
-        except Exception as e:
-            logger.error(f"Failed to update attribute 'created_date' for dataset '{dataset_id}': {e}")
-        else:
-            logger.info(f"Updated attribute 'created_date' for dataset '{dataset_id}' with value '{created_date}'")
-            
-        try:
-            # update updated date or error msg
-            updated_date = get_metadata_date(dbdao, "updated_date")
-            portal_server_api.update_dataset_attributes_table(dataset_id, "updated_date", updated_date)
-        except Exception as e:
-            logger.error(f"Failed to update attribute 'updated_date' for dataset '{dataset_id}': {e}")
-        else:
-            logger.info(f"Updated attribute 'updated_date' for dataset '{dataset_id}' with value '{updated_date}'")
-                        
-        try:
-            # update data ingestion date or error msg
-            data_ingestion_date = get_metadata_date(dbdao, "data_ingestion_date")
-            portal_server_api.update_dataset_attributes_table(dataset_id, "data_ingestion_date", data_ingestion_date)
-        except Exception as e:
-            logger.error(f"Failed to update attribute 'data_ingestion_date' for dataset '{dataset_id}': {e}")
-        else:
-            logger.info(f"Updated attribute 'data_ingestion_date' for dataset '{dataset_id}' with value '{data_ingestion_date}'")
-
-        try:
-            # update last fetched metadata date
-            metadata_last_fetch_date = datetime.now().strftime('%Y-%m-%d')
-            portal_server_api.update_dataset_attributes_table(dataset_id, "metadata_last_fetch_date", metadata_last_fetch_date)
-        except Exception as e:
-            logger.error(f"Failed to update attribute 'metadata_last_fetch_date' for dataset '{dataset_id}': {e}")
-        else:
-            logger.info(f"Updated attribute 'metadata_last_fetch_date' for dataset '{dataset_id}' with value '{metadata_last_fetch_date}'")
+            try:
+                # update last fetched metadata date
+                metadata_last_fetch_date = datetime.now().strftime('%Y-%m-%d')
+                portal_server_api.update_dataset_attributes_table(dataset_id, "metadata_last_fetch_date", metadata_last_fetch_date)
+            except Exception as e:
+                logger.error(f"Failed to update attribute 'metadata_last_fetch_date' for dataset '{dataset_id}': {e}")
+            else:
+                logger.info(f"Updated attribute 'metadata_last_fetch_date' for dataset '{dataset_id}' with value '{metadata_last_fetch_date}'")
