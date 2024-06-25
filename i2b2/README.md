@@ -12,7 +12,7 @@
     "tag_name": "v1.8.0.0002",
     "schema_name": "testi2b2",
     "database_code": "alpdev_pg",
-    "load_data": True
+    "load_data": true
   }
 }
 ```
