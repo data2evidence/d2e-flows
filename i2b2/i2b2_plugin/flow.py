@@ -1,7 +1,8 @@
 from prefect.task_runners import SequentialTaskRunner
 from prefect import flow, task, get_run_logger
 from prefect_shell import ShellOperation
-from i2b2_plugin.types import i2b2PluginType, FlowActionType
+from i2b2_plugin.types import *
+from i2b2_plugin.utils import *
 from typing import Dict
 import importlib
 import sys
@@ -9,21 +10,69 @@ import os
 from datetime import datetime
 
 
-
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def i2b2_plugin(options: i2b2PluginType):
     match options.flow_action_type:
         case FlowActionType.CREATE_DATA_MODEL:
-            create_i2b2_datamodel(options)
+            create_i2b2_dataset(options)
         case FlowActionType.GET_VERSION_INFO:
             update_dataset_metadata(options)
-        case FlowActionType.LOAD_DATA:
-            load_demo_data(options)
 
 
-def update_dataset_metadata(options):
+def create_i2b2_dataset(options: i2b2PluginType):
     logger = get_run_logger()
-    dataset_list = options.dataset
+
+    database_code = options.database_code
+    schema_name = options.schema_name
+    tag_name = options.tag_name
+    token = options.token
+
+    try:
+        sys.path.append('/app/pysrc')
+        dbdao_module = importlib.import_module('dao.DBDao')
+        types_modules = importlib.import_module('utils.types')
+        userdao_module = importlib.import_module('dao.UserDao')
+        dbsvc_module = importlib.import_module('flows.alp_db_svc.dataset.main')
+        dbutils_module = importlib.import_module('alpconnection.dbutils')
+
+        admin_user = types_modules.PG_TENANT_USERS.ADMIN_USER
+        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
+        userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
+        tenant_configs = dbutils_module.extract_db_credentials(database_code)
+        
+        
+        setup_plugin(tag_name)
+        create_i2b2_schema(dbdao)
+        overwrite_db_properties(tag_name, tenant_configs, schema_name)
+
+        version = get_version_from_tag(tag_name)
+
+        create_crc_tables(version)
+        create_crc_stored_procedures(version)
+        
+        # task to create i2b2 metadata table
+        create_metadata_table(dbdao, schema_name, tag_name, version)
+        
+        # prefect task to grant read privilege to tenant read user
+        dbsvc_module.create_and_assign_roles(
+            userdao=userdao,
+            tenant_configs=tenant_configs,
+            data_model="i2b2",
+            dialect=types_modules.DatabaseDialects.POSTGRES
+        )
+        
+        # task to load demo data based on flag
+        if options.load_data:
+            load_demo_data(dbdao)
+
+    except Exception as e:
+        logger.error(e)
+        raise(e)
+
+
+def update_dataset_metadata(options: i2b2PluginType):
+    logger = get_run_logger()
+    dataset_list = options.datasets
     token = options.token
     if (dataset_list is None) or (len(dataset_list) == 0):
         logger.debug("No datasets fetched from portal")
@@ -43,45 +92,19 @@ async def setup_plugin(tag_name: str):
     os.chdir(f"{path}")
     
     try:
-        await _download_source_code(tag_name)
-        await _unzip_source_code(tag_name)
-        #await _setup_apache_ant(tag_name) # use version of apache ant in i2b2 source code
+        await download_source_code(tag_name)
+        await unzip_source_code(tag_name)
+        #await setup_apache_ant(tag_name) # use version of apache ant in i2b2 source code
     except Exception as e:
         logger.error(e)
         raise(e)
-
-async def _download_source_code(tag_name: str):
-    await ShellOperation(
-        commands=[
-            f"wget https://github.com/i2b2/i2b2-data/archive/refs/tags/{tag_name}.tar.gz",
-        ]).run()
-    
-async def _unzip_source_code(tag_name: str):
-    await ShellOperation(
-        commands=[         
-            f"tar -xzf {tag_name}.tar.gz"
-        ]).run()
-
-async def _setup_apache_ant(tag_name: str):
-    cwd = os.getcwd()
-    ant_bin_dir = os.path.join(cwd, f"{_path_to_ant(tag_name)}/apache-ant")
-    
-    # Set ant_home environment variable
-    os.environ["ANT_HOME"] = ant_bin_dir
-    
-    await ShellOperation(
-        commands=[         
-            f'ln -sfn {ant_bin_dir} /opt/ant',
-            f'ln -sfn /opt/ant/bin/ant /usr/bin/ant',
-            'ant -version'
-        ]).run()
 
 
 @task(log_prints=True)
 def overwrite_db_properties(tag_name: str, tenant_configs: Dict, schema_name: str):
     logger = get_run_logger()
     try:
-        new_install_dir = f"{_path_to_ant(tag_name)}/NewInstall/Crcdata"
+        new_install_dir = f"{path_to_ant(tag_name)}/NewInstall/Crcdata"
         path = os.path.join(os.getcwd(), new_install_dir)
         os.chdir(f"{path}")
         
@@ -107,9 +130,12 @@ def overwrite_db_properties(tag_name: str, tenant_configs: Dict, schema_name: st
 
 
 @task(log_prints=True)
-def update_creation_date():
-    pass
-    
+def create_i2b2_schema(dbdao):
+    schema_exists = dbdao.check_schema_exists()
+    if schema_exists == False:
+        dbdao.create_schema()
+    else:
+        raise Exception(f"Schema {dbdao.schema_name} already exists in database {dbdao.database_code}")
 
 @task
 def create_crc_tables(version: str):
@@ -127,13 +153,25 @@ def create_crc_stored_procedures(version: str):
         ]).run()
 
 
-@flow
+@task
 def load_demo_data(dbdao):
     ingest_data()
     dbdao.update_data_ingestion_date()
 
 
 @task
+def create_metadata_table(dbdao, schema_name: str, tag_name: str, version: str):
+    dbdao.create_i2b2_metadata_table()
+    values_to_insert = {
+        "schema_name": schema_name,
+        "created_date": datetime.now(),
+        "updated_date": datetime.now(),
+        "tag": tag_name,
+        "release_version": version
+    }
+    dbdao.insert_values_into_table('dataset_metadata', values_to_insert)
+        
+
 def ingest_data():
     ShellOperation(
         commands = [
@@ -142,80 +180,10 @@ def ingest_data():
     ).run()
     
 
-
-def create_i2b2_datamodel(options: i2b2PluginType):
-    logger = get_run_logger()
-    database_code = options.database_code
-    schema_name = options.schema_name
-    tag_name = options.tag_name
-    token = options.token
-    try:
-        sys.path.append('/app/pysrc')
-        dbdao_module = importlib.import_module('dao.DBDao')
-        types_modules = importlib.import_module('utils.types')
-        userdao_module = importlib.import_module('dao.UserDao')
-        dbsvc_module = importlib.import_module('flows.alp_db_svc.dataset.main')
-        dbutils_module = importlib.import_module('alpconnection.dbutils')
-        portal_server_api_module = importlib.import_module('api.PortalServerAPI')
-        
-        portal_server_api = portal_server_api_module.PortalServerAPI(token)
-        
-        admin_user = types_modules.PG_TENANT_USERS.ADMIN_USER
-        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
-        userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
-        tenant_configs = dbutils_module.extract_db_credentials(database_code)
-        
-        
-        setup_plugin(tag_name)
-        create_i2b2_schema(dbdao)
-        overwrite_db_properties(tag_name, tenant_configs, schema_name)
-        version = _get_version(tag_name)
-        create_crc_tables(version)
-        create_crc_stored_procedures(version)
-        
-        # grant read privilege to tenant read user
-        dbsvc_module.create_and_assign_roles(
-            userdao=userdao,
-            tenant_configs=tenant_configs,
-            data_model="i2b2",
-            dialect=types_modules.DatabaseDialects.POSTGRES
-        )
-        
-        dbdao.create_i2b2_metadata_table()
-        values_to_insert = {
-            "schema_name": schema_name,
-            "created_date": datetime.now(),
-            "updated_date": datetime.now(),
-            "tag": tag_name,
-            "release_version": version
-        }
-        dbdao.insert_values_into_table('dataset_metadata', values_to_insert)
-
-        # load demo data
-        if options.load_data:
-            load_demo_data(dbdao) # subflow
-
-    except Exception as e:
-        logger.error(e)
-        raise(e)
-
-
-@task(log_prints=True)
-def create_i2b2_schema(dbdao):
-    schema_exists = dbdao.check_schema_exists()
-    if schema_exists == False:
-        dbdao.create_schema()
-    else:
-        raise Exception(f"Schema {dbdao.schema_name} already exists in database {dbdao.database_code}")
-
-
-
-
-        
-
-
 @task
 def get_and_update_attributes(token: str, dataset: Dict):
+    logger = get_run_logger()
+
     sys.path.append('/app/pysrc')
     dbdao_module = importlib.import_module('dao.DBDao')
     types_modules = importlib.import_module('utils.types')
@@ -230,25 +198,69 @@ def get_and_update_attributes(token: str, dataset: Dict):
     except KeyError:
         get_run_logger().error()     
     else:
-        try:
-            # update with patient count or error msg
-            dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
-            patient_count = dbdao.get_distinct_count("patient_dimension", "patient_num")
-        except Exception as e:
-            error_msg = f"Error retrieving patient count"
-            get_run_logger().error(f"{error_msg}: {e}")
-            patient_count = error_msg
-            
+        
+        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
         portal_server_api = portal_server_api_module.PortalServerAPI(token)
-        portal_server_api.update_dataset_attributes_table(dataset_id, "patient_count", patient_count)
 
-        
+        try:
+            # update patient count or error msg
+            patient_count = get_patient_count(dbdao)
+            portal_server_api.update_dataset_attributes_table(dataset_id, "patient_count", patient_count)
+        except Exception as e:
+            logger.error(f"Failed to update attribute 'patient count' for dataset '{dataset_id}': {e}")
+        else:
+            logger.info(f"Updated attribute 'patient count' for dataset '{dataset_id}' with value '{patient_count}'")
 
-        
+        try:
+            # update release version or error msg
+            release_version = get_metadata_version(dbdao, "release_version")
+            portal_server_api.update_dataset_attributes_table(dataset_id, "version", release_version)
+        except Exception as e:
+            logger.error(f"Failed to update attribute 'version' for dataset '{dataset_id}': {e}")
+        else:
+            logger.info(f"Updated attribute 'version' for dataset '{dataset_id}' with value '{release_version}'")
 
-def _get_version(tag: str) -> str:
-    return tag[1:4].replace(".", "-")
+        try:
+            # update release tag or error msg
+            tag = get_metadata_version(dbdao, "tag")
+            portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", tag)
+        except Exception as e:
+            logger.error(f"Failed to update attribute 'schema_version' for dataset '{dataset_id}': {e}")
+        else:
+            logger.info(f"Updated attribute 'schema_version' for dataset '{dataset_id}' with value '{tag}'")
+            
+        try:
+            # update created date or error msg
+            created_date = get_metadata_date(dbdao, "created_date")
+            portal_server_api.update_dataset_attributes_table(dataset_id, "created_date", created_date)
+        except Exception as e:
+            logger.error(f"Failed to update attribute 'created_date' for dataset '{dataset_id}': {e}")
+        else:
+            logger.info(f"Updated attribute 'created_date' for dataset '{dataset_id}' with value '{created_date}'")
+            
+        try:
+            # update updated date or error msg
+            updated_date = get_metadata_date(dbdao, "updated_date")
+            portal_server_api.update_dataset_attributes_table(dataset_id, "updated_date", updated_date)
+        except Exception as e:
+            logger.error(f"Failed to update attribute 'updated_date' for dataset '{dataset_id}': {e}")
+        else:
+            logger.info(f"Updated attribute 'updated_date' for dataset '{dataset_id}' with value '{updated_date}'")
+                        
+        try:
+            # update data ingestion date or error msg
+            data_ingestion_date = get_metadata_date(dbdao, "data_ingestion_date")
+            portal_server_api.update_dataset_attributes_table(dataset_id, "data_ingestion_date", data_ingestion_date)
+        except Exception as e:
+            logger.error(f"Failed to update attribute 'data_ingestion_date' for dataset '{dataset_id}': {e}")
+        else:
+            logger.info(f"Updated attribute 'data_ingestion_date' for dataset '{dataset_id}' with value '{data_ingestion_date}'")
 
-def _path_to_ant(tag: str) -> str:
-    return f"i2b2-data-{tag[1:]}/edu.harvard.i2b2.data/Release_{_get_version(tag)}"
-
+        try:
+            # update last fetched metadata date
+            metadata_last_fetch_date = datetime.now().strftime('%Y-%m-%d')
+            portal_server_api.update_dataset_attributes_table(dataset_id, "metadata_last_fetch_date", metadata_last_fetch_date)
+        except Exception as e:
+            logger.error(f"Failed to update attribute 'metadata_last_fetch_date' for dataset '{dataset_id}': {e}")
+        else:
+            logger.info(f"Updated attribute 'metadata_last_fetch_date' for dataset '{dataset_id}' with value '{metadata_last_fetch_date}'")
