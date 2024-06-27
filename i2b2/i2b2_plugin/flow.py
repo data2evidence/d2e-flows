@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy import String, TIMESTAMP
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
 def i2b2_plugin(options: i2b2PluginType):
     match options.flow_action_type:
         case FlowActionType.CREATE_DATA_MODEL:
@@ -137,7 +137,7 @@ def create_i2b2_schema(dbdao):
     else:
         raise Exception(f"Schema {dbdao.schema_name} already exists in database {dbdao.database_code}")
 
-@task
+@task(log_prints=True)
 def create_crc_tables(version: str):
     ShellOperation(
         commands=[
@@ -145,7 +145,7 @@ def create_crc_tables(version: str):
         ]).run()
 
 
-@task
+@task(log_prints=True)
 def create_crc_stored_procedures(version: str):
     ShellOperation(
         commands=[
@@ -153,13 +153,13 @@ def create_crc_stored_procedures(version: str):
         ]).run()
 
 
-@task
+@task(log_prints=True)
 def load_demo_data(dbdao):
     ingest_data()
     dbdao.update_data_ingestion_date()
 
 
-@task
+@task(log_prints=True)
 def create_metadata_table(dbdao, schema_name: str, tag_name: str, version: str):
     columns_to_create = {
             "schema_name": String,
@@ -187,7 +187,8 @@ def ingest_data():
     ).run()
     
 
-@task
+
+@task(log_prints=True)
 def get_and_update_attributes(token: str, dataset: Dict):
     logger = get_run_logger()
 

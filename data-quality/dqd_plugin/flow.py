@@ -21,7 +21,7 @@ def setup_plugin():
         raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
 def dqd_plugin(options: dqdOptionsType):
     setup_plugin()
     # DQD has to be imported dynamically as dataflow-mgmt does not have flow source code files and prefect is validating file imports during creation of prefect deployments
