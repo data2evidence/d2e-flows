@@ -8,7 +8,7 @@ def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
     sys.path.append('/app/pysrc')
     
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=10)
 def data_management_plugin(options: dataModelType):
     setup_plugin()
     dbsvc_module = importlib.import_module('flows.alp_db_svc.flow')

@@ -110,7 +110,7 @@ def load_demo_data():
     
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
 def i2b2_plugin(options: i2b2PluginType):
     logger = get_run_logger()
     database_code = options.database_code
