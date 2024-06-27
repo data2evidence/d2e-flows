@@ -58,11 +58,11 @@ def data_load_plugin(options: DataloadOptions):
 
                     common_columns = list(set(csv_column_names) & set(table_column_names))
                     logger.info(f"Inserting data into table {file.table_name} at the chunk index of {i}")
-                    data = clean_vocab_synpuf_data(data, file.table_name, logger=logger)
+                    data = format_vocab_synpuf_data(data, file.table_name, logger=logger)
                     data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize)
                 else:
                     logger.info(f"Inserting data into table {file.table_name} at the chunk index of {i}")
-                    data = data = clean_vocab_synpuf_data(data, file.table_name, logger=logger)
+                    data = data = format_vocab_synpuf_data(data, file.table_name, logger=logger)
                     data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
         except Exception as e:
             logger.error(f'Data load failed for the table {file.table_name} at the chunk index: {i}  with error: {e}')
@@ -76,7 +76,7 @@ def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
     else:
         yield i, pd.read_csv(filepath)
         
-def clean_vocab_synpuf_data(data, table_name, logger):
+def format_vocab_synpuf_data(data, table_name, logger):
     match table_name:
         case "concept_relationship" | "concept" | "drug_strength":
             logger.info(f"Cast column data in {table_name} dataframe")
@@ -90,6 +90,8 @@ def clean_vocab_synpuf_data(data, table_name, logger):
             data["numerator_unit_concept_id"] = data["numerator_unit_concept_id"].replace('', pd.NA)
             data["denominator_unit_concept_id"] = data["denominator_unit_concept_id"].replace('', pd.NA)
             data["denominator_value"] = data["denominator_value"].replace('', pd.NA)
+        case "location":
+            data['LOCATION_ID'] = pd.to_numeric(data['LOCATION_ID'], errors='coerce').fillna(0).astype(int)
         case "care_site":
             data.drop(['LOCATION_ID'], inplace=True, axis=1)
         case "condition_occurrence":
@@ -104,8 +106,9 @@ def clean_vocab_synpuf_data(data, table_name, logger):
             data.drop(['DRUG_EXPOSURE_END_DATETIME', 'VERBATIM_END_DATE', 'REFILLS', 'QUANTITY', 'DAYS_SUPPLY', 'ROUTE_CONCEPT_ID', 'LOT_NUMBER', 'PROVIDER_ID', 'VISIT_OCCURRENCE_ID', 'VISIT_DETAIL_ID', 'ROUTE_SOURCE_VALUE', 'DOSE_UNIT_SOURCE_VALUE'], inplace=True, axis=1)
         case "measurement":
             data.drop(['MEASUREMENT_DATETIME', 'MEASUREMENT_TIME', 'OPERATOR_CONCEPT_ID', 'VALUE_AS_NUMBER', 'UNIT_CONCEPT_ID', 'RANGE_LOW', 'RANGE_HIGH', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'MEASUREMENT_SOURCE_CONCEPT_ID', 'VALUE_SOURCE_VALUE'], inplace=True, axis=1)
+            data['MEASUREMENT_ID'] = pd.to_numeric(data['MEASUREMENT_ID'], errors='coerce').fillna(0).astype(int)
         case "observation":
-            data.drop(['OBSERVATION_DATETIME', 'OBSERVATION_EVENT_ID', 'VALUE_AS_NUMBER', 'VALUE_AS_STRING', 'VALUE_AS_DATETIME', 'QUALIFIER_CONCEPT_ID', 'UNIT_CONCEPT_ID', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'UNIT_SOURCE_VALUE', 'QUALIFIER_SOURCE_VALUE', 'OBS_EVENT_FIELD_CONCEPT_ID'], inplace=True, axis=1)
+            data.drop(['OBSERVATION_DATETIME', 'OBSERVATION_EVENT_ID', 'VALUE_AS_NUMBER', 'VALUE_AS_STRING', 'QUALIFIER_CONCEPT_ID', 'UNIT_CONCEPT_ID', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'UNIT_SOURCE_VALUE', 'QUALIFIER_SOURCE_VALUE', 'OBS_EVENT_FIELD_CONCEPT_ID'], inplace=True, axis=1)
         case "payer_plan_period":
             data.drop(['PAYER_CONCEPT_ID', 'PAYER_SOURCE_VALUE', 'PAYER_SOURCE_CONCEPT_ID', 'PLAN_CONCEPT_ID', 'PLAN_SOURCE_CONCEPT_ID', 'SPONSOR_CONCEPT_ID', 'SPONSOR_SOURCE_VALUE', 'SPONSOR_SOURCE_CONCEPT_ID', 'FAMILY_SOURCE_VALUE', 'STOP_REASON_CONCEPT_ID', 'STOP_REASON_SOURCE_VALUE', 'STOP_REASON_SOURCE_CONCEPT_ID'], inplace=True, axis=1)
         case "person":
@@ -115,8 +118,9 @@ def clean_vocab_synpuf_data(data, table_name, logger):
         case "provider":
             data.drop(['YEAR_OF_BIRTH', 'SPECIALTY_SOURCE_VALUE', 'GENDER_SOURCE_VALUE'], inplace=True, axis=1)
         case "visit_occurrence":
-            data.drop(['VISIT_START_DATETIME', 'VISIT_END_DATETIME', 'PROVIDER_ID', 'CARE_SITE_ID', 'VISIT_SOURCE_CONCEPT_ID', 'ADMITTING_SOURCE_VALUE', 'DISCHARGE_TO_SOURCE_VALUE', 'PRECEDING_VISIT_OCCURRENCE_ID'], inplace=True, axis=1)
+            data.drop(['VISIT_START_DATETIME', 'VISIT_END_DATETIME', 'PROVIDER_ID', 'CARE_SITE_ID', 'VISIT_SOURCE_CONCEPT_ID', 'PRECEDING_VISIT_OCCURRENCE_ID'], inplace=True, axis=1)
         case _:
-            print("No formating for table")
+            print(f"No formating for table {table_name}")
     data = data.replace("N/A", "N/A")
+    data = data.rename(columns=str.lower)
     return data
