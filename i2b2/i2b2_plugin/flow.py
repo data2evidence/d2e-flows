@@ -8,6 +8,7 @@ import importlib
 import sys
 import os
 from datetime import datetime
+from sqlalchemy import String, TIMESTAMP
 
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
@@ -160,7 +161,14 @@ def load_demo_data(dbdao):
 
 @task
 def create_metadata_table(dbdao, schema_name: str, tag_name: str, version: str):
-    dbdao.create_i2b2_metadata_table()
+    columns_to_create = {
+            "schema_name": String,
+            "created_date": TIMESTAMP,
+            "updated_date": TIMESTAMP,
+            "tag": String,
+            "release_version": String
+        }
+    dbdao.create_table('dataset_metadata', columns_to_create)
     values_to_insert = {
         "schema_name": schema_name,
         "created_date": datetime.now(),
