@@ -58,35 +58,11 @@ def data_load_plugin(options: DataloadOptions):
 
                     common_columns = list(set(csv_column_names) & set(table_column_names))
                     logger.info(f"Inserting data into table {file.table_name} at the chunk index of {i}")
-                    if (file.table_name == "concept_relationship" or file.table_name == "concept" or file.table_name == "drug_strength"):
-                        logger.info(f"Cast column data in {file.table_name} dataframe")
-                        data["valid_start_date"] = pd.to_datetime(data["valid_start_date"].astype(str))
-                        data["valid_end_date"] =  pd.to_datetime(data["valid_end_date"].astype(str))
-                    if(file.table_name == "drug_strength"):
-                        data["amount_value"] = data["amount_value"].replace('', pd.NA)
-                        data["amount_unit_concept_id"] = data["amount_unit_concept_id"].replace("", pd.NA)
-                        data["box_size"] = data["box_size"].replace('', pd.NA)
-                        data["numerator_value"] = data["numerator_value"].replace('', pd.NA)
-                        data["numerator_unit_concept_id"] = data["numerator_unit_concept_id"].replace('', pd.NA)
-                        data["denominator_unit_concept_id"] = data["denominator_unit_concept_id"].replace('', pd.NA)
-                        data["denominator_value"] = data["denominator_value"].replace('', pd.NA)
-                    data = data.replace("N/A", "N/A")
+                    data = clean_vocab_synpuf_data(data, file.table_name, logger=logger)
                     data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize)
                 else:
                     logger.info(f"Inserting data into table {file.table_name} at the chunk index of {i}")
-                    if (file.table_name == "concept_relationship" or file.table_name == "concept" or file.table_name == "drug_strength"):
-                        logger.info(f"Cast column data in {file.table_name} dataframe")
-                        data["valid_start_date"] = pd.to_datetime(data["valid_start_date"].astype(str))
-                        data["valid_end_date"] =  pd.to_datetime(data["valid_end_date"].astype(str))
-                    if(file.table_name == "drug_strength"):
-                        data["amount_value"] = data["amount_value"].replace('', pd.NA)
-                        data["amount_unit_concept_id"] = data["amount_unit_concept_id"].replace('', pd.NA)
-                        data["box_size"] = data["box_size"].replace('', pd.NA)
-                        data["numerator_value"] = data["numerator_value"].replace('', pd.NA)
-                        data["numerator_unit_concept_id"] = data["numerator_unit_concept_id"].replace('', pd.NA)
-                        data["denominator_unit_concept_id"] = data["denominator_unit_concept_id"].replace('', pd.NA)
-                        data["denominator_value"] = data["denominator_value"].replace('', pd.NA)
-                    data = data.replace("N/A", "N/A")
+                    data = data = clean_vocab_synpuf_data(data, file.table_name, logger=logger)
                     data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
         except Exception as e:
             logger.error(f'Data load failed for the table {file.table_name} at the chunk index: {i}  with error: {e}')
@@ -99,3 +75,48 @@ def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
             i += 1
     else:
         yield i, pd.read_csv(filepath)
+        
+def clean_vocab_synpuf_data(data, table_name, logger):
+    match table_name:
+        case "concept_relationship" | "concept" | "drug_strength":
+            logger.info(f"Cast column data in {table_name} dataframe")
+            data["valid_start_date"] = pd.to_datetime(data["valid_start_date"].astype(str))
+            data["valid_end_date"] =  pd.to_datetime(data["valid_end_date"].astype(str))
+        case "drug_strength":
+            data["amount_value"] = data["amount_value"].replace('', pd.NA)
+            data["amount_unit_concept_id"] = data["amount_unit_concept_id"].replace("", pd.NA)
+            data["box_size"] = data["box_size"].replace('', pd.NA)
+            data["numerator_value"] = data["numerator_value"].replace('', pd.NA)
+            data["numerator_unit_concept_id"] = data["numerator_unit_concept_id"].replace('', pd.NA)
+            data["denominator_unit_concept_id"] = data["denominator_unit_concept_id"].replace('', pd.NA)
+            data["denominator_value"] = data["denominator_value"].replace('', pd.NA)
+        case "care_site":
+            data.drop(['LOCATION_ID'], inplace=True, axis=1)
+        case "condition_occurrence":
+            data.drop(['CONDITION_END_DATETIME', 'PROVIDER_ID', 'VISIT_DETAIL_ID'], inplace=True, axis=1)
+        case "cost":
+            data.drop(['TOTAL_CHARGE', 'TOTAL_COST', 'PAID_BY_PAYER', 'PAID_PATIENT_COPAY', 'PAID_PATIENT_DEDUCTIBLE', 'PAID_BY_PRIMARY', 'PAID_INGREDIENT_COST', 'PAID_DISPENSING_FEE', 'PAYER_PLAN_PERIOD_ID', 'AMOUNT_ALLOWED', 'REVENUE_CODE_CONCEPT_ID', 'REVENUE_CODE_SOURCE_VALUE', 'DRG_SOURCE_VALUE'], inplace=True, axis=1)
+        case "death":
+            data.drop(['CAUSE_CONCEPT_ID', 'DEATH_DATETIME'], inplace=True, axis=1)
+        case "device_exposure":
+            data.drop(['DEVICE_EXPOSURE_END_DATETIME', 'UNIQUE_DEVICE_ID', 'QUANTITY', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'UNIT_CONCEPT_ID', 'UNIT_SOURCE_VALUE', 'UNIT_SOURCE_CONCEPT_ID'], inplace=True, axis=1)
+        case "drug_exposure":
+            data.drop(['DRUG_EXPOSURE_END_DATETIME', 'VERBATIM_END_DATE', 'REFILLS', 'QUANTITY', 'DAYS_SUPPLY', 'ROUTE_CONCEPT_ID', 'LOT_NUMBER', 'PROVIDER_ID', 'VISIT_OCCURRENCE_ID', 'VISIT_DETAIL_ID', 'ROUTE_SOURCE_VALUE', 'DOSE_UNIT_SOURCE_VALUE'], inplace=True, axis=1)
+        case "measurement":
+            data.drop(['MEASUREMENT_DATETIME', 'MEASUREMENT_TIME', 'OPERATOR_CONCEPT_ID', 'VALUE_AS_NUMBER', 'UNIT_CONCEPT_ID', 'RANGE_LOW', 'RANGE_HIGH', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'MEASUREMENT_SOURCE_CONCEPT_ID', 'VALUE_SOURCE_VALUE'], inplace=True, axis=1)
+        case "observation":
+            data.drop(['OBSERVATION_DATETIME', 'OBSERVATION_EVENT_ID', 'VALUE_AS_NUMBER', 'VALUE_AS_STRING', 'VALUE_AS_DATETIME', 'QUALIFIER_CONCEPT_ID', 'UNIT_CONCEPT_ID', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'UNIT_SOURCE_VALUE', 'QUALIFIER_SOURCE_VALUE', 'OBS_EVENT_FIELD_CONCEPT_ID'], inplace=True, axis=1)
+        case "payer_plan_period":
+            data.drop(['PAYER_CONCEPT_ID', 'PAYER_SOURCE_VALUE', 'PAYER_SOURCE_CONCEPT_ID', 'PLAN_CONCEPT_ID', 'PLAN_SOURCE_CONCEPT_ID', 'SPONSOR_CONCEPT_ID', 'SPONSOR_SOURCE_VALUE', 'SPONSOR_SOURCE_CONCEPT_ID', 'FAMILY_SOURCE_VALUE', 'STOP_REASON_CONCEPT_ID', 'STOP_REASON_SOURCE_VALUE', 'STOP_REASON_SOURCE_CONCEPT_ID'], inplace=True, axis=1)
+        case "person":
+            data.drop(['BIRTH_DATETIME', 'PROVIDER_ID', 'CARE_SITE_ID', 'GENDER_SOURCE_CONCEPT_ID', 'RACE_SOURCE_CONCEPT_ID', 'ETHNICITY_SOURCE_CONCEPT_ID'], inplace=True, axis=1)
+        case "procedure_occurrence":
+            data.drop(['PROCEDURE_END_DATE', 'PROCEDURE_END_DATETIME', 'MODIFIER_CONCEPT_ID', 'QUANTITY', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'MODIFIER_SOURCE_VALUE'], inplace=True, axis=1)
+        case "provider":
+            data.drop(['YEAR_OF_BIRTH', 'SPECIALTY_SOURCE_VALUE', 'GENDER_SOURCE_VALUE'], inplace=True, axis=1)
+        case "visit_occurrence":
+            data.drop(['VISIT_START_DATETIME', 'VISIT_END_DATETIME', 'PROVIDER_ID', 'CARE_SITE_ID', 'VISIT_SOURCE_CONCEPT_ID', 'ADMITTING_SOURCE_VALUE', 'DISCHARGE_TO_SOURCE_VALUE', 'PRECEDING_VISIT_OCCURRENCE_ID'], inplace=True, axis=1)
+        case _:
+            print("No formating for table")
+    data = data.replace("N/A", "N/A")
+    return data
