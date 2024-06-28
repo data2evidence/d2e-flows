@@ -91,7 +91,7 @@ def format_vocab_synpuf_data(data, table_name, logger):
             data["denominator_unit_concept_id"] = data["denominator_unit_concept_id"].replace('', pd.NA)
             data["denominator_value"] = data["denominator_value"].replace('', pd.NA)
         case "location":
-            data['LOCATION_ID'] = pd.to_numeric(data['LOCATION_ID'], errors='coerce').fillna(0).astype(int)
+            data.drop(['COUNTRY_CONCEPT_ID', 'COUNTRY_SOURCE_VALUE', 'LATITUDE', 'LONGITUDE'], inplace=True, axis=1)
         case "care_site":
             data.drop(['LOCATION_ID'], inplace=True, axis=1)
         case "condition_occurrence":
@@ -105,8 +105,7 @@ def format_vocab_synpuf_data(data, table_name, logger):
         case "drug_exposure":
             data.drop(['DRUG_EXPOSURE_END_DATETIME', 'VERBATIM_END_DATE', 'REFILLS', 'QUANTITY', 'DAYS_SUPPLY', 'ROUTE_CONCEPT_ID', 'LOT_NUMBER', 'PROVIDER_ID', 'VISIT_OCCURRENCE_ID', 'VISIT_DETAIL_ID', 'ROUTE_SOURCE_VALUE', 'DOSE_UNIT_SOURCE_VALUE'], inplace=True, axis=1)
         case "measurement":
-            data.drop(['MEASUREMENT_DATETIME', 'MEASUREMENT_TIME', 'OPERATOR_CONCEPT_ID', 'VALUE_AS_NUMBER', 'UNIT_CONCEPT_ID', 'RANGE_LOW', 'RANGE_HIGH', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'MEASUREMENT_SOURCE_CONCEPT_ID', 'VALUE_SOURCE_VALUE'], inplace=True, axis=1)
-            data['MEASUREMENT_ID'] = pd.to_numeric(data['MEASUREMENT_ID'], errors='coerce').fillna(0).astype(int)
+            data.drop(['MEASUREMENT_DATETIME', 'MEASUREMENT_TIME', 'OPERATOR_CONCEPT_ID', 'VALUE_AS_NUMBER', 'UNIT_CONCEPT_ID', 'RANGE_LOW', 'RANGE_HIGH', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'MEASUREMENT_SOURCE_CONCEPT_ID', 'VALUE_SOURCE_VALUE', 'MEASUREMENT_EVENT_ID', 'MEAS_EVENT_FIELD_CONCEPT_ID', 'UNIT_SOURCE_CONCEPT_ID'], inplace=True, axis=1)
         case "observation":
             data.drop(['OBSERVATION_DATETIME', 'OBSERVATION_EVENT_ID', 'VALUE_AS_NUMBER', 'VALUE_AS_STRING', 'QUALIFIER_CONCEPT_ID', 'UNIT_CONCEPT_ID', 'PROVIDER_ID', 'VISIT_DETAIL_ID', 'UNIT_SOURCE_VALUE', 'QUALIFIER_SOURCE_VALUE', 'OBS_EVENT_FIELD_CONCEPT_ID'], inplace=True, axis=1)
         case "payer_plan_period":
