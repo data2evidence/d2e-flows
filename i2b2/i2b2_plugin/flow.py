@@ -165,7 +165,7 @@ def create_metadata_table(dbdao, schema_name: str, tag_name: str, version: str):
             "schema_name": String,
             "created_date": TIMESTAMP,
             "updated_date": TIMESTAMP,
-            "data_ingestion-date": TIMESTAMP,
+            "data_ingestion_date": TIMESTAMP,
             "tag": String,
             "release_version": String
         }
