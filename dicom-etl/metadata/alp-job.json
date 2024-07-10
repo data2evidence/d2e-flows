@@ -1,0 +1,6 @@
+{
+    "name": "dicom_etl_plugin",
+    "type": "data_load",
+    "entrypoint": "dicom_etl_plugin/flow.py",
+    "tags": ["data", "data_load", "dicom", "medical_imaging", "imaging", "radiology"]
+  }
