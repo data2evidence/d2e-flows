@@ -4,7 +4,6 @@ from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 from sqlalchemy import create_engine, text
 from data_load_plugin.utils.types import DataloadOptions
-sys.path.append('/usr/local/lib/python3.10/dist-packages/pandas')
 import pandas as pd
 
 def setup_plugin():
