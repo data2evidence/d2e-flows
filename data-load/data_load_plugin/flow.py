@@ -39,7 +39,7 @@ def data_load_plugin(options: DataloadOptions):
         for t in tables_to_truncate:
             trans = connection.begin()
             try:
-                truncate_sql = text(f"delete from {schema}.{t}")
+                truncate_sql = sql.text(f"delete from {schema}.{t}")
                 connection.execute(truncate_sql)
                 trans.commit()
                 
@@ -48,14 +48,14 @@ def data_load_plugin(options: DataloadOptions):
                 logger.error(e)
                 raise e
             else:
-                logger.info(f"Table {t} truncated successfully.")
+                logger.info(f"Table {t} truncated successfully!")
 
     for file in files:
         try:
             logger.info(f"Reading data from file {file.table_name}")
             # Load data from CSV file
             for i, data in read_csv(file.path, escapechar=escape_char, header=header, delimiter=options.delimiter, encoding=options.encoding, chunksize=chunksize):
-                data = format_vocab_synpuf_data(data, file.table_name, logger=logger)
+                data = format_vocab_synpuf_data(data, file.table_name)
                 if header == 0:
                     csv_column_names = data.columns.tolist()
                     sql_query = sql.text("SELECT column_name FROM information_schema.columns WHERE table_name = :x AND table_schema = :y;")
@@ -72,6 +72,8 @@ def data_load_plugin(options: DataloadOptions):
         except Exception as e:
             logger.error(f'Data load failed for the table {file.table_name} at the chunk index: {i}  with error: {e}')
             raise e
+        else:
+            logger.info(f"Data load succeeded for table {file.table_name}!")
 
 def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
     i = 1
@@ -82,10 +84,9 @@ def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
     else:
         yield i, pd.read_csv(filepath)
         
-def format_vocab_synpuf_data(data, table_name, logger):
+def format_vocab_synpuf_data(data, table_name):
     match table_name:
         case "concept_relationship" | "concept" | "drug_strength":
-            logger.info(f"Cast column data in {table_name} dataframe")
             data["valid_start_date"] = pd.to_datetime(data["valid_start_date"].astype(str))
             data["valid_end_date"] =  pd.to_datetime(data["valid_end_date"].astype(str))
             if table_name == "drug_strength":
@@ -138,8 +139,6 @@ def format_vocab_synpuf_data(data, table_name, logger):
             data.drop(['YEAR_OF_BIRTH', 'SPECIALTY_SOURCE_VALUE', 'GENDER_SOURCE_VALUE'], inplace=True, axis=1)
         case "visit_occurrence":
             data.drop(['VISIT_START_DATETIME', 'VISIT_END_DATETIME', 'PROVIDER_ID', 'CARE_SITE_ID', 'VISIT_SOURCE_CONCEPT_ID', 'PRECEDING_VISIT_OCCURRENCE_ID'], inplace=True, axis=1)
-        case _:
-            print(f"No formating for table {table_name}")
     data = data.replace("N/A", "N/A")
     data = data.rename(columns=str.lower)
     return data
