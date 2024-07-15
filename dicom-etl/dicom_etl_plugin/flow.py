@@ -1,5 +1,7 @@
 from prefect import task, flow, get_run_logger
+from prefect.serializers import JSONSerializer
 from prefect.task_runners import SequentialTaskRunner
+from prefect.filesystems import RemoteFileSystem as RFS
 from prefect.context import TaskRunContext, FlowRunContext
 
 from pydicom import dcmread
@@ -55,23 +57,23 @@ def dicom_data_load_plugin(options: DICOMETLOptions):
         case FlowActionType.INGEST_METADATA:
             missing_person_id_options = options.missing_person_id_options
             mapping = options.person_to_patient_mapping
-            root_folder = options.root_folder
+            dicom_files_abs_path = options.dicom_files_abs_path
             upload_files = options.upload_files
             mapping_dbdao = dbdao_module.DBDao(database_code, mapping.schema_name, admin_user)
             
             DicomServerAPI = importlib.import_module('api.DicomServerAPI').DicomServerAPI()
 
-            for path in Path(root_folder).rglob('*.dcm'):
+            for path in Path(dicom_files_abs_path).rglob('*.dcm'):
                 if path.is_file() and path.suffix == '.dcm':
                     # 3. Extract data elements and insert into image_occurrence table
                     # 4. Extract data elements and insert into dicom_file_metadata table
                     image_occurrence_id, sop_instance_id = process_file_metadata(path, cdm_dbdao, mi_dbdao, vocab_dbdao, 
                                                                                  mapping_dbdao, missing_person_id_options, mapping)
                     if upload_files:
-                        image_occurrence_id, sop_instance_id = upload_file_to_server(dbdao=mi_dbdao, filepath=path, 
-                                                                                      image_occurrence_id=image_occurrence_id, 
-                                                                                      sop_instance_id=sop_instance_id, 
-                                                                                      api=DicomServerAPI)
+                        image_occurrence_id, sop_instance_id = upload_file_to_server(filepath=path, 
+                                                                                     image_occurrence_id=image_occurrence_id, 
+                                                                                     sop_instance_id=sop_instance_id, 
+                                                                                     api=DicomServerAPI)
             
 @task(log_prints=True)
 def setup_vocab(dbdao):
@@ -144,6 +146,7 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao, mapping_d
                 if data_elem.keyword == "PixelData":
                     logger.info(f"Excluding Pixel Data")
                 else:
+                    # memoizing results to the file_data_to_insert
                     process_data_element(mi_dbdao, data_elem, image_occurrence_id,
                                             sop_instance_uid, instance_number, 
                                             file_data_to_insert)
@@ -239,7 +242,7 @@ def process_data_element(dbdao, data_elem: DataElement, image_occurrence_id: int
 
 
 @task(log_prints=True)
-def upload_file_to_server(dbdao, filepath: str, image_occurrence_id: int, 
+def upload_file_to_server(filepath: str, image_occurrence_id: int, 
                           sop_instance_id: str, api):     
     logger = get_run_logger()   
     dicom_server_url = os.getenv("DICOM_SERVER__API_BASE_URL")
@@ -254,7 +257,7 @@ def upload_file_to_server(dbdao, filepath: str, image_occurrence_id: int,
         logger.info(f"Orthasnc instance id is '{orthanc_instance_id}'")
         
         if orthanc_instance_id:
-            # file renamed in storage when uploaded
+            # because file is renamed when uploaded to dicom server
             uploaded_filename = api.get_uploaded_file_name(orthanc_instance_id[0])
             logger.info(f"'{filename}' was renamed to '{uploaded_filename}' in DICOM server!")
             
@@ -263,7 +266,7 @@ def upload_file_to_server(dbdao, filepath: str, image_occurrence_id: int,
             flow_run_id = str(task_run_context.get("flow_run_id"))
             
             # for traceability
-            values_to_insert = {
+            file_upload_metadata = {
                 "task_run_id": task_run_id,
                 "flow_run_id": flow_run_id,
                 "original_filename": filename,
@@ -273,11 +276,10 @@ def upload_file_to_server(dbdao, filepath: str, image_occurrence_id: int,
                 "image_occurrence_id": image_occurrence_id,
                 "sop_instance_id": sop_instance_id
             }
-
-            logger.info(f"Inserting record to 'file_upload_metadata'..")
-            dbdao.insert_values_into_table("file_upload_metadata", values_to_insert)
         else:
             raise Exception(f"Failed to upload file '{filename}'")
     except Exception as e:
         logger.error(e)
         raise e
+    else: 
+        return file_upload_metadata

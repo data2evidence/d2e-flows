@@ -25,7 +25,7 @@ class DICOMETLOptions(BaseModel):
     medical_imaging_schema_name: str
     cdm_schema_name: str
     vocab_schema_name: str
-    root_folder: str
+    dicom_files_abs_path: str
     upload_files: Optional[bool] = False
     missing_person_id_options: Optional[MissingPersonIDOptions] # How to handle on missing person id
     person_to_patient_mapping: Optional[PersonPatientMapping]
