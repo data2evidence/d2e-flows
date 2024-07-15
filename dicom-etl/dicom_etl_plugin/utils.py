@@ -1,12 +1,11 @@
-
-import pandas as pd
 import sqlalchemy as sql
-from datetime import datetime
 from typing import Dict, Tuple
+from datetime import datetime
+import os
+import pandas as pd
 from pydicom.tag import BaseTag
 
 from dicom_etl_plugin.types import *
-
 
 def get_image_occurrence_concept_ids(modality_code: str, anatomic_site: str, vocab_dbdao) -> Tuple[int, int]:
     # get standard concept id for modality
@@ -109,7 +108,7 @@ def update_concept_table(vocab_dbdao):
     res = vocab_dbdao.execute_sqlalchemy_statement(sql_statement, callback=vocab_dbdao.get_single_value)
 
     if res == 0:
-        concept_df = pd.read_csv(f"{PATH_TO_EXTERNAL_FILES}/omop_table_staging.csv")
+        concept_df = pd.read_csv(r"dicom_etl_plugin/external/omop_table_staging.csv")
         
         # Adjust its data types
         concept_df['valid_end_date'] = pd.to_datetime('1993-01-01')
@@ -146,7 +145,7 @@ def populate_data_elements(mi_dbdao):
 
     if res == 0:
     # populate from csv if table is empty
-        df = pd.read_csv(f"{PATH_TO_EXTERNAL_FILES}/part6_attributes.csv")
+        df = pd.read_csv(r"dicom_etl_plugin/external/part6_attributes.csv")
         
         column_mapping = {
             "Tag": "data_element_tag",
@@ -161,6 +160,8 @@ def populate_data_elements(mi_dbdao):
         
         df = df.rename(columns=column_mapping)
         df['data_element_id'] = range(1, len(df)+1)
+        df['etl_created_datetime'] = datetime.now()
+        df['etl_modified_datetime'] = datetime.now()
         
         df.to_sql(
             name=data_element_table_name,
@@ -205,60 +206,32 @@ def convert_tag_to_tuple(tag: BaseTag) -> str:
     return str_tuple
 
 
-def get_person_id(dbdao, patient_id: str, patient_dob: str | None, study_date: str | None,
-                  patient_sex: str | None, patient_age: str | None, patient_race: str | None) -> int:
-    person_table_name = "person"
-    person_column_names = ["person_id", "gender_concept_id", "year_of_birth", "race_concept_id", 
-                           "ethnicity_concept_id", "person_source_value", "gender_source_value", 
-                           "race_source_value"]
-    person_columns = dbdao.get_sqlalchemy_columns(table_name=person_table_name, column_names=person_column_names)
+def get_person_id(dbdao, patient_id: str, missing_person_id_option, mapping) -> int:
+    table_name = mapping.table_name
+    mapped_person_id = mapping.person_id_column_name
+    mapped_patient_id = mapping.patient_id_column_name
     
-    # Find person_id using person.person_source_value = dicom file patient_id
-    sql_statement = sql.select(person_columns.get("person_id")) \
-                        .where(sql.func.upper(person_columns.get("person_source_value")) == sql.func.upper(patient_id))
+    column_names = [mapped_person_id, mapped_patient_id]
+    
+    columns = dbdao.get_sqlalchemy_columns(table_name=table_name, column_names=column_names)
+    
+    sql_statement = sql.select(columns.get("mapped_person_id")) \
+                        .where(sql.func.upper(columns.get(mapped_patient_id)) == sql.func.upper(patient_id))
                         
     try:
-        res = dbdao.execute_sqlalchemy_statement(sql_statement, callback=dbdao.get_single_value)
+        person_id = dbdao.execute_sqlalchemy_statement(sql_statement, callback=dbdao.get_single_value)
     except Exception as e:
         print(f"Failed to get matching person_id for patient_id '{patient_id}': {e}")
         
-        # If no matching person_id, insert new record in person table
-        new_person_id = dbdao.get_next_record_id(person_table_name, "person_id")
-        
-        try:
-        # new record in person table must have year of birth
-            if patient_dob is None:
-                if patient_age is None or study_date is None:
-                    raise Exception("Unable to retrieve or impute year of birth due to missing data elements in file! [PatientBirthDate, PatientAge, StudyDate]")
-                else:
-                    year_of_birth = impute_birth_year(patient_age, study_date)
-            else:
-                year_of_birth = int(patient_dob[0:4])
-        except Exception as e:
-            # image_occurrence and procedure_occurrence to use person_id 0 
-            # since new person record cannot be created
-            print(f"Failed to create new person record: {e}. Defaulting to person_id '0'")
-            return 0
-        else:
-            # Todo: codify gender, race, ethnicity (transform_nonimaging_data.ipynb)
-            new_person_record = {
-                "person_id": new_person_id,
-                "gender_concept_id": 0,
-                "year_of_birth": year_of_birth,
-                "race_concept_id": 0,
-                "ethnicity_concept_id": 0,
-                "person_source_value": patient_id,
-                "gender_source_value": patient_sex,
-                "race_source_value":  patient_race
-            }
-            print(f"Inserting new person record with person_id of '{new_person_id}'")
-            
-            dbdao.insert_values_into_table(person_table_name, new_person_record)
-            print(f"New person record inserted with person_id of '{new_person_id}'")
-            return new_person_id
+        match missing_person_id_option:
+            case MissingPersonIDOptions.SKIP:
+                raise Exception(f"Failed to get person_id for patient_id '{patient_id}'. Skipping data ingestion..")
+            case MissingPersonIDOptions.USE_ID_ZERO:
+                print(f"Defaulting to person_id '0' due to missing person_id for patient_id '{patient_id}'")
+                return 0
     else:
         # Matching person_id for patient_id found
-        return res
+        return person_id
 
 # Todo: standardize values map study description to procedure_concept_id with Athena
 def insert_procedure_occurence_table(dbdao, person_id: int, study_date: str, study_description: str) -> int:

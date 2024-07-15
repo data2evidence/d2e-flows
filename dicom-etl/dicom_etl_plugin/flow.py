@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import importlib
+import pandas as pd
 from pathlib import Path
 from uuid import uuid4, UUID
 from typing import Dict, List
@@ -19,8 +20,6 @@ from orthanc_api_client import OrthancApiClient
 from dicom_etl_plugin.types import *
 from dicom_etl_plugin.utils import *
 
-#import pandas as pd
-
 
 def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
@@ -28,41 +27,46 @@ def setup_plugin():
     
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def dicom_etl_plugin(options: ETLOptions):
+def dicom_data_load_plugin(options: DICOMETLOptions):
+    setup_plugin()
     logger = get_run_logger()
+
     flow_action_type = options.flow_action_type
     database_code = options.database_code
-    
-    root_folder = options.root_folder
-    upload_files = options.upload_files
-    
     medical_imaging_schema_name = options.medical_imaging_schema_name
     vocab_schema_name = options.vocab_schema_name
-    cdm_schema_name = options.cdm_schema_name
+    cdm_schema_name = options.cdm_schema_name    
 
-    setup_plugin()
-    types_module = importlib.import_module('utils.types')
+    admin_user = importlib.import_module('utils.types').PG_TENANT_USERS.ADMIN_USER
     dbdao_module = importlib.import_module('dao.DBDao')
-    dicom_server_api_module = importlib.import_module('api.DicomServerAPI')
 
-    admin_user = types_module.PG_TENANT_USERS.ADMIN_USER
     mi_dbdao = dbdao_module.DBDao(database_code, medical_imaging_schema_name, admin_user)
     vocab_dbdao = dbdao_module.DBDao(database_code, vocab_schema_name, admin_user)
     cdm_dbdao = dbdao_module.DBDao(database_code, cdm_schema_name, admin_user)
-    DicomServerAPI = dicom_server_api_module.DicomServerAPI()
+
     
     match flow_action_type:
-        case FlowActionType.INGEST_METADATA:
+        case FlowActionType.LOAD_VOCAB:
             # 1. Populate vocabulary and concept tables with DICOM
             # 2. Populate dicom data element reference table
             setup_vocab(vocab_dbdao)
             load_data_elements(mi_dbdao)
             
+        case FlowActionType.INGEST_METADATA:
+            missing_person_id_options = options.missing_person_id_options
+            mapping = options.person_to_patient_mapping
+            root_folder = options.root_folder
+            upload_files = options.upload_files
+            mapping_dbdao = dbdao_module.DBDao(database_code, mapping.schema_name, admin_user)
+            
+            DicomServerAPI = importlib.import_module('api.DicomServerAPI').DicomServerAPI()
+
             for path in Path(root_folder).rglob('*.dcm'):
                 if path.is_file() and path.suffix == '.dcm':
                     # 3. Extract data elements and insert into image_occurrence table
                     # 4. Extract data elements and insert into dicom_file_metadata table
-                    image_occurrence_id, sop_instance_id = process_file_metadata(path, cdm_dbdao, mi_dbdao, vocab_dbdao)
+                    image_occurrence_id, sop_instance_id = process_file_metadata(path, cdm_dbdao, mi_dbdao, vocab_dbdao, 
+                                                                                 mapping_dbdao, missing_person_id_options, mapping)
                     if upload_files:
                         image_occurrence_id, sop_instance_id = upload_file_to_server(dbdao=mi_dbdao, filepath=path, 
                                                                                       image_occurrence_id=image_occurrence_id, 
@@ -82,7 +86,8 @@ def load_data_elements(dbdao):
     
 
 @task(log_prints=True)
-def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao):
+def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao, mapping_dbdao,
+                          missing_person_id_option, person_to_patient_mapping):
     '''
     Prefect task that processes the tags of a DICOM file and inserts into medical imaging schema
     '''
@@ -98,12 +103,12 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao):
             acquisition_date = f.get("AcquisitionDate", None) # [0x0008, 0x0022]
             patient_id = f.get("PatientID", None) # [0x0010, 0x0020]
 
-            # only process files with valid attributes
+            # Returns below attributes as a list if value is None
             check_none_attributes(study_instance_uid=study_instance_uid,
-                                    series_instance_uid=series_instance_uid,
-                                    sop_instance_uid=sop_instance_uid,
-                                    acquisition_date=acquisition_date,
-                                    patient_id=patient_id)
+                                  series_instance_uid=series_instance_uid,
+                                  sop_instance_uid=sop_instance_uid,
+                                  acquisition_date=acquisition_date,
+                                  patient_id=patient_id)
             
             instance_number = f.get("InstanceNumber", None) # [0x0020, 0x0013]
             study_date = f.get("StudyDate", None) # [0x0008, 0x0020] 
@@ -112,16 +117,10 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao):
             anatomic_site = f.get("BodyPartExamined", None) # [0x0018, 0x0015]
             
             
-            # retrieve person_id from person table
-            patient_age = f.get("PatientAge", None) # [0x0010, 0x1010]
-            patient_dob = f.get("PatientBirthDate", None) # [0x0010, 0x0030]
-            patient_sex = f.get("PatientSex", None) # [0x0010, 0x0040]
-            patient_race = f.get("EthnicGroup", None) # [0x0010, 0x2160]
-            
-            person_id = get_person_id(cdm_dbdao, patient_id, patient_dob, study_date,
-                                    patient_sex, patient_age, patient_race)
-            
-            
+            # retrieve person_id using person_to_patient_mapping
+            person_id = get_person_id(mapping_dbdao, patient_id, missing_person_id_option, person_to_patient_mapping)
+
+
             # insert record into procedure_occurrence table
             procedure_occurrence_id = insert_procedure_occurence_table(cdm_dbdao, person_id, study_date, 
                                                                        study_description)
@@ -143,7 +142,7 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao):
             logger.info(f"Processing data elements for ingestion..")
             for data_elem in f:
                 if data_elem.keyword == "PixelData":
-                    logger.info(f"Excluding Pixel Data with tag {data_elem.tag}")
+                    logger.info(f"Excluding Pixel Data")
                 else:
                     process_data_element(mi_dbdao, data_elem, image_occurrence_id,
                                             sop_instance_uid, instance_number, 
@@ -155,13 +154,12 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao):
                 raise Exception("No metadata to insert")
             else: 
                 logger.info(f"Inserting {no_of_attributes} metadata into 'dicom_file_metadata' table..")
-                for _data in file_data_to_insert:
-                    try:
-                        mi_dbdao.insert_values_into_table("dicom_file_metadata", _data)
-                    except Exception as e:
-                        logger.error(_data)
-                        logger.error(e)
-                        
+                try:
+                    mi_dbdao.insert_values_into_table("dicom_file_metadata", file_data_to_insert)
+                except Exception as e:
+                    logger.error(f"Failed to insert metadata for into table for '{path.name}' file: {e}")
+                    raise e
+                    
         except Exception as e:
             logger.error(e)
             raise(e)
@@ -200,7 +198,6 @@ def process_data_element(dbdao, data_elem: DataElement, image_occurrence_id: int
     record = {
         "metadata_id": metadata_id,
         "data_element_id": data_element_id,
-        "ingested_datetime": datetime.now(),
         "metadata_source_tag": tag_as_str_tuple,
         "metadata_source_group_number": f"{data_elem.tag.group:04X}",
         "metadata_source_keyword": keyword,
@@ -215,7 +212,9 @@ def process_data_element(dbdao, data_elem: DataElement, image_occurrence_id: int
         "private_creator": private_creator,
         "image_occurrence_id": image_occurrence_id,
         "sop_instance_id": sop_instance_id,
-        "instance_number": instance_number
+        "instance_number": instance_number,
+        "etl_created_datetime": datetime.now(),
+        "etl_modified_datetime": datetime.now()
     }
     
     if is_sequence is False:
@@ -252,7 +251,7 @@ def upload_file_to_server(dbdao, filepath: str, image_occurrence_id: int,
         
         logger.info(f"Uploading '{filename}' to DICOM server..")
         orthanc_instance_id = orthanc_a.upload_file(filepath)
-        logger.info(f"orthanc_instance_id is '{orthanc_instance_id}'")
+        logger.info(f"Orthasnc instance id is '{orthanc_instance_id}'")
         
         if orthanc_instance_id:
             # file renamed in storage when uploaded
