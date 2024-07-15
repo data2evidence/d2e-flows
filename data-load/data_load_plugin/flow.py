@@ -1,11 +1,16 @@
-import importlib
 import sys
+import csv
+import importlib
+import numpy as np
+import pandas as pd
+from io import StringIO
+import sqlalchemy as sql
+
 from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
-import sqlalchemy as sql
+
 from data_load_plugin.utils.types import DataloadOptions
-import pandas as pd
-import numpy as np
+
 
 def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
@@ -45,14 +50,14 @@ def data_load_plugin(options: DataloadOptions):
                 
             except Exception as e:
                 trans.rollback()
-                logger.error(e)
+                logger.error(f"Failed to truncate table '{schema}.{t}': {e}")
                 raise e
             else:
-                logger.info(f"Table {t} truncated successfully!")
+                logger.info(f"Table '{schema}.{t}' truncated successfully!")
 
     for file in files:
         try:
-            logger.info(f"Reading data from file {file.table_name}")
+            logger.info(f"Reading data from file '{file.table_name}'")
             # Load data from CSV file
             for i, data in read_csv(file.path, escapechar=escape_char, header=header, delimiter=options.delimiter, encoding=options.encoding, chunksize=chunksize):
                 data = format_vocab_synpuf_data(data, file.table_name)
@@ -66,14 +71,14 @@ def data_load_plugin(options: DataloadOptions):
                         else:
                             table_column_names = [column_name[0] for column_name in res]
                             common_columns = list(set(csv_column_names) & set(table_column_names))
-                            data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize)
+                            data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy)
                 elif header is None:
-                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
+                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy)
         except Exception as e:
-            logger.error(f'Data load failed for the table {file.table_name} at the chunk index: {i}  with error: {e}')
+            logger.error(f"'Data load failed for the table '{schema}.{file.table_name}' at the chunk index: {i}  with error: {e}")
             raise e
         else:
-            logger.info(f"Data load succeeded for table {file.table_name}!")
+            logger.info(f"Data load succeeded for table '{schema}.{file.table_name}'!")
 
 def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
     i = 1
@@ -142,3 +147,21 @@ def format_vocab_synpuf_data(data, table_name):
     data = data.replace("N/A", "N/A")
     data = data.rename(columns=str.lower)
     return data
+
+def psql_insert_copy(table, conn, keys, data_iter):
+    dbapi_conn = conn.connection
+    with dbapi_conn.cursor() as cur:
+        s_buf = StringIO()
+        writer = csv.writer(s_buf)
+        writer.writerows(data_iter)
+        s_buf.seek(0)
+
+        columns = ', '.join('"{}"'.format(k) for k in keys)
+        if table.schema:
+            table_name = '{}.{}'.format(table.schema, table.name)
+        else:
+            table_name = table.name
+
+        sql = 'COPY {} ({}) FROM STDIN WITH CSV'.format(
+            table_name, columns)
+        cur.copy_expert(sql=sql, file=s_buf)
