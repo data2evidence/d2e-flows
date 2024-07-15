@@ -1,6 +1,0 @@
-{
-    "name": "r_cdm_plugin",
-    "type": "r_cdm",
-    "entrypoint": "r_cdm_plugin/flow.py",
-    "tags": ["omop_cdm"]
-  }

@@ -1,21 +1,21 @@
 from pydantic import BaseModel
 
-class cohortJsonType(BaseModel):
+class CohortJsonType(BaseModel):
     id: int
     name: str
-    createdDate: int
-    modifiedDate: int
-    hasWriteAccess: bool
+    created_date: int
+    modified_date: int
+    has_write_access: bool
     tags: list
-    expressionType: str
+    expression_type: str
     expression: dict
 
-class cohortGeneratorOptionsType(BaseModel):
-    databaseCode: str
-    schemaName: str
-    vocabSchemaName: str
-    cohortJson: cohortJsonType
-    datasetId: str
+class CohortGeneratorOptionsType(BaseModel):
+    database_code: str
+    schema_name: str
+    vocab_schema_name: str
+    cohort_json: CohortJsonType
+    dataset_id: str
     description: str
     owner: str
     token: str

@@ -102,10 +102,10 @@ MEILISEARCH_INDEX_CONFIG = {
     },
 }
 
-class meilisearchAddIndexType(BaseModel):
-    databaseCode: str
-    vocabSchemaName: str
-    tableName: str
+class MeilisearchAddIndexType(BaseModel):
+    database_code: str
+    vocab_schema_name: str
+    table_name: str
     
     @property
     def meilisearch_index_config(self) -> Dict:

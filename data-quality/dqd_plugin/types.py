@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 
 
-class dqdBaseOptionsType(BaseModel):
+class DqdBaseOptionsType(BaseModel):
     schemaName: str
     databaseCode: str
     cdmVersionNumber: str
@@ -10,7 +10,7 @@ class dqdBaseOptionsType(BaseModel):
     releaseDate: str
 
 
-class dqdOptionsType(dqdBaseOptionsType):
+class DqdOptionsType(DqdBaseOptionsType):
     cohortDefinitionId: Optional[str]
     checkNames: Optional[List[str]]
     cohortDatabaseSchema: Optional[str]

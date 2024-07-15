@@ -101,11 +101,11 @@ MEILISEARCH_INDEX_CONFIG = {
     },
 }
 
-class meilisearchAddIndexWithEmbeddingsType(BaseModel):
+class MeilisearchAddIndexWithEmbeddingsType(BaseModel):
     token: str
-    databaseCode: str
-    vocabSchemaName: str
-    tableName: str
+    database_code: str
+    vocab_schema_name: str
+    table_name: str
     
     @property
     def meilisearch_index_config(self) -> Dict:
