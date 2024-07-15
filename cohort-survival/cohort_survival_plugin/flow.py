@@ -11,19 +11,19 @@ def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
     sys.path.append("/app/pysrc")
     r_libs_user_directory = os.getenv("R_LIBS_USER")
-    # force=TRUE for fresh install everytime flow is run
     if r_libs_user_directory:
         ShellOperation(
             commands=[
-                f"Rscript -e \"remotes::install_version('snakecase', quiet=FALSE, upgrade='never', force=TRUE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('broom', quiet=FALSE, upgrade='never', force=TRUE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('visOmopResults', quiet=FALSE, upgrade='never', force=TRUE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('dbplyr', version='2.4.0', quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('rjson', quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('omopgenerics', version='0.2.1', quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('CDMConnector', version='1.4.0', quiet=FALSE, upgrade='never', force=TRUE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('PatientProfiles', quiet=FALSE, upgrade='never', force=TRUE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('CohortSurvival', version='0.5.1', quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('snakecase', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('broom', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('visOmopResults', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('dbplyr', version='2.4.0', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('rjson', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('omopgenerics', version='0.2.1', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('CDMConnector', version='1.4.0', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('PatientProfiles', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('CohortSurvival', version='0.5.1', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+                f"Rscript -e \"remotes::install_version('RPostgres', version='1.4.5', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
             ]
         ).run()
     else:
