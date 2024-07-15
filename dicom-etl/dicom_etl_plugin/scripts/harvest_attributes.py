@@ -61,11 +61,12 @@ for child in root:
 
                     # Save the output as a DataFrame
                     df = pd.DataFrame(rows_data, columns=column_names)
+                    
+                    # Add extra columns required for dicom_data_element_table
+                    df['Is Retired'] = df['Retired'].notna()
+                    df['Is Private'] = False
+                    df.to_csv('part6_attributes.csv', index=False)
         else:
             print("Node with label='6' not found.")
 
 
-df['Is Retired'] = df['Retired'].notna()
-df['Is Private'] = False
-
-df.to_csv('part6_attributes.csv', index=False)
