@@ -45,23 +45,26 @@
 
 
 ## Flow Structure
-  - Load DICOM vocabulary 
-    - `Vocabulary` table
-    - `Concept Class` table
-    - `Concept` table 
-  - Load DICOM Data Elements in `dicom_data_element` table
-  - Process each DICOM file in supplied folder parameter
-    - Extract attributes to get/create `person` record
-      - Use `
-    - Extract attributes to create `procedure_occurrence` record
-      - Requires `person_id`
-    - Extract attributes to create `image_occurrence` record
-      - Requires `person_id` and `procedure_occurrence_id`
-    - Extract attributes and ingest into `dicom_file_metadata` table
-      - Requires `image_occurrence_id`
-  - Upload file to DICOM server (Optional) 
-    - Store uploaded metadata in `file_upload_metadata` table
-    - Requires `image_occurrence_id`, `sop_instance_id`
+### Load Vocabulary
+- Load DICOM vocabulary 
+  - `Vocabulary` table
+  - `Concept Class` table
+  - `Concept` table 
+- Load DICOM Data Elements in `dicom_data_element` table
+
+### Ingest Metadata Flow 
+For each DICOM file in supplied folder parameter `dicom_files_abs_path`
+1. Extract `patient_id` attribute and use to get corresponding `person_id` from mapping table
+2. Insert record in `procedure_occurrence` table
+3. Extract attributes to create `image_occurrence` record
+   - Extract `modality` and `body_part_examined` attributes
+   - Get standard concept id using a 1:1 match of the concept name
+   - Use concept id 0 if no matching concept found
+4. Extract all attributes except Pixel Data and ingest into `dicom_file_metadata` table
+    - Requires `image_occurrence_id`
+5. Upload file to DICOM server (Optional) 
+  - Store uploaded metadata in `file_upload_metadata` table
+  - Requires `image_occurrence_id`, `sop_instance_id` for traceability
 
 ## DICOM Vocabulary Source / Folder Structure
 - CSV files for DICOM vocabularies, concepts, and data elements sourced from https://github.com/paulnagy/DICOM2OMOP are stored in `external` folder
