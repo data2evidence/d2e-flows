@@ -29,7 +29,7 @@ def setup_plugin():
     
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def dicom_data_load_plugin(options: DICOMETLOptions):
+def dicom_etl_plugin(options: DICOMETLOptions):
     setup_plugin()
     logger = get_run_logger()
 
@@ -37,7 +37,8 @@ def dicom_data_load_plugin(options: DICOMETLOptions):
     database_code = options.database_code
     medical_imaging_schema_name = options.medical_imaging_schema_name
     vocab_schema_name = options.vocab_schema_name
-    cdm_schema_name = options.cdm_schema_name    
+    cdm_schema_name = options.cdm_schema_name
+    to_truncate = options.to_truncate
 
     admin_user = importlib.import_module('utils.types').PG_TENANT_USERS.ADMIN_USER
     dbdao_module = importlib.import_module('dao.DBDao')
@@ -45,14 +46,13 @@ def dicom_data_load_plugin(options: DICOMETLOptions):
     mi_dbdao = dbdao_module.DBDao(database_code, medical_imaging_schema_name, admin_user)
     vocab_dbdao = dbdao_module.DBDao(database_code, vocab_schema_name, admin_user)
     cdm_dbdao = dbdao_module.DBDao(database_code, cdm_schema_name, admin_user)
-
     
     match flow_action_type:
         case FlowActionType.LOAD_VOCAB:
             # 1. Populate vocabulary and concept tables with DICOM
             # 2. Populate dicom data element reference table
-            setup_vocab(vocab_dbdao)
-            load_data_elements(mi_dbdao)
+            setup_vocab(vocab_dbdao, to_truncate)
+            load_data_elements(mi_dbdao, to_truncate)
             
         case FlowActionType.INGEST_METADATA:
             missing_person_id_options = options.missing_person_id_options
@@ -65,8 +65,9 @@ def dicom_data_load_plugin(options: DICOMETLOptions):
 
             for path in Path(dicom_files_abs_path).rglob('*.dcm'):
                 if path.is_file() and path.suffix == '.dcm':
-                    # 3. Extract data elements and insert into image_occurrence table
-                    # 4. Extract data elements and insert into dicom_file_metadata table
+                    # 1. Extract data elements and insert into image_occurrence table
+                    # 2. Extract data elements and insert into dicom_file_metadata table
+                    # 3. (Optional) Upload file to DICOM server
                     image_occurrence_id, sop_instance_id = process_file_metadata(path, cdm_dbdao, mi_dbdao, vocab_dbdao, 
                                                                                  mapping_dbdao, missing_person_id_options, mapping)
                     if upload_files:
@@ -76,16 +77,16 @@ def dicom_data_load_plugin(options: DICOMETLOptions):
                                                                                      api=DicomServerAPI)
             
 @task(log_prints=True)
-def setup_vocab(dbdao):
-    # import csv if table is empty
-    update_vocabulary_table(dbdao)
-    update_concept_class_table(dbdao)
-    update_concept_table(dbdao)
+def setup_vocab(dbdao, to_truncate: bool):
+    task_logger = get_run_logger()
+    update_vocabulary_table(dbdao, to_truncate, task_logger)
+    update_concept_class_table(dbdao, to_truncate, task_logger)
+    update_concept_table(dbdao, to_truncate, task_logger)
     
 @task(log_prints=True)
-def load_data_elements(dbdao):
-    populate_data_elements(dbdao)
-    
+def load_data_elements(dbdao, to_truncate: bool):
+    task_logger = get_run_logger()
+    update_dicom_data_element_table(dbdao, to_truncate, task_logger)
 
 @task(log_prints=True)
 def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao, mapping_dbdao,
@@ -97,86 +98,68 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao, mapping_d
     logger.info(f"Processing metadata for '{path.name}'..")
     file_data_to_insert = []
     with dcmread(path) as f:
-        try:
-            study_instance_uid = f.get("StudyInstanceUID", None) # [0x0020, 0x000D]
-            series_instance_uid = f.get("SeriesInstanceUID", None) # [0x0020, 0x000E]
-            
-            sop_instance_uid = f.get("SOPInstanceUID", None) # [0x0008, 0x0018]
-            acquisition_date = f.get("AcquisitionDate", None) # [0x0008, 0x0022]
-            patient_id = f.get("PatientID", None) # [0x0010, 0x0020]
-
-            # Returns below attributes as a list if value is None
-            check_none_attributes(study_instance_uid=study_instance_uid,
-                                  series_instance_uid=series_instance_uid,
-                                  sop_instance_uid=sop_instance_uid,
-                                  acquisition_date=acquisition_date,
-                                  patient_id=patient_id)
-            
-            instance_number = f.get("InstanceNumber", None) # [0x0020, 0x0013]
-            study_date = f.get("StudyDate", None) # [0x0008, 0x0020] 
-            study_description = f.get("StudyDescription", None) # [0x0008, 0x1030] 
-            modality_code = f.get("Modality", None)  # [0x0008, 0x0060]
-            anatomic_site = f.get("BodyPartExamined", None) # [0x0018, 0x0015]
-            
-            
-            # retrieve person_id using person_to_patient_mapping
-            person_id = get_person_id(mapping_dbdao, patient_id, missing_person_id_option, person_to_patient_mapping)
-
-
-            # insert record into procedure_occurrence table
-            procedure_occurrence_id = insert_procedure_occurence_table(cdm_dbdao, person_id, study_date, 
-                                                                       study_description)
-
-            # ingest into image_occurrence table
-            image_occurrence_id = insert_image_occurrence_table(
-                vocab_dbdao,
-                mi_dbdao,
-                modality_code,
-                anatomic_site,
-                study_instance_uid,
-                series_instance_uid,
-                acquisition_date,
-                person_id,
-                procedure_occurrence_id
-            )
+        study_instance_uid = f.get("StudyInstanceUID", None) # [0x0020, 0x000D]
+        series_instance_uid = f.get("SeriesInstanceUID", None) # [0x0020, 0x000E]
         
-            # ingest into dicom_file_metadata table
-            logger.info(f"Processing data elements for ingestion..")
-            for data_elem in f:
-                if data_elem.keyword == "PixelData":
-                    logger.info(f"Excluding Pixel Data")
-                else:
-                    # memoizing results to the file_data_to_insert
-                    process_data_element(mi_dbdao, data_elem, image_occurrence_id,
-                                            sop_instance_uid, instance_number, 
-                                            file_data_to_insert)
-                    
-            no_of_attributes = len(file_data_to_insert)
-            
-            if no_of_attributes == 0:
-                raise Exception("No metadata to insert")
-            else: 
-                logger.info(f"Inserting {no_of_attributes} metadata into 'dicom_file_metadata' table..")
-                try:
-                    mi_dbdao.insert_values_into_table("dicom_file_metadata", file_data_to_insert)
-                except Exception as e:
-                    logger.error(f"Failed to insert metadata for into table for '{path.name}' file: {e}")
-                    raise e
-                    
-        except Exception as e:
-            logger.error(e)
-            raise(e)
-        else:
-            return image_occurrence_id, sop_instance_uid
+        sop_instance_uid = f.get("SOPInstanceUID", None) # [0x0008, 0x0018]
+        acquisition_date = f.get("AcquisitionDate", None) # [0x0008, 0x0022]
+        patient_id = f.get("PatientID", None) # [0x0010, 0x0020]
+
+        # Returns below attributes as a list if value is None
+        check_none_attributes(study_instance_uid=study_instance_uid,
+                                series_instance_uid=series_instance_uid,
+                                sop_instance_uid=sop_instance_uid,
+                                acquisition_date=acquisition_date,
+                                patient_id=patient_id)
+        
+        instance_number = f.get("InstanceNumber", None) # [0x0020, 0x0013]
+        study_date = f.get("StudyDate", None) # [0x0008, 0x0020] 
+        study_description = f.get("StudyDescription", None) # [0x0008, 0x1030] 
+        modality_code = f.get("Modality", None)  # [0x0008, 0x0060]
+        anatomic_site = f.get("BodyPartExamined", None) # [0x0018, 0x0015]
+        
+        
+        # retrieve person_id using person_to_patient_mapping
+        person_id = get_person_id(mapping_dbdao, patient_id, missing_person_id_option, person_to_patient_mapping)
+
+
+        # insert record into procedure_occurrence table
+        procedure_occurrence_id = insert_procedure_occurence_table(cdm_dbdao, person_id, study_date, 
+                                                                    study_description)
+
+        # ingest into image_occurrence table
+        image_occurrence_id = insert_image_occurrence_table(
+            vocab_dbdao,
+            mi_dbdao,
+            modality_code,
+            anatomic_site,
+            study_instance_uid,
+            series_instance_uid,
+            acquisition_date,
+            person_id,
+            procedure_occurrence_id
+        )
+        
+        # ingest into dicom_file_metadata table
+        logger.info(f"Processing data elements for ingestion..")
+        for data_elem in f:
+            if data_elem.keyword == "PixelData":
+                logger.info(f"Excluding ingestion of Pixel Data from file '{path.name}'")
+            else:
+                # memoizing results to the file_data_to_insert
+                process_data_element(mi_dbdao, logger, data_elem, image_occurrence_id,
+                                        sop_instance_uid, instance_number, path)
+    return image_occurrence_id, sop_instance_uid
+
     
             
 
-def process_data_element(dbdao, data_elem: DataElement, image_occurrence_id: int, 
-                         sop_instance_id: str, instance_number: int,
-                         metadata_list: List, sequence_id: str = None, 
-                         dataset_id: str = None) -> bool:
+def process_data_element(dbdao, logger, data_elem: DataElement, image_occurrence_id: int, 
+                         sop_instance_id: str, instance_number: int, path: str,
+                         sequence_id: str = None, dataset_id: str = None) -> bool:
     data_elem_json = data_elem.to_json_dict(bulk_data_element_handler=None, 
                                             bulk_data_threshold=1024) # 1024 is the default used by pydicom for datasets.to_json_dict()
+    metadata_table = "dicom_file_metadata"
     
     default_factory = lambda: None
     record = defaultdict(default_factory)
@@ -221,11 +204,15 @@ def process_data_element(dbdao, data_elem: DataElement, image_occurrence_id: int
     }
     
     if is_sequence is False:
-        record["metadata_source_value"] = json.dumps(data_element_source_value)
-        metadata_list.append(record)
+        try:
+            record["metadata_source_value"] = json.dumps(data_element_source_value)
+            dbdao.insert_values_into_table("dicom_file_metadata", record)
+        except Exception as e:
+            logger.error(f"Failed to insert metadata for into table for file '{path.name}': {e}")
+            raise e
     else:
         # insert sequence as a data element 
-        metadata_list.append(record)
+        dbdao.insert_values_into_table(metadata_table, record)
         
         # handle nested datasets and data elements
         for dataset in data_elem:
@@ -233,13 +220,13 @@ def process_data_element(dbdao, data_elem: DataElement, image_occurrence_id: int
             dataset_id = str(uuid4())
             for nested_data_elem in dataset:
                 process_data_element(dbdao=dbdao,
+                                     logger=logger,
                                      data_elem=nested_data_elem, 
                                      image_occurrence_id=image_occurrence_id,
                                      sop_instance_id=sop_instance_id,
                                      instance_number=instance_number,
-                                     metadata_list=metadata_list, 
-                                     sequence_id=metadata_id, dataset_id=dataset_id)
-
+                                     path=path, sequence_id=metadata_id, 
+                                     dataset_id=dataset_id)
 
 @task(log_prints=True)
 def upload_file_to_server(filepath: str, image_occurrence_id: int, 
@@ -247,39 +234,36 @@ def upload_file_to_server(filepath: str, image_occurrence_id: int,
     logger = get_run_logger()   
     dicom_server_url = os.getenv("DICOM_SERVER__API_BASE_URL")
     
-    try:
-        filename = filepath.name
-        logger.info("Connecting to DICOM server..")
-        orthanc_a = OrthancApiClient(dicom_server_url, user='', pwd='')
+
+    filename = filepath.name
+    logger.info("Connecting to DICOM server..")
+    orthanc_a = OrthancApiClient(dicom_server_url, user='', pwd='')
+    
+    logger.info(f"Uploading '{filename}' to DICOM server..")
+    orthanc_instance_id = orthanc_a.upload_file(filepath)
+    logger.info(f"Orthasnc instance id is '{orthanc_instance_id}'")
+    
+    if orthanc_instance_id:
+        # because file is renamed when uploaded to dicom server
+        uploaded_filename = api.get_uploaded_file_name(orthanc_instance_id[0])
+        logger.info(f"'{filename}' was renamed to '{uploaded_filename}' in DICOM server!")
         
-        logger.info(f"Uploading '{filename}' to DICOM server..")
-        orthanc_instance_id = orthanc_a.upload_file(filepath)
-        logger.info(f"Orthasnc instance id is '{orthanc_instance_id}'")
+        task_run_context = TaskRunContext.get().task_run.dict()
+        task_run_id = str(task_run_context.get("id"))
+        flow_run_id = str(task_run_context.get("flow_run_id"))
         
-        if orthanc_instance_id:
-            # because file is renamed when uploaded to dicom server
-            uploaded_filename = api.get_uploaded_file_name(orthanc_instance_id[0])
-            logger.info(f"'{filename}' was renamed to '{uploaded_filename}' in DICOM server!")
-            
-            task_run_context = TaskRunContext.get().task_run.dict()
-            task_run_id = str(task_run_context.get("id"))
-            flow_run_id = str(task_run_context.get("flow_run_id"))
-            
-            # for traceability
-            file_upload_metadata = {
-                "task_run_id": task_run_id,
-                "flow_run_id": flow_run_id,
-                "original_filename": filename,
-                "instance_id": orthanc_instance_id,
-                "uploaded_filename": uploaded_filename,
-                "uploaded_datetime": datetime.now(),
-                "image_occurrence_id": image_occurrence_id,
-                "sop_instance_id": sop_instance_id
-            }
-        else:
-            raise Exception(f"Failed to upload file '{filename}'")
-    except Exception as e:
-        logger.error(e)
-        raise e
-    else: 
-        return file_upload_metadata
+        # for traceability
+        file_upload_metadata = {
+            "task_run_id": task_run_id,
+            "flow_run_id": flow_run_id,
+            "original_filename": filename,
+            "instance_id": orthanc_instance_id,
+            "uploaded_filename": uploaded_filename,
+            "uploaded_datetime": datetime.now(),
+            "image_occurrence_id": image_occurrence_id,
+            "sop_instance_id": sop_instance_id
+        }
+    else:
+        logger.error()
+        raise Exception(f"Orthanc_instance_id is {orthanc_instance_id}. Failed to upload file '{filename}'")
+    return file_upload_metadata

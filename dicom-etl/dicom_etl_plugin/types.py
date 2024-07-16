@@ -6,8 +6,8 @@ from enum import Enum
 PATH_TO_EXTERNAL_FILES = r"dicom_etl_plugin/external"
 
 class FlowActionType(str, Enum):
-    INGEST_METADATA = "insert_metadata_data"
-    LOAD_VOCAB = "Load DICOM vocabularies and concepts"
+    INGEST_METADATA = "ingest_metadata"
+    LOAD_VOCAB = "load_vocab"
     
 class MissingPersonIDOptions(str, Enum):
     SKIP = "skip" # skip data ingestion
@@ -25,7 +25,8 @@ class DICOMETLOptions(BaseModel):
     medical_imaging_schema_name: str
     cdm_schema_name: str
     vocab_schema_name: str
-    dicom_files_abs_path: str
+    to_truncate: Optional[bool] = False
+    dicom_files_abs_path: Optional[str]
     upload_files: Optional[bool] = False
     missing_person_id_options: Optional[MissingPersonIDOptions] # How to handle on missing person id
     person_to_patient_mapping: Optional[PersonPatientMapping]

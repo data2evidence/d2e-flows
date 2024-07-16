@@ -52,19 +52,27 @@ def get_image_occurrence_concept_ids(modality_code: str, anatomic_site: str, voc
     return modality_concept_id, anatomic_site_concept_id
 
 
-def update_vocabulary_table(vocab_dbdao):
+def update_vocabulary_table(dbdao, to_truncate: bool, logger):
     '''
     Add DICOM Vocabulary to Vocabulary table
     '''
     vocabulary_table = "vocabulary"
-    vocab_id_column_name = ["vocabulary_id"]
-    vocab_id_column = vocab_dbdao.get_sqlalchemy_columns(table_name=vocabulary_table.casefold(), column_names=vocab_id_column_name)
+    vocab_column_names = ["vocabulary_id"]
+    vocab_columns = dbdao.get_sqlalchemy_columns(table_name=vocabulary_table.casefold(), column_names=vocab_column_names)
     
-    sql_statement = sql.select(sql.func.count(vocab_id_column.get("vocabulary_id"))) \
-                    .where(sql.func.upper(vocab_id_column.get("vocabulary_id")) == "DICOM")
-                    
-    res = vocab_dbdao.execute_sqlalchemy_statement(sql_statement, vocab_dbdao.get_single_value)
-    if res == 0:
+    if to_truncate:
+        logger.info(f"Truncating '{dbdao.schema_name}.{vocabulary_table}' table..")
+        delete_conditions = [
+            sql.func.upper(vocab_columns.get("vocabulary_id")) == "DICOM"
+        ]
+        try:
+            dbdao.delete_records(vocabulary_table, delete_conditions)
+            logger.info(f"Successfully truncated DICOM vocabulary from '{dbdao.schema_name}.{vocabulary_table}' table..")
+        except Exception as e:
+            logger.error(f"Failed to truncate DICOM vocabulary from '{dbdao.schema_name}.{vocabulary_table}' table")
+            raise e
+    try:
+        logger.info(f"Populating '{dbdao.schema_name}.{vocabulary_table}' table..")
         values_to_insert = {
             "vocabulary_id": "DICOM",
             "vocabulary_name": "Digital Imaging and Communications in Medicine (National Electrical Manufacturers Association)",
@@ -72,43 +80,68 @@ def update_vocabulary_table(vocab_dbdao):
             "vocabulary_version": "NEMA Standard PS3", 
             "vocabulary_concept_id": 2128000000
         }
-
-        vocab_dbdao.insert_values_into_table(vocabulary_table, values_to_insert)
+        dbdao.insert_values_into_table(vocabulary_table, values_to_insert)
+    except Exception as e:
+        logger.error(f"Failed to insert DICOM Vocabulary into'{dbdao.schema_name}.{vocabulary_table}' table!")
+        raise e
     else:
-        print(f"Skip updating '{vocabulary_table}'. Table already populated with '{res}' row(s) of DICOM vocabulary")
+        logger.info(f"Successfully inserted DICOM Vocabulary into '{dbdao.schema_name}.{vocabulary_table}' table!")
 
-def update_concept_class_table(vocab_dbdao):    
+
+def update_concept_class_table(dbdao, to_truncate: bool, logger):
+    '''
+    Add DICOM Vocabulary to Concept Class table
+    '''  
     concept_class_table = "concept_class"
     concept_class_id_col_name = ["concept_class_id"]
-    concept_class_id_column = vocab_dbdao.get_sqlalchemy_columns(table_name=concept_class_table.casefold(), column_names=concept_class_id_col_name)
+    concept_class_id_column = dbdao.get_sqlalchemy_columns(table_name=concept_class_table.casefold(), column_names=concept_class_id_col_name)
     
-    # check if table contains dicom concept classes
-    sql_statement = sql.select(sql.func.count(concept_class_id_column.get("concept_class_id"))) \
-                        .where(concept_class_id_column.get("concept_class_id").contains("DICOM"))
-    res = vocab_dbdao.execute_sqlalchemy_statement(sql_statement, callback=vocab_dbdao.get_single_value)
+    if to_truncate:
+        logger.info(f"Truncating '{dbdao.schema_name}.{concept_class_table}' table..")
+        delete_conditions = [
+            sql.func.upper(concept_class_id_column.get("concept_class_id")).contains("DICOM")
+        ]
+        try:
+            dbdao.delete_records(concept_class_table, delete_conditions)
+            logger.info(f"Successfully truncated DICOM vocabulary from '{dbdao.schema_name}.{concept_class_table}' table..")
+        except Exception as e:
+            logger.error(f"Failed to truncate DICOM vocabulary from '{dbdao.schema_name}.{concept_class_table}' table")
+            raise e
 
-    if res == 0:
+    try:
+        logger.info(f"Populating '{dbdao.schema_name}.{concept_class_table}' table..")
         values_to_insert = [
             {"concept_class_id": "DICOM Attributes", "concept_class_name": "DICOM Attributes", "concept_class_concept_id": 2128000002},
             {"concept_class_id": "DICOM Value Sets", "concept_class_name": "DICOM Value Sets", "concept_class_concept_id": 2128000002}
         ]
-
-        vocab_dbdao.insert_values_into_table(concept_class_table, values_to_insert)
+        dbdao.insert_values_into_table(concept_class_table, values_to_insert)
+    except Exception as e:
+        logger.error(f"Failed to insert DICOM Vocabulary into'{dbdao.schema_name}.{concept_class_table}' table!")
+        raise e
     else:
-        print(f"Skip updating '{concept_class_table}'. Table already populated with '{res}' rows of DICOM concept classes")
+        logger.info(f"Successfully inserted DICOM Vocabulary into '{dbdao.schema_name}.{concept_class_table}' table!")
+
    
-def update_concept_table(vocab_dbdao):
+def update_concept_table(dbdao, to_truncate: bool, logger):
     concept_table = "concept"
     concept_column_names = ["vocabulary_id"]
-    concept_columns = vocab_dbdao.get_sqlalchemy_columns(table_name=concept_table.casefold(), column_names=concept_column_names)
+    concept_columns = dbdao.get_sqlalchemy_columns(table_name=concept_table.casefold(), column_names=concept_column_names)
 
-    # check if table contains dicom concepts
-    sql_statement = sql.select(sql.func.count(concept_columns.get("vocabulary_id"))) \
-                        .where(concept_columns.get("vocabulary_id") == "DICOM")
-    res = vocab_dbdao.execute_sqlalchemy_statement(sql_statement, callback=vocab_dbdao.get_single_value)
+    if to_truncate:
+        logger.info(f"Truncating '{dbdao.schema_name}.{concept_table}' table..")
+        delete_conditions = [
+            sql.func.upper(concept_columns.get("vocabulary_id")) == "DICOM"
+        ]
+        try:
+            dbdao.delete_records(concept_table, delete_conditions)
+            logger.info(f"Successfully truncated DICOM vocabulary from '{dbdao.schema_name}.{concept_table}' table..")
+        except Exception as e:
+            logger.error(f"Failed to truncate DICOM vocabulary from '{dbdao.schema_name}.{concept_table}' table")
+            raise e
 
-    if res == 0:
-        concept_df = pd.read_csv(r"dicom_etl_plugin/external/omop_table_staging.csv")
+    logger.info(f"Populating '{dbdao.schema_name}.{concept_table}' table..")
+    try:
+        concept_df = pd.read_csv(f"{PATH_TO_EXTERNAL_FILES}/omop_table_staging.csv")
         
         # Adjust its data types
         concept_df['valid_end_date'] = pd.to_datetime('1993-01-01')
@@ -126,26 +159,38 @@ def update_concept_table(vocab_dbdao):
 
         concept_df.to_sql(
             name=concept_table, 
-            con=vocab_dbdao.engine,
-            schema=vocab_dbdao.schema_name,
+            con=dbdao.engine,
+            schema=dbdao.schema_name,
             if_exists="append",
             index=False
         )
+    except Exception as e:
+        logger.error(f"Failed to insert DICOM Concepts into'{dbdao.schema_name}.{concept_table}' table!")
+        raise e
     else:
-        print(f"Skip updating'{concept_table}'. Table already populated with '{res}' rows of DICOM concepts")
-
+        logger.info(f"Successfully inserted DICOM Concepts into '{dbdao.schema_name}.{concept_table}' table!")
         
-def populate_data_elements(mi_dbdao):
+        
+def update_dicom_data_element_table(dbdao, to_truncate:bool, logger):
     data_element_table_name = "dicom_data_element"
-    column_names = ["data_element_tag"]
-    data_element_columns = mi_dbdao.get_sqlalchemy_columns(table_name=data_element_table_name, column_names=column_names)
-    
-    sql_statement = sql.select(sql.func.count(data_element_columns.get("data_element_tag")))
-    res = mi_dbdao.execute_sqlalchemy_statement(sql_statement, callback=mi_dbdao.get_single_value)
+    column_names = ["data_element_tag", "data_element_id"]
+    data_element_columns = dbdao.get_sqlalchemy_columns(table_name=data_element_table_name, column_names=column_names)
 
-    if res == 0:
-    # populate from csv if table is empty
-        df = pd.read_csv(r"dicom_etl_plugin/external/part6_attributes.csv")
+    if to_truncate:
+        logger.info(f"Truncating '{dbdao.schema_name}.{data_element_table_name}' table..")
+        delete_conditions = [
+            data_element_columns.get("data_element_id") > 0
+        ]
+        try:
+            dbdao.delete_records(data_element_table_name, delete_conditions)
+            logger.info(f"Successfully truncated '{dbdao.schema_name}.{data_element_table_name}' table..")
+        except Exception as e:
+            logger.error(f"Failed to truncate '{dbdao.schema_name}.{data_element_table_name}' table")
+            raise e
+
+    try:
+        logger.info(f"Populating '{dbdao.schema_name}.{data_element_table_name}' table from csv..")
+        df = pd.read_csv(f"{PATH_TO_EXTERNAL_FILES}/part6_attributes.csv")
         
         column_mapping = {
             "Tag": "data_element_tag",
@@ -165,13 +210,16 @@ def populate_data_elements(mi_dbdao):
         
         df.to_sql(
             name=data_element_table_name,
-            con=mi_dbdao.engine,
-            schema=mi_dbdao.schema_name,
+            con=dbdao.engine,
+            schema=dbdao.schema_name,
             if_exists="append",
             index=False
         )
+    except Exception as e:
+        logger.error(f"Failed to populate '{dbdao.schema_name}.{data_element_table_name}' table!")
+        raise e
     else:
-        print(f"Skip updating '{data_element_table_name}'. Table already populated with '{res}' rows of data elementss")
+        logger.info(f"Successfully populated '{dbdao.schema_name}.{data_element_table_name}' table!")
 
 
 def check_none_attributes(**kwargs):
@@ -215,9 +263,9 @@ def get_person_id(dbdao, patient_id: str, missing_person_id_option, mapping) -> 
     
     columns = dbdao.get_sqlalchemy_columns(table_name=table_name, column_names=column_names)
     
-    sql_statement = sql.select(columns.get("mapped_person_id")) \
+    sql_statement = sql.select(columns.get(mapped_person_id)) \
                         .where(sql.func.upper(columns.get(mapped_patient_id)) == sql.func.upper(patient_id))
-                        
+
     try:
         person_id = dbdao.execute_sqlalchemy_statement(sql_statement, callback=dbdao.get_single_value)
     except Exception as e:
@@ -293,7 +341,9 @@ def insert_data_element_table(dbdao, tag: str, name: str, keyword: str,
         "data_element_name": name,
         "data_element_keyword": keyword,
         "value_representation": value_representation,
-        "is_private": is_private
+        "is_private": is_private,
+        "etl_created_datetime": datetime.now(),
+        "etl_modified_datetime": datetime.now()
     }
     dbdao.insert_values_into_table(table_name, new_data_element_record)
 
