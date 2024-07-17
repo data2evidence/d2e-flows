@@ -2,7 +2,7 @@
 .
 
 ## Pre-requisities to running DICOM ETL Flow
-  - Create medical imaging schema with data load plugin (Link)
+  - [Create medical imaging schema with data load plugin](https://github.com/alp-os/d2e-plugins/tree/main/data-management)
   - Load DICOM vocab using this plugin
 
 ## How to run the plugin:
