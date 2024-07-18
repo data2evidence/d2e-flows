@@ -1,11 +1,16 @@
-import importlib
 import sys
+import csv
+import importlib
+import numpy as np
+import pandas as pd
+from io import StringIO
+import sqlalchemy as sql
+
 from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
-from sqlalchemy import create_engine, text
+
 from data_load_plugin.utils.types import DataloadOptions
-sys.path.append('/usr/local/lib/python3.10/dist-packages/pandas')
-import pandas as pd
+
 
 def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
@@ -32,40 +37,48 @@ def data_load_plugin(options: DataloadOptions):
     pg_port = conn_details["port"]
 
     # TODO: make below dialect agnostic
-    engine = create_engine(f'postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{database_name}')
+    engine = sql.create_engine(f'postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{database_name}')
 
     # Truncating
     with engine.connect() as connection:
         for t in tables_to_truncate:
             trans = connection.begin()
             try:
-                truncate_sql = text(f"delete from {schema}.{t}")
+                truncate_sql = sql.text(f"delete from {schema}.{t}")
                 connection.execute(truncate_sql)
                 trans.commit()
-                logger.info(f"Table {t} truncated successfully.")
+                
             except Exception as e:
                 trans.rollback()
-                logger.error(e)
+                logger.error(f"Failed to truncate table '{schema}.{t}': {e}")
+                raise e
+            else:
+                logger.info(f"Table '{schema}.{t}' truncated successfully!")
 
     for file in files:
         try:
-            logger.info(f"Reading data from file {file.table_name}")
+            logger.info(f"Reading data from file '{file.table_name}'")
             # Load data from CSV file
             for i, data in read_csv(file.path, escapechar=escape_char, header=header, delimiter=options.delimiter, encoding=options.encoding, chunksize=chunksize):
-                if(header):
+                data = format_vocab_synpuf_data(data, file.table_name)
+                if header == 0:
                     csv_column_names = data.columns.tolist()
-                    table_column_names = [col[0] for col in engine.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '%s'", file.table_name).fetchall()]
-
-                    common_columns = list(set(csv_column_names) & set(table_column_names))
-                    logger.info(f"Inserting data into table {file.table_name} at the chunk index of {i}")
-                    data = format_vocab_synpuf_data(data, file.table_name, logger=logger)
-                    data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize)
-                else:
-                    logger.info(f"Inserting data into table {file.table_name} at the chunk index of {i}")
-                    data = data = format_vocab_synpuf_data(data, file.table_name, logger=logger)
-                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
+                    sql_query = sql.text("SELECT column_name FROM information_schema.columns WHERE table_name = :x AND table_schema = :y;")
+                    with engine.connect() as connection:
+                        res = connection.execute(sql_query, {"x": file.table_name, "y": schema}).fetchall()
+                        if res is None:
+                            raise Exception(f"No columns found for table {file.table_name} in schema {schema}!")
+                        else:
+                            table_column_names = [column_name[0] for column_name in res]
+                            common_columns = list(set(csv_column_names) & set(table_column_names))
+                            data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy)
+                elif header is None:
+                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy)
         except Exception as e:
-            logger.error(f'Data load failed for the table {file.table_name} at the chunk index: {i}  with error: {e}')
+            logger.error(f"'Data load failed for the table '{schema}.{file.table_name}' at the chunk index: {i}  with error: {e}")
+            raise e
+        else:
+            logger.info(f"Data load succeeded for table '{schema}.{file.table_name}'!")
 
 def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
     i = 1
@@ -76,20 +89,33 @@ def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
     else:
         yield i, pd.read_csv(filepath)
         
-def format_vocab_synpuf_data(data, table_name, logger):
+def format_vocab_synpuf_data(data, table_name):
     match table_name:
         case "concept_relationship" | "concept" | "drug_strength":
-            logger.info(f"Cast column data in {table_name} dataframe")
             data["valid_start_date"] = pd.to_datetime(data["valid_start_date"].astype(str))
             data["valid_end_date"] =  pd.to_datetime(data["valid_end_date"].astype(str))
-        case "drug_strength":
-            data["amount_value"] = data["amount_value"].replace('', pd.NA)
-            data["amount_unit_concept_id"] = data["amount_unit_concept_id"].replace("", pd.NA)
-            data["box_size"] = data["box_size"].replace('', pd.NA)
-            data["numerator_value"] = data["numerator_value"].replace('', pd.NA)
-            data["numerator_unit_concept_id"] = data["numerator_unit_concept_id"].replace('', pd.NA)
-            data["denominator_unit_concept_id"] = data["denominator_unit_concept_id"].replace('', pd.NA)
-            data["denominator_value"] = data["denominator_value"].replace('', pd.NA)
+            if table_name == "drug_strength":
+                # Integer columns use pd.NA
+                data["amount_unit_concept_id"].replace('', pd.NA, inplace=True)
+                data["box_size"].replace('', pd.NA, inplace=True)
+                data["numerator_unit_concept_id"].replace('', pd.NA, inplace=True)
+                data["denominator_unit_concept_id"].replace('', pd.NA, inplace=True)
+                
+                # Float Columns use np.nan
+                data["amount_value"].replace('', np.nan, inplace=True)
+                data["numerator_value"].replace('', np.nan, inplace=True)
+                data["denominator_value"].replace('', np.nan, inplace=True)
+                
+                # Convert to integer
+                data["amount_unit_concept_id"] = pd.to_numeric(data["amount_unit_concept_id"], errors="coerce").astype('Int64')
+                data["box_size"] = pd.to_numeric(data["box_size"], errors="coerce").astype('Int64')
+                data["numerator_unit_concept_id"] = pd.to_numeric(data["numerator_unit_concept_id"], errors="coerce").astype('Int64')
+                data["denominator_unit_concept_id"] = pd.to_numeric(data["denominator_unit_concept_id"], errors="coerce").astype('Int64')
+                
+                # Convert to float
+                data["amount_value"] = pd.to_numeric(data["amount_value"], errors="coerce").astype('float64')
+                data["numerator_value"] = pd.to_numeric(data["numerator_value"], errors="coerce").astype('float64')
+                data["denominator_value"] = pd.to_numeric(data["denominator_value"], errors="coerce").astype('float64')
         case "location":
             data.drop(['COUNTRY_CONCEPT_ID', 'COUNTRY_SOURCE_VALUE', 'LATITUDE', 'LONGITUDE'], inplace=True, axis=1)
         case "care_site":
@@ -118,8 +144,24 @@ def format_vocab_synpuf_data(data, table_name, logger):
             data.drop(['YEAR_OF_BIRTH', 'SPECIALTY_SOURCE_VALUE', 'GENDER_SOURCE_VALUE'], inplace=True, axis=1)
         case "visit_occurrence":
             data.drop(['VISIT_START_DATETIME', 'VISIT_END_DATETIME', 'PROVIDER_ID', 'CARE_SITE_ID', 'VISIT_SOURCE_CONCEPT_ID', 'PRECEDING_VISIT_OCCURRENCE_ID'], inplace=True, axis=1)
-        case _:
-            print(f"No formating for table {table_name}")
     data = data.replace("N/A", "N/A")
     data = data.rename(columns=str.lower)
     return data
+
+def psql_insert_copy(table, conn, keys, data_iter):
+    dbapi_conn = conn.connection
+    with dbapi_conn.cursor() as cur:
+        s_buf = StringIO()
+        writer = csv.writer(s_buf)
+        writer.writerows(data_iter)
+        s_buf.seek(0)
+
+        columns = ', '.join('"{}"'.format(k) for k in keys)
+        if table.schema:
+            table_name = '{}.{}'.format(table.schema, table.name)
+        else:
+            table_name = table.name
+
+        sql = 'COPY {} ({}) FROM STDIN WITH CSV'.format(
+            table_name, columns)
+        cur.copy_expert(sql=sql, file=s_buf)
