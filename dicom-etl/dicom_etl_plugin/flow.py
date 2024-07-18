@@ -71,7 +71,7 @@ def dicom_etl_plugin(options: DICOMETLOptions):
                     image_occurrence_id, sop_instance_id = process_file_metadata(path, cdm_dbdao, mi_dbdao, vocab_dbdao, 
                                                                                  mapping_dbdao, missing_person_id_options, mapping)
                     if upload_files:
-                        image_occurrence_id, sop_instance_id = upload_file_to_server(filepath=path, 
+                        result = upload_file_to_server(filepath=path, 
                                                                                      image_occurrence_id=image_occurrence_id, 
                                                                                      sop_instance_id=sop_instance_id, 
                                                                                      api=DicomServerAPI)
