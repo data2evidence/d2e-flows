@@ -96,7 +96,6 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao, mapping_d
     '''
     logger = get_run_logger()
     logger.info(f"Processing metadata for '{path.name}'..")
-    file_data_to_insert = []
     with dcmread(path) as f:
         study_instance_uid = f.get("StudyInstanceUID", None) # [0x0020, 0x000D]
         series_instance_uid = f.get("SeriesInstanceUID", None) # [0x0020, 0x000E]
@@ -146,7 +145,6 @@ def process_file_metadata(path: str, cdm_dbdao, mi_dbdao, vocab_dbdao, mapping_d
             if data_elem.keyword == "PixelData":
                 logger.info(f"Excluding ingestion of Pixel Data from file '{path.name}'")
             else:
-                # memoizing results to the file_data_to_insert
                 process_data_element(mi_dbdao, logger, data_elem, image_occurrence_id,
                                         sop_instance_uid, instance_number, path)
     return image_occurrence_id, sop_instance_uid
@@ -228,7 +226,13 @@ def process_data_element(dbdao, logger, data_elem: DataElement, image_occurrence
                                      path=path, sequence_id=metadata_id, 
                                      dataset_id=dataset_id)
 
-@task(log_prints=True)
+@task(
+    log_prints=True,
+    result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")),
+    result_storage_key="dicom_etl_{flow_run.id}.json",
+    result_serializer=JSONSerializer(),
+    persist_result=True
+    )
 def upload_file_to_server(filepath: str, image_occurrence_id: int, 
                           sop_instance_id: str, api):     
     logger = get_run_logger()   
