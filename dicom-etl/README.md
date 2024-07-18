@@ -8,33 +8,57 @@
 ## How to run the plugin:
 
 - Trigger from jobs page e.g.
+
+### Load Dicom Vocab
 ```
 {
   "options": {
-    "flow_action_type": "ingest_metadata",
+    "toTruncate": true,
+    "uploadFiles": false,
+    "databaseCode": "alpdev_pg",
+    "cdmSchemaName": "cdmdefault",
+    "flowActionType": "load_vocab",
+    "vocabSchemaName": "cdmvocab",
+    "dicomFilesAbsPath": "",
+    "missingPersonIdOptions": "",
+    "personToPatientMapping": {
+      "tableName": "",
+      "schemaName": "",
+      "personIdColumnName": "",
+      "patientIdColumnName": ""
+    },
+    "medicalImagingSchemaName": "testdicom"
+  }
+}
+- Flow Action Type `load_vocab` to load DICOM vocab in vocab schema
+- With option to_truncate: False/True to truncate DICOM vocab
+```
+### Ingest Metadata
+
+```
+{
+  "options": {
+    "upload_files": true,
     "database_code": "alpdev_pg",
-    "medical_imaging_schema_name": "cdmmedicalimaging",
     "cdm_schema_name": "cdmdefault",
+    "flow_action_type": "ingest_metadata",
     "vocab_schema_name": "cdmvocab",
-    "dicom_files_abs_path": "/tmp/files/",
-    "to_truncate": False,
-    "upload_files": False,
+    "dicom_files_abs_path": "/app/pysrc",
     "missing_person_id_options": "use_id_zero",
-    "PersonPatientMapping": {
-      schema_name: "cdmmedicalimaging",
-      table_name: "mappingtable",
-      person_id_column_name: "source_person_id",
-      patient_id_column_name: "source_patient_id"
-    }
+    "person_to_patient_mapping": {
+      "table_name": "mappingtable",
+      "schema_name": "testdicom",
+      "person_id_column_name": "source_person_id",
+      "patient_id_column_name": "source_patient_id"
+    },
+    "medical_imaging_schema_name": "testdicom"
   }
 }
 ```
 
 - Flow Action Type `ingest_metadata` to ingest the metadata into `dicom_file_metadata` table
-  - With option upload_files: False/True to upload files to server
-- Flow Action Type `load_vocab` to load DICOM vocab in vocab schema
-  - With option to_truncate: False/True to truncate DICOM vocab
-- missing_person_id_options
+- With option upload_files: False/True to upload files to server
+- With optionmissing_person_id_options
   - `SKIP` raises an error if person id cannot be found
   - `USE_ID_ZERO` use person_id 0 to create procedure occurrence and image occurrence records
 - person_to_patient_mapping: mapping table used to map `patient_id` in DICOM file to `person_id` in `person` table
