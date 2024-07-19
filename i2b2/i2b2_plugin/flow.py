@@ -33,12 +33,13 @@ def create_i2b2_dataset(options: i2b2PluginType):
         types_modules = importlib.import_module('utils.types')
         userdao_module = importlib.import_module('dao.UserDao')
         dbsvc_module = importlib.import_module('flows.alp_db_svc.dataset.main')
-        dbutils_module = importlib.import_module('alpconnection.dbutils')
+        dbutils_module = importlib.import_module('utils.DBUtils')
+        dbutils = dbutils_module.DBUtils(database_code)
 
-        admin_user = types_modules.PG_TENANT_USERS.ADMIN_USER
+        admin_user = types_modules.UserType.ADMIN_USER
         dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
         userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
-        tenant_configs = dbutils_module.extract_db_credentials(database_code)
+        tenant_configs = dbutils.extract_database_credentials(database_code)
         
         
         setup_plugin(tag_name)
@@ -198,7 +199,7 @@ def get_and_update_attributes(token: str, dataset: Dict):
     types_modules = importlib.import_module('utils.types')
     portal_server_api_module = importlib.import_module('api.PortalServerAPI')
     
-    admin_user = types_modules.PG_TENANT_USERS.ADMIN_USER
+    admin_user = types_modules.UserType.ADMIN_USER
         
     try:
         dataset_id = dataset.get("id")
