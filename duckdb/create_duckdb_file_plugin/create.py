@@ -46,11 +46,11 @@ def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, d
     logger = get_run_logger()
     # Get table names from db
     db_dao = modules.dao_DBDao.DBDao(
-        database_code, schema_name, modules.utils_types.PG_TENANT_USERS.READ_USER)
+        database_code, schema_name, modules.utils_types.UserType.READ_USER)
     table_names = db_dao.get_table_names()
 
     # Get credentials for database code
-    db_credentials = dbutils_obj.__filter_database_credentials()
+    db_credentials = dbutils_obj.extract_database_credentials()
 
     # copy tables from postgres into duckdb
     for table in table_names:
