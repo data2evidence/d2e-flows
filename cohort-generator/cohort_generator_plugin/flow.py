@@ -27,10 +27,11 @@ def setup_plugin():
 
 @flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
 def cohort_generator_plugin(options: CohortGeneratorOptionsType):
-    setup_plugin() # To dynamically import helper functions from dataflow-gen
-    
     logger = get_run_logger()
     logger.info('Running Cohort Generator')
+    
+    setup_plugin() # To dynamically import helper functions from dataflow-gen    
+    
     database_code = options.database_code
     schema_name = options.schema_name
     vocab_schema_name = options.vocab_schema_name
@@ -40,30 +41,37 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     owner = options.owner
     token = options.token
     
+    analytics_svc_api_module = importlib.import_module('api.AnalyticsSvcAPI')
+    analytics_svc_api = analytics_svc_api_module.AnalyticsSvcAPI(token)
+    dbutils = importlib.import_module('utils.DBUtils').DBUtils(database_code)
+    admin_user = importlib.import_module("utils.types").UserType.ADMIN_USER
+    robjects = importlib.import_module('rpy2.robjects')
+    
     cohort_json_expression = json.dumps(cohort_json.expression)
     cohort_name = cohort_json.name
     
-    cohort_definition_id = create_cohort_definition(token,
+    cohort_definition_id = create_cohort_definition(analytics_svc_api,
                                                     dataset_id,
                                                     description,
                                                     owner,
                                                     cohort_json_expression,
                                                     cohort_name)
 
-    create_cohort(database_code,
+    create_cohort(dbutils,
+                  admin_user,
                   schema_name,
                   cohort_definition_id,
                   cohort_json_expression,
                   cohort_name, 
-                  vocab_schema_name)
+                  vocab_schema_name,
+                  robjects)
     
 @task(result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")), 
       result_storage_key="{flow_run.id}_cohort_definition.txt",
       persist_result=True)
-def create_cohort_definition(token: str, dataset_id: str, description: str, owner: str, 
+def create_cohort_definition(analytics_svc_api, dataset_id: str, description: str, owner: str, 
                              cohort_json_expression: str, cohort_name: str):
-    analytics_svc_api_module = importlib.import_module('api.AnalyticsSvcAPI')
-    analytics_svc_api = analytics_svc_api_module.AnalyticsSvcAPI(token)
+
     result = analytics_svc_api.create_cohort_definition(
         datasetId=dataset_id,
         description=description,
@@ -75,14 +83,11 @@ def create_cohort_definition(token: str, dataset_id: str, description: str, owne
 
 
 @task
-def create_cohort(database_code: str, schema_name: str, cohort_definition_id: int, 
-                  cohort_json_expression: str, cohort_name: str, vocab_schema_name: str):
+def create_cohort(dbutils, admin_user, schema_name: str, cohort_definition_id: int, 
+                  cohort_json_expression: str, cohort_name: str, vocab_schema_name: str, 
+                  robjects):
     
-    dbutils = importlib.import_module('utils.DBUtils').DBUtils(database_code)
     set_db_driver_env_string = dbutils.set_db_driver_env()
-    
-    types_module = importlib.import_module("utils.types")
-    admin_user = types_module.UserType.ADMIN_USER
     
     set_connection_string = dbutils.get_database_connector_connection_string(
         admin_user,
@@ -90,7 +95,7 @@ def create_cohort(database_code: str, schema_name: str, cohort_definition_id: in
     )
    
     r_libs_user_directory = os.getenv("R_LIBS_USER")
-    robjects = importlib.import_module('rpy2.robjects')
+    
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''
                 .libPaths(c('{r_libs_user_directory}',.libPaths()))
