@@ -32,11 +32,11 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     
     setup_plugin() # To dynamically import helper functions from dataflow-gen    
     
-    database_code = options.database_code
-    schema_name = options.schema_name
-    vocab_schema_name = options.vocab_schema_name
-    cohort_json = options.cohort_json
-    dataset_id = options.dataset_id
+    database_code = options.databaseCode
+    schema_name = options.schemaName
+    vocab_schema_name = options.vocabSchemaName
+    cohort_json = options.cohortJson
+    dataset_id = options.datasetId
     description = options.description
     owner = options.owner
     token = options.token

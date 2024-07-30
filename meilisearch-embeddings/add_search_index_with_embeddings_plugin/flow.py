@@ -17,9 +17,9 @@ def setup_plugin():
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbeddingsType):
     logger = get_run_logger()
-    database_code = options.database_code
-    vocab_schema_name = options.vocab_schema_name
-    table_name = options.table_name
+    database_code = options.databaseCode
+    vocab_schema_name = options.vocabSchemaName
+    table_name = options.tableName
     token = options.token
     CHUNK_SIZE = options.chunk_size
     MEILISEARCH_INDEX_CONFIG = options.meilisearch_index_config
@@ -30,7 +30,7 @@ def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbe
     vocabdao_module = importlib.import_module('dao.VocabDao')
 
 
-    # Check if options.vocabSchemaName is valid
+    # Check if vocab_schema_name is valid
     if not re.match(r"^\w+$", vocab_schema_name):
         error_message = "VocabSchemaName is invalid"
         logger.error(error_message)

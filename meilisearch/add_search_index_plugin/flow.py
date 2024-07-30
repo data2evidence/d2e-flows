@@ -19,9 +19,9 @@ def setup_plugin():
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def add_search_index_plugin(options: MeilisearchAddIndexType):
     logger = get_run_logger()
-    database_code = options.database_code
-    vocab_schema_name = options.vocab_schema_name
-    table_name = options.table_name
+    database_code = options.databaseCode
+    vocab_schema_name = options.vocabSchemaName
+    table_name = options.tableName
     CHUNK_SIZE = options.chunk_size
     MEILISEARCH_INDEX_CONFIG = options.meilisearch_index_config
     

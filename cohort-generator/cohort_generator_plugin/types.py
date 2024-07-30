@@ -3,19 +3,19 @@ from pydantic import BaseModel
 class CohortJsonType(BaseModel):
     id: int
     name: str
-    created_date: int
-    modified_date: int
-    has_write_access: bool
+    createdDate: int
+    modifiedDate: int
+    hasWriteAccess: bool
     tags: list
-    expression_type: str
+    expressionType: str
     expression: dict
 
 class CohortGeneratorOptionsType(BaseModel):
-    database_code: str
-    schema_name: str
-    vocab_schema_name: str
-    cohort_json: CohortJsonType
-    dataset_id: str
+    databaseCode: str
+    schemaName: str
+    vocabSchemaName: str
+    cohortJson: CohortJsonType
+    datasetId: str
     description: str
     owner: str
     token: str
