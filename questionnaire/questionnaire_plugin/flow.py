@@ -42,12 +42,14 @@ def create_questionnaire_definition_task(db_connection, questionnaire_definition
 
     logger = get_run_logger(f"Running Create Questionnaire Definition..")
     try:
-        hana_questionnaire_table = "GDM.QUESTIONNAIRE"
-        hana_questionnaire_item_table = "GDM.ITEM_QUESTIONNAIRE"
-        #dialect = db_connection.db_dialect()
-
-        questionnaire_table = db_connection.translate_table_names(hana_questionnaire_table)
-        questionnaire_item_table = db_connection.translate_table_names(hana_questionnaire_item_table)
+        
+        match db_connection.db_dialect:
+            case DatabaseDialects.HANA:
+                questionnaire_table = "GDM.QUESTIONNAIRE"
+                questionnaire_item_table = "GDM.ITEM_QUESTIONNAIRE"
+            case DatabaseDialects.POSTGRES:
+                questionnaire_table = "gdm_questionnaire"
+                questionnaire_item_table = "gdm_item_questionnaire"
 
         # create column value mappings json
         questionnaire_values_to_insert = _parse_questionnaire_definition(
@@ -91,7 +93,7 @@ def create_questionnaire_item(items: List[IItemType],
         questionnaire_item_values_to_insert = _parse_questionnaire_definition_item(
             item_obj, item_id, questionnaire_id, parent_item_id).dict()
 
-        if dbconnection.db_dialect == "hana":
+        if dbconnection.db_dialect == DatabaseDialects.HANA:
             # handle different column names for databases
             convert_columns_to_hana(
                 questionnaire_item_values_to_insert, "gdm_questionnaire_id", "GDM.QUESTIONNAIRE_ID")
