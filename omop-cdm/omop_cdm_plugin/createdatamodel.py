@@ -32,7 +32,7 @@ def insert_cdm_version(cdm_version: str, schema_dao, vocab_schema_dao):
     cdm_version_concept_id = vocab_schema_dao.execute_sqlalchemy_statement(get_cdm_version_concept_id_statement,
                                                                      vocab_schema_dao.get_single_value)
 
-    logger.info(f"Retrieving 'cdm_version_concept_id' from vocab schema {vocab_schema_dao.schema_name} with cdm_concept_code '{cdm_concept_code}'..")
+    logger.info(f"Retrieving 'vocabulary_version' from vocab schema {vocab_schema_dao.schema_name} with cdm_concept_code '{cdm_concept_code}'..")
     vocabulary_version = vocab_schema_dao.execute_sqlalchemy_statement(get_vocabulary_version_statement,
                                                                  vocab_schema_dao.get_single_value)
 
@@ -46,7 +46,7 @@ def insert_cdm_version(cdm_version: str, schema_dao, vocab_schema_dao):
         "cdm_version": cdm_version,
         "vocabulary_version": vocabulary_version,
     }
-    if cdm_version == "5.4":
+    if cdm_version == CDMVersion.OMOP54:
         # v5.3 does not have 'cdm_version_concept_id' column
         values_to_insert["cdm_version_concept_id"] = cdm_version_concept_id
     
@@ -94,15 +94,15 @@ def create_and_assign_roles(userdao, tenant_configs, cdm_version: str):
     else:
         logger.info(f"'{read_role}' role does not exist")
         logger.info(
-            f"'Creating '{read_role}' role and assigning to '{read_user}' user")
+            f"Creating '{read_role}' role and assigning to '{read_user}' user")
         userdao.create_and_assign_role(read_user, read_role)
 
     # Grant read role read privileges
-    logger.info(f"'Granting read privileges to '{read_role}' role")
+    logger.info(f"Granting read privileges to '{read_role}' role")
     userdao.grant_read_privileges(read_role)
     
-    if cdm_version > "5.3":
+    if cdm_version == CDMVersion.OMOP54:
         # v5.3 does not have cohort table
         # Grant write cohort and cohort_definition table privileges to read role
-        logger.info(f"'Granting cohort write privileges to '{read_role}' role")
+        logger.info(f"Granting cohort write privileges to '{read_role}' role")
         userdao.grant_cohort_write_privileges(read_role)
