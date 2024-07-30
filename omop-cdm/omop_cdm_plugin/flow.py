@@ -12,6 +12,7 @@ from prefect.task_runners import SequentialTaskRunner
 from omop_cdm_plugin.types import *
 from omop_cdm_plugin.utils import *
 from omop_cdm_plugin.hooks import *
+from omop_cdm_plugin.createdatamodel import *
 
 def setup_plugin(release_version):
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
@@ -58,9 +59,6 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
         userdao_module = importlib.import_module('dao.UserDao')
         userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
         
-        # import task to creates roles
-        dbsvc_module = importlib.import_module('flows.alp_db_svc.dataset.main')
-        
         # import helper function to get database connection
         dbutils_module = importlib.import_module('utils.DBUtils')
         dbutils = dbutils_module.DBUtils(database_code)
@@ -76,20 +74,34 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
         )
         create_cdm_tables_wo(database_code, schema_name, cdm_version, admin_user, logger)
         
-        # Prefect task to grant read privilege to tenant read user
-        dbsvc_module.create_and_assign_roles(
+        # Grant permissions
+        create_and_assign_roles_wo = create_and_assign_roles.with_options(
+            on_failure=[partial(drop_schema_hook,
+                                **dict(schema_dao=omop_cdm_dao))]
+        )        
+        
+        create_and_assign_roles_wo(
             userdao=userdao,
             tenant_configs=tenant_configs,
-            data_model=data_model,
-            dialect=types_module.DatabaseDialects.POSTGRES
+            cdm_version=cdm_version
         )
         
-        # prefect task to insert cdm version
-        dbsvc_module.insert_cdm_version(
-            schema_dao=omop_cdm_dao, # need to pass in vocab schema
-            cdm_version=cdm_version,
-            vocab_schema=vocab_schema
-        )
+        if schema_name != vocab_schema:
+            # Insert CDM Version
+            vocab_schema_dao = dbdao_module.DBDao(database_code, vocab_schema, admin_user)
+            insert_cdm_version_wo = insert_cdm_version.with_options(
+                on_failure=[partial(drop_schema_hook,
+                                    **dict(schema_dao=omop_cdm_dao))]
+            )  
+            insert_cdm_version_wo(
+                cdm_version=cdm_version,
+                schema_dao=omop_cdm_dao,
+                vocab_schema_dao=vocab_schema_dao
+            )
+        else:
+            # If newly created schema is also the vocab schema
+            # Todo: Add insertion of cdm version to update flow
+            logger.info("Skipping insertion of 'CDM Version. Please load vocabulary data first.")
     except Exception as e:
         logger.error(e)
         raise e
