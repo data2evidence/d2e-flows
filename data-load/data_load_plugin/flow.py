@@ -21,6 +21,7 @@ def setup_plugin():
 def data_load_plugin(options: DataloadOptions):
     setup_plugin()
     logger = get_run_logger()
+    logger.info(f"pandas import location: {pd.__file__}")
     files = options.files
     database_code = options.database_code
     header = 0 if options.header else None
