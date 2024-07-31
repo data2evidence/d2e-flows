@@ -1,4 +1,3 @@
-from typing import Dict
 from omop_cdm_plugin.types import *
 
 # List of tables linked to person table
@@ -38,7 +37,7 @@ def get_patient_count(dbdao, logger) -> str:
     return str(patient_count)
 
 
-def get_total_entity_count(entity_count_distribution: Dict, logger) -> str:
+def get_total_entity_count(entity_count_distribution: dict, logger) -> str:
     try:
         total_entity_count = 0
         for entity, entity_count in entity_count_distribution.items():
