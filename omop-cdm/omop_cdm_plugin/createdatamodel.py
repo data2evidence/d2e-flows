@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from prefect import task, get_run_logger
 
-from omop_cdm_plugin.types import RELEASE_VERSION_MAPPING
+from omop_cdm_plugin.types import RELEASE_VERSION_MAPPING, CDMVersion
 
 @task(log_prints=True)
 def insert_cdm_version(cdm_version: str, schema_dao, vocab_schema_dao):  
