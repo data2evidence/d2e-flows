@@ -66,13 +66,7 @@ def dqd_plugin(options: DqdOptionsType):
     flow_run_context = FlowRunContext.get().flow_run.dict()
     flow_run_id = str(flow_run_context.get("id"))
     output_folder = f'/output/{flow_run_id}'
-    execute_dqd_wo = execute_dqd.with_options(
-        on_failure=[partial(
-            persist_dqd, **dict(output_folder=output_folder, schema_name=schema_name))],
-        on_completion=[partial(
-            persist_dqd, **dict(output_folder=output_folder, schema_name=schema_name))]
-    )
-    execute_dqd_wo(schema_name,
+    execute_dqd(schema_name,
                    database_code,
                    cdm_version_number,
                    vocab_schema_name,
@@ -158,36 +152,6 @@ def execute_dqd(
     with open(f'{output_folder}/{schema_name}.json', 'rt') as f:
             return json.loads(f.read())
 
-async def persist_dqd(task, task_run, state, output_folder, schema_name): 
-    logger = task_run_logger(task_run, task)
-    error_message = None
-    result_json = {}
-    isError = state.type == StateType.FAILED
-    if isError:
-        with open(f'{output_folder}/errors/{schema_name}.json', 'rt') as f:
-            error_message = f.read()
-        logger.error(error_message)
-    else:
-        with open(f'{output_folder}/{schema_name}.json', 'rt') as f:
-            result_json = json.loads(f.read())
-    await insert_to_dqd_result_table(flow_run_id=task_run.flow_run_id, result=result_json, error=isError, error_message=error_message)
-
-async def insert_to_dqd_result_table(flow_run_id: str, result: dict, 
-                                     error: bool, error_message: str):
-    logger = get_run_logger()
-    task_run_context = TaskRunContext.get().task_run.dict()
-    task_run_name = str(task_run_context.get("name"))
-    try:
-        dqd_dao_module = importlib.import_module('dao.DqdResultDao')
-        dqd_result_dao = dqd_dao_module.DqdResultDao()
-        dqd_result_dao.insert(flow_run_id=flow_run_id, result=result,
-                              error=error, error_message=error_message)
-        logger.info(
-            f"Successfully persisted results for task run '{task_run_name}'")
-    except Exception as e:
-        logger.error(
-            f"Failed to persist results for task run '{task_run_name}': {e}")
-        raise e
 
 if __name__ == "__main__":
     try:
