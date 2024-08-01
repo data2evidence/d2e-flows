@@ -6,7 +6,6 @@ import importlib
 from prefect_shell import ShellOperation
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
-from prefect.filesystems import RemoteFileSystem as RFS
 
 from cohort_generator_plugin.types import CohortGeneratorOptionsType
 
@@ -66,9 +65,7 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
                   vocab_schema_name,
                   robjects)
     
-@task(result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")), 
-      result_storage_key="{flow_run.id}_cohort_definition.txt",
-      persist_result=True)
+@task(log_prints=True)
 def create_cohort_definition(analytics_svc_api, dataset_id: str, description: str, owner: str, 
                              cohort_json_expression: str, cohort_name: str):
 
@@ -82,7 +79,7 @@ def create_cohort_definition(analytics_svc_api, dataset_id: str, description: st
     return result
 
 
-@task
+@task(log_prints=True)
 def create_cohort(dbutils, admin_user, schema_name: str, cohort_definition_id: int, 
                   cohort_json_expression: str, cohort_name: str, vocab_schema_name: str, 
                   robjects):
