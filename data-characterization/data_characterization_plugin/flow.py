@@ -39,6 +39,17 @@ def setup_plugin():
 def data_characterization_plugin(options: DCOptionsType):
     setup_plugin()
 
+    dbutils = importlib.import_module("utils.DBUtils").DBUtils(database_code)
+    user_type_module = importlib.import_module("utils.types")
+    robjects = importlib.import_module("rpy2.robjects")
+    dqdresult_dao = importlib.import_module("dao.DqdResultDao").DqdResultDao()
+    
+    admin_user = user_type_module.UserType.ADMIN_USER
+    read_user = user_type_module.UserType.READ_USER
+
+    results_schema_dao = importlib.import_module("dao.DBDao").DBDao(database_code, results_schema, admin_user)
+    user_dao = importlib.import_module("dao.UserDao").UserDao(database_code, results_schema, admin_user)
+
     logger = get_run_logger()
 
     schema_name = options.schemaName
@@ -56,15 +67,6 @@ def data_characterization_plugin(options: DCOptionsType):
     flow_run_context = FlowRunContext.get().flow_run.dict()
     flow_run_id = str(flow_run_context.get("id"))
     output_folder = f"/output/{flow_run_id}"
-    
-    dbutils = importlib.import_module("utils.DBUtils").DBUtils(database_code)
-    user_type_module = importlib.import_module("utils.types")
-    admin_user = user_type_module.UserType.ADMIN_USER
-    read_user = user_type_module.UserType.READ_USER
-    robjects = importlib.import_module("rpy2.robjects")
-    dqdresult_dao = importlib.import_module("dao.DqdResultDao").DqdResultDao()
-    results_schema_dao = importlib.import_module("dao.DBDao").DBDao(database_code, results_schema, admin_user)
-    user_dao = importlib.import_module("dao.UserDao").UserDao(database_code, results_schema, admin_user)
     
     dialect = dbutils.get_database_dialect()
     match dialect:
