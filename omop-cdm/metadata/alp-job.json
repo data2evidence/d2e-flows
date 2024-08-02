@@ -1,6 +1,7 @@
 {
-    "name": "omop_cdm_plugin",
-    "type": "data_model",
-    "entrypoint": "omop_cdm_plugin/flow.py",
-    "tags": ["omop_cdm"]
-  }
+  "name": "omop_cdm_plugin",
+  "type": "datamodel",
+  "datamodels": ["omop5-3", "omop5-4"],
+  "entrypoint": "omop_cdm_plugin/flow.py",
+  "tags": ["omop_cdm"]
+}
