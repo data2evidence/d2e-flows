@@ -16,8 +16,6 @@ class flowActionType(str, Enum):
     CREATE_SNAPSHOT = "create_snapshot"
     CREATE_PARQUET_SNAPSHOT = "create_parquet_snapshot"
     GET_VERSION_INFO = "get_version_info"
-    CREATE_QUESTIONNAIRE_DEFINITION = "create_questionnaire_definition"
-    GET_QUESTIONNAIRE_RESPONSE = "get_questionnaire_response"
     CREATE_CDMSCHEMA = "create_cdm_schema"
 
 class dataModelType(BaseModel):
@@ -32,8 +30,6 @@ class dataModelType(BaseModel):
     rollback_count: Optional[int]
     rollback_tag: Optional[str]
     update_count: Optional[int]
-    questionnaire_definition: Optional[Dict]
-    questionnaire_id: Optional[str]
     token: Optional[str]
     datasets: Optional[List]
 

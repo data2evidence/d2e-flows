@@ -10,5 +10,5 @@ class CreateDuckdbDatabaseFileType(BaseModel):
 class CreateDuckdbDatabaseFileModules(BaseModel):
     # TODO: TBD disscuss a better way to handle dynamic imports
     utils_types: Any
-    alpconnection_dbutils: Any
+    dbutils: Any
     dao_DBDao: Any

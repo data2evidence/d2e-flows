@@ -28,16 +28,10 @@ def data_load_plugin(options: DataloadOptions):
     schema = options.schema_name
     tables_to_truncate = [f.table_name for f in files if f.truncate]
     chunksize = options.chunksize if options.chunksize else None
-    dbutils_module = importlib.import_module('alpconnection.dbutils')
-    conn_details = dbutils_module.extract_db_credentials(database_code)
-    database_name = conn_details["databaseName"]
-    pg_user = conn_details["adminUser"]
-    pg_password = conn_details["adminPassword"]
-    pg_host = conn_details["host"]
-    pg_port = conn_details["port"]
-
-    # TODO: make below dialect agnostic
-    engine = sql.create_engine(f'postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{database_name}')
+    dbutils_module = importlib.import_module('utils.DBUtils')
+    admin_user = importlib.import_module('utils.types').UserType.ADMIN_USER
+    dbutils = dbutils_module.DBUtils(database_code)
+    engine = dbutils.create_database_engine(admin_user)
 
     # Truncating
     with engine.connect() as connection:

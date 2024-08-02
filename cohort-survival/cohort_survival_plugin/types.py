@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class cohortSurvivalOptionsType(BaseModel):
+class CohortSurvivalOptionsType(BaseModel):
     databaseCode: str
     schemaName: str
     targetCohortDefinitionId: int
