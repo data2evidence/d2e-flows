@@ -102,7 +102,7 @@ MEILISEARCH_INDEX_CONFIG = {
     },
 }
 
-class meilisearchAddIndexType(BaseModel):
+class MeilisearchAddIndexType(BaseModel):
     databaseCode: str
     vocabSchemaName: str
     tableName: str

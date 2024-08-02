@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='omop_cdm_plugin',
-    version='0.0.0',
+    version='0.1.0',
     packages=find_packages(),
     install_requires=[
         "prefect-shell==0.2.2", "prefect==2.14.6", 

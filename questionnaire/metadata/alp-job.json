@@ -1,0 +1,6 @@
+{
+    "name": "questionnaire_plugin",
+    "type": "questionnaire",
+    "entrypoint": "questionnaire_plugin/flow.py",
+    "tags": ["questionnaire"]
+  }
