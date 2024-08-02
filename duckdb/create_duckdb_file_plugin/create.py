@@ -3,11 +3,11 @@ import duckdb
 from prefect import get_run_logger
 from create_duckdb_file_plugin.config import CreateDuckdbDatabaseFileType, CreateDuckdbDatabaseFileModules
 
-
 # These imports are now coming in from dynamic imports as CreateDuckdbDatabaseFileModules
 # from utils.types import DatabaseDialects, PG_TENANT_USERS, DatabaseDialects
-# from alpconnection.dbutils import extract_db_credentials
+# from utils.DBUtils import DBUtils
 # from dao.DBDao import DBDao
+
 
 def get_supported_duckdb_dialetcs(modules: CreateDuckdbDatabaseFileModules):
     SUPPORTED_DUCKDB_DIALECTS = [
@@ -24,10 +24,11 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
     database_code = options.databaseCode
     schema_name = options.schemaName
     duckdb_database_name = f"{database_code}_{schema_name}"
+    
+    dbutils = modules.dbutils.DBUtils(database_code)
 
     # Get dialect from database code
-    dialect = modules.alpconnection_dbutils.extract_db_credentials(database_code)[
-        "dialect"]
+    dialect = dbutils.get_database_dialect()
 
     if dialect not in SUPPORTED_DUCKDB_DIALECTS:
         error_message = f"""Input dialect: {
@@ -36,22 +37,20 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
         raise ValueError(error_message)
 
     # TODO: Add switch case after unifiying envConverter postgres dialect value
-    copyPostgresToDuckdb(database_code, schema_name,
-                         duckdb_database_name, modules)
+    copy_postgres_to_duckdb(dbutils, database_code, schema_name, duckdb_database_name, modules)
     logger.info(f"""Duckdb database file: {
                 duckdb_database_name} has been successfully created.""")
 
 
-def copyPostgresToDuckdb(database_code: str, schema_name: str, duckdb_database_name: str, modules: CreateDuckdbDatabaseFileModules):
+def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, duckdb_database_name: str, modules: CreateDuckdbDatabaseFileModules):
     logger = get_run_logger()
     # Get table names from db
     db_dao = modules.dao_DBDao.DBDao(
-        database_code, schema_name, modules.utils_types.PG_TENANT_USERS.READ_USER)
+        database_code, schema_name, modules.utils_types.UserType.READ_USER)
     table_names = db_dao.get_table_names()
 
     # Get credentials for database code
-    db_credentials = modules.alpconnection_dbutils.extract_db_credentials(
-        database_code)
+    db_credentials = dbutils_obj.extract_database_credentials()
 
     # copy tables from postgres into duckdb
     for table in table_names:

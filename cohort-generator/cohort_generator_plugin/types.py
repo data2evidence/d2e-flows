@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-class cohortJsonType(BaseModel):
+class CohortJsonType(BaseModel):
     id: int
     name: str
     createdDate: int
@@ -10,11 +10,11 @@ class cohortJsonType(BaseModel):
     expressionType: str
     expression: dict
 
-class cohortGeneratorOptionsType(BaseModel):
+class CohortGeneratorOptionsType(BaseModel):
     databaseCode: str
     schemaName: str
     vocabSchemaName: str
-    cohortJson: cohortJsonType
+    cohortJson: CohortJsonType
     datasetId: str
     description: str
     owner: str

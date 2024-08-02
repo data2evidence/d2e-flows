@@ -27,9 +27,5 @@ def data_management_plugin(options: dataModelType):
             dbsvc_module.create_snapshot_flow(options)
         case flowActionType.GET_VERSION_INFO:
             dbsvc_module.get_version_info_flow(options)
-        case flowActionType.CREATE_QUESTIONNAIRE_DEFINITION:
-            dbsvc_module.create_questionnaire_definition_flow(options)
-        case flowActionType.GET_QUESTIONNAIRE_RESPONSE:
-            dbsvc_module.get_questionnaire_response_flow(options)
         case flowActionType.CREATE_CDMSCHEMA:
             dbsvc_module.create_cdm_schema(options)
