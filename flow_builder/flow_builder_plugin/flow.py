@@ -1,3 +1,4 @@
+import sys
 from prefect import flow
 
 @flow
@@ -15,7 +16,18 @@ def build_flow():
     )
 
 if __name__ == '__main__':
-    build_flow.deploy(
+    kwargs = {}
+    for arg in sys.argv[1:]:
+        key, value = arg.split('=')
+        kwargs[key] = value
+
+    sourcePath = kwargs.get('sourcePath')
+    entrypoint = kwargs.get('entrypoint')
+    build_flow.from_source(
+        sourcePath,
+        entrypoint
+    ).deploy(
         name="flow_builder-deployment",
-        build=False
+        build=False,
+        push=False
     )
