@@ -32,6 +32,7 @@ def setup_plugin():
 @flow(log_prints=True, 
       persist_result=True,
       task_runner=SequentialTaskRunner,
+      timeout_seconds=3600,
       on_failure=[drop_data_characterization_schema],
       on_cancellation=[drop_data_characterization_schema]
       )

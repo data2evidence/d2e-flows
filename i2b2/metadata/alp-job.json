@@ -3,5 +3,5 @@
     "type": "datamodel",
     "datamodels": ["i2b2"],
     "entrypoint": "i2b2_plugin/flow.py",
-    "tags": ["id2b2"]
+    "tags": ["i2b2"]
   }

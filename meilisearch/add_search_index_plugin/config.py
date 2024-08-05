@@ -85,7 +85,9 @@ MEILISEARCH_INDEX_CONFIG = {
         "meilisearch_primary_key": "meilisearch_id",
         "index_settings": {
             "filterableAttributes": [
-                "ancestor_concept_id"
+                "ancestor_concept_id",
+                "descendant_concept_id",
+                "min_levels_of_separation"
             ],
             **MEILISEARCH_INDEX_GLOBAL_SETTINGS
         }
@@ -100,7 +102,7 @@ MEILISEARCH_INDEX_CONFIG = {
     },
 }
 
-class meilisearchAddIndexType(BaseModel):
+class MeilisearchAddIndexType(BaseModel):
     databaseCode: str
     vocabSchemaName: str
     tableName: str

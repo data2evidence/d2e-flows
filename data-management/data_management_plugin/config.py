@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Optional, Dict
+from pydantic import BaseModel, Field, root_validator
+from typing import Optional, Dict, List
 
 FLOW_NAME = "data_management_plugin"
 DATAMODEL_CHANGELOG_MAPPING = {
@@ -16,9 +16,7 @@ class flowActionType(str, Enum):
     CREATE_SNAPSHOT = "create_snapshot"
     CREATE_PARQUET_SNAPSHOT = "create_parquet_snapshot"
     GET_VERSION_INFO = "get_version_info"
-    CREATE_QUESTIONNAIRE_DEFINITION = "create_questionnaire_definition"
-    GET_QUESTIONNAIRE_RESPONSE = "get_questionnaire_response"
-
+    CREATE_CDMSCHEMA = "create_cdm_schema"
 
 class dataModelType(BaseModel):
     flow_action_type: flowActionType
@@ -31,10 +29,9 @@ class dataModelType(BaseModel):
     source_schema: Optional[str]
     rollback_count: Optional[int]
     rollback_tag: Optional[str]
-    update_count: int = 0
-    questionnaire_definition: Optional[Dict]
-    questionnaire_id: Optional[str]
+    update_count: Optional[int]
     token: Optional[str]
+    datasets: Optional[List]
 
     @property
     def flow_name(self) -> str:
@@ -47,3 +44,9 @@ class dataModelType(BaseModel):
     @property
     def changelog_filepath_list(self) -> Dict:
         return DATAMODEL_CHANGELOG_MAPPING
+    
+    @root_validator(pre=True)
+    def set_default_vocab_schema(cls, values):
+        if values.get('vocab_schema') is None:
+            values['vocab_schema'] = values.get('schema_name')
+        return values
