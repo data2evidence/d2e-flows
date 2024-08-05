@@ -26,6 +26,7 @@ def create_i2b2_dataset(options: i2b2PluginType):
     database_code = options.database_code
     schema_name = options.schema_name
     tag_name = options.tag_name
+    data_model = options.data_model
 
     try:
         sys.path.append('/app/pysrc')
@@ -39,7 +40,7 @@ def create_i2b2_dataset(options: i2b2PluginType):
         admin_user = types_modules.UserType.ADMIN_USER
         dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
         userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
-        tenant_configs = dbutils.extract_database_credentials(database_code)
+        tenant_configs = dbutils.extract_database_credentials()
         
         
         setup_plugin(tag_name)
@@ -52,7 +53,7 @@ def create_i2b2_dataset(options: i2b2PluginType):
         create_crc_stored_procedures(version)
         
         # task to create i2b2 metadata table
-        create_metadata_table(dbdao, schema_name, tag_name, version)
+        create_metadata_table(dbdao, schema_name, tag_name, data_model[1:])
         
         # prefect task to grant read privilege to tenant read user
         dbsvc_module.create_and_assign_roles(
@@ -202,9 +203,11 @@ def get_and_update_attributes(token: str, dataset: Dict):
     admin_user = types_modules.UserType.ADMIN_USER
         
     try:
+        print(f"dataset is {dataset}")
         dataset_id = dataset.get("id")
         database_code = dataset.get("databaseCode")
         schema_name = dataset.get("schemaName")
+        data_model = dataset.get("dataModel").split(" ")[0]
     except KeyError as ke:
         missing_key = ke.args[0]
         logger.error(f"'{missing_key} not found in dataset'")
@@ -231,7 +234,7 @@ def get_and_update_attributes(token: str, dataset: Dict):
 
             try:
                 # update release version or error msg
-                release_version = get_metadata_version(dbdao, "release_version")
+                release_version = data_model[1:]
                 portal_server_api.update_dataset_attributes_table(dataset_id, "version", release_version)
             except Exception as e:
                 logger.error(f"Failed to update attribute 'version' for dataset '{dataset_id}': {e}")
@@ -240,12 +243,15 @@ def get_and_update_attributes(token: str, dataset: Dict):
 
             try:
                 # update release tag or error msg
-                tag = get_metadata_version(dbdao, "tag")
+                print(f"data_model is {data_model}")
+                tag = RELEASE_TAG_MAPPING.get(data_model)
                 portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", tag)
+                portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", tag)
+                print(f"tag is {tag}")
             except Exception as e:
-                logger.error(f"Failed to update attribute 'schema_version' for dataset '{dataset_id}': {e}")
+                logger.error(f"Failed to update attribute 'schema_version', 'latest_schema_version' for dataset '{dataset_id}': {e}")
             else:
-                logger.info(f"Updated attribute 'schema_version' for dataset '{dataset_id}' with value '{tag}'")
+                logger.info(f"Updated attribute 'schema_version', 'latest_schema_version' for dataset '{dataset_id}' with value '{tag}'")
                 
             try:
                 # update created date or error msg
