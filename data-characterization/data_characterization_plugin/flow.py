@@ -38,9 +38,14 @@ def setup_plugin():
       timeout_seconds=3600
       )
 def data_characterization_plugin(options: DCOptionsType):
+    logger = get_run_logger()
     setup_plugin()
 
-    logger = get_run_logger()
+    dbutils_module = importlib.import_module("utils.DBUtils")
+    user_type_module = importlib.import_module("utils.types")
+    robjects = importlib.import_module("rpy2.robjects")
+    user_dao_module = importlib.import_module("dao.UserDao")
+    dbdao_module = importlib.import_module("dao.DBDao")
 
     schema_name = options.schemaName
     database_code = options.databaseCode
@@ -58,15 +63,13 @@ def data_characterization_plugin(options: DCOptionsType):
     flow_run_id = str(flow_run_context.get("id"))
     output_folder = f"/output/{flow_run_id}"
     
-    dbutils = importlib.import_module("utils.DBUtils").DBUtils(database_code)
-    user_type_module = importlib.import_module("utils.types")
+    dbutils = dbutils_module.DBUtils(database_code)
     admin_user = user_type_module.UserType.ADMIN_USER
     read_user = user_type_module.UserType.READ_USER
-    robjects = importlib.import_module("rpy2.robjects")
-    results_schema_dao = importlib.import_module("dao.DBDao").DBDao(database_code, results_schema, admin_user)
-    user_dao = importlib.import_module("dao.UserDao").UserDao(database_code, results_schema, admin_user)
-    
+    results_schema_dao = dbdao_module.DBDao(database_code, results_schema, admin_user)
+    user_dao = user_dao_module.UserDao(database_code, results_schema, admin_user)
     dialect = dbutils.get_database_dialect()
+    
     match dialect:
         case DatabaseDialects.POSTGRES:
             results_schema = results_schema.lower()
@@ -230,8 +233,7 @@ def execute_data_characterization(schema_name: str,
                     createTable <- TRUE
                     sqlOnly <- FALSE
                     excludeAnalysisIds <- c({exclude_analysis_ids})
-                    Achilles::achilles( connectionDetails = connectionDetails, cdmVersion = cdmVersion, cdmDatabaseSchema = cdmDatabaseSchema, createTable = createTable, resultsDatabaseSchema = resultsDatabaseSchema, outputFolder = outputFolder, sqlOnly=sqlOnly, numThreads=numThreads, excludeAnalysisIds=excludeAnalysisIds)
-            ''')
+                    Achilles::achilles( connectionDetails = connectionDetails, cdmVersion = cdmVersion, cdmDatabaseSchema = cdmDatabaseSchema, createTable = createTable, resultsDatabaseSchema = resultsDatabaseSchema, outputFolder = outputFolder, sqlOnly=sqlOnly, numThreads=numThreads, excludeAnalysisIds=excludeAnalysisIds)''')
     except Exception as e:
         logger.error(f"execute_data_characterization task failed")
         result_json = {}
