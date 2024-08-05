@@ -203,7 +203,6 @@ def get_and_update_attributes(token: str, dataset: Dict):
     admin_user = types_modules.UserType.ADMIN_USER
         
     try:
-        print(f"dataset is {dataset}")
         dataset_id = dataset.get("id")
         database_code = dataset.get("databaseCode")
         schema_name = dataset.get("schemaName")
@@ -243,11 +242,9 @@ def get_and_update_attributes(token: str, dataset: Dict):
 
             try:
                 # update release tag or error msg
-                print(f"data_model is {data_model}")
                 tag = RELEASE_TAG_MAPPING.get(data_model)
                 portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", tag)
                 portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", tag)
-                print(f"tag is {tag}")
             except Exception as e:
                 logger.error(f"Failed to update attribute 'schema_version', 'latest_schema_version' for dataset '{dataset_id}': {e}")
             else:
