@@ -13,7 +13,6 @@ def drop_schema_hook(task, task_run, state, schema_dao):
         drop_schema = schema_dao.drop_schema()
         msg = f"Successfully drop schema {schema_dao.database_code}.{schema_dao.schema_name}"
         logger.info(msg)
-        logger.info("Do nothing")
     except Exception as e:
         logger.error(
             f"Failed to drop schema {schema_dao.database_code}.{schema_dao.schema_name}")

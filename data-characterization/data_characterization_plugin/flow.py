@@ -144,13 +144,6 @@ def create_data_characterization_schema(
         
         tenant_configs = dbutils.extract_database_credentials()
         
-        print("creating schema and tables")
-        #create_schema(results_schema_dao)
-        
-        results_schema = "cdmdefault_datacharacterization"
-        vocab_schema_name = "cdmvocab"
-        
-        '''
         # create tables with liquibase
         action = LiquibaseAction.UPDATE
         
@@ -165,7 +158,7 @@ def create_data_characterization_schema(
                          tenant_configs=tenant_configs,
                          plugin_classpath=plugin_classpath,
                          )
-        '''
+
 
         # enable auditing
         enable_audit_policies = tenant_configs.get("enableAuditPolicies")
@@ -215,8 +208,6 @@ def execute_data_characterization(schema_name: str,
         logger = get_run_logger()
         threads = os.getenv('ACHILLES_THREAD_COUNT')
         logger.info('Running achilles')
-        
-        vocab_schema_name = "cdmdefault"
         
         with robjects.conversion.localconverter(robjects.default_converter):
             robjects.r(f'''
