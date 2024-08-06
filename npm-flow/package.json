@@ -4,7 +4,7 @@
     "config": {
         "name": "npm-flow-plugin",
         "type": "data_flow",
-        "entrypoint": "npm_flow_plugin/flow.py",
+        "entrypoint": "npm_flow_plugin/flow.py:hello",
         "tags": ["docker", "npm", "example"]
     }
 }
