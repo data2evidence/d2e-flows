@@ -17,6 +17,7 @@ class flowActionType(str, Enum):
     CREATE_PARQUET_SNAPSHOT = "create_parquet_snapshot"
     GET_VERSION_INFO = "get_version_info"
     CREATE_CDMSCHEMA = "create_cdm_schema"
+    CHANGELOG_SYNC = "changelog_sync"
 
 class dataModelType(BaseModel):
     flow_action_type: flowActionType
