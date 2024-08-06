@@ -11,4 +11,4 @@ CREATE SEQUENCE COHORT_DEFINITION_ID_SEQ
 
 ALTER TABLE cohort_definition
 ALTER COLUMN definition_type_concept_id DROP NOT NULL,
-ALTER COLUMN subject_concept_id DROP NOT NULL;
+--ALTER COLUMN subject_concept_id DROP NOT NULL;
