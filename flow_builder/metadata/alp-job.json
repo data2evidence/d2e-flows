@@ -1,6 +1,0 @@
-{
-    "name": "flow_builder_plugin",
-    "type": "flow_builder",
-    "entrypoint": "flow_builder_plugin/flow.py",
-    "tags": ["docker", "flow_builder", "dind"]
-}
