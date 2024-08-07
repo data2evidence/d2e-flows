@@ -13,8 +13,6 @@ class flowActionType(str, Enum):
     UPDATE_DATA_MODEL = "update_datamodel"
     ROLLBACK_COUNT = "rollback_count"
     ROLLBACK_TAG = "rollback_tag"
-    CREATE_SNAPSHOT = "create_snapshot"
-    CREATE_PARQUET_SNAPSHOT = "create_parquet_snapshot"
     GET_VERSION_INFO = "get_version_info"
     CREATE_CDMSCHEMA = "create_cdm_schema"
 
@@ -25,8 +23,6 @@ class dataModelType(BaseModel):
     schema_name: Optional[str]
     cleansed_schema_option: Optional[bool]
     vocab_schema: Optional[str]
-    snapshot_copy_config: Optional[Dict]
-    source_schema: Optional[str]
     rollback_count: Optional[int]
     rollback_tag: Optional[str]
     update_count: Optional[int]
