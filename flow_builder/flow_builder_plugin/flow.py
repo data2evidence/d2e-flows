@@ -73,7 +73,10 @@ if __name__ == '__main__':
     cmd = kwargs.get('cmd', 'deploy')
     match cmd:
         case 'deploy':
-            build_flow.deploy(
+            build_flow.from_source(
+                source=f"{os.getcwd()}",
+                entrypoint="flow.py:build_flow"
+            ).deploy(
                 name="flow_builder-deployment",
                 build=False,
                 push=False
