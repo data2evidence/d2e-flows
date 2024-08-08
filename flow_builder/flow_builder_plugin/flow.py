@@ -52,7 +52,10 @@ def build_flow(name, url):
                 entrypoint=f"{plugin_path}/{flow_entrypoint}", 
                 name=f"{flow_name}",
                 parameters=flow_params,
-                job_variables={"image_pull_policy": "Never"}
+                job_variables={
+                    "image_pull_policy": "Never",
+                    "env": {"PREFECT_API_URL": "http://alp-dataflow-gen-1.alp.local:41120"}
+                }
             ),
             work_pool_name="docker-pool", 
             image=f"{flow_name}:{plugin_version}",
