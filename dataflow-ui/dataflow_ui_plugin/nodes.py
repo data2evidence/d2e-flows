@@ -8,11 +8,11 @@ import traceback as tb
 from functools import partial
 from typing import List, Dict
 
-import dask_sql
-import dask.dataframe as dd
-from dask.utils import tmpfile
+#import dask_sql
+#import dask.dataframe as dd
+#from dask.utils import tmpfile
 
-ro = importlib.import_module('rpy2.robjects')
+
 
 import sqlalchemy
 from sqlalchemy.sql import select
@@ -44,10 +44,16 @@ class Result:
     def __init__(self, error: bool, data, node: Node, task_run_context):
         self.error = error
         self.node = node
-        self.data = data
         self.task_run_id = str(task_run_context.get("id"))
         self.task_run_name = str(task_run_context.get("name"))
         self.flow_run_id = str(task_run_context.get("flow_run_id"))
+        #self.data = data
+        self.data = {
+            "result": data,
+            "error": self.error,
+            "errorMessage": data if self.error else None,
+            "nodeName": self.node
+        }
 
 
 class SqlNode(Node):
@@ -58,7 +64,8 @@ class SqlNode(Node):
 
     def task(self, _input: Dict[str, Result], task_run_context):
         try:
-            c = dask_sql.Context()
+            dask_sql_module = importlib.import_module("dask_sql")
+            c = dask_sql_module.Context()
             for tablename in self.tables.keys():
                 input_element = _input
                 for path in self.tables[tablename]:
@@ -101,6 +108,7 @@ class RNode(Node):
         self.r_code = ''''''+_node["r_code"]+''''''
 
     def test(self, _input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.conversion.localconverter(ro.default_converter):
             r_inst = ro.r(self.r_code)
             r_test_exec = ro.globalenv['test_exec']
@@ -113,6 +121,7 @@ class RNode(Node):
 
     def task(self, _input: Dict[str, Result], task_run_context):
         try:
+            ro = importlib.import_module('rpy2.robjects')
             with ro.ro.conversion.localconverter(ro.default_converter):
                 r_inst = ro.r(self.r_code)
                 r_exec = ro.globalenv['exec']
@@ -137,6 +146,7 @@ class CsvNode(Node):
         # self.types = _node["datatypes"]
 
     def _load_dask_dataframe(self):
+        dd = importlib.import_module("dask.dataframe")
         if self.hasheader:
             # dtype=self.types
             dd_df = dd.read_csv(self.file, delimiter=self.delimiter)
@@ -196,9 +206,11 @@ class DbQueryReader(Node):
             "columns": _node["columns"], "data": _node["testdata"]}
 
     def test(self, task_run_context):
+        dd = importlib.import_module("dask.dataframe")
         return Result(False,  dd.from_pandas(pd.read_json(json.dumps(self.testdata), orient="split"), npartitions=1), self, task_run_context)
 
     def task(self, task_run_context):
+        dd = importlib.import_module("dask.dataframe")
         # return dd.read_sql_query(sqlalchemy.select(sqlalchemy.text(self.sqlquery)), self.dbconn, self.index_col, divisions=self.divisions)
         dbutils_module = importlib.import_module("utils.DBUtils")
         types_module = importlib.import_module("utils.types")
@@ -279,7 +291,8 @@ class DataMappingNode(Node):
         self.source_node_dfs = _node["tables"]
 
     def _create_query(self, _input):
-        with tmpfile() as f:
+        dask_utils = importlib.import_module("dask.utils")
+        with dask_utils.tmpfile() as f:
             db = "sqlite:///%s" % f
 
             engine = create_engine(db, echo=False)
@@ -343,7 +356,8 @@ class DataMappingNode(Node):
     def task(self, _input: Dict[str, Result], task_run_context):  # executes the retrieved sql query
         try:
             sql_query = self._create_query(_input)
-            context = dask_sql.Context()
+            dask_sql_module = importlib.import_module("dask_sql")
+            context = dask_sql_module.Context()
             for table_name in self.source_node_dfs.keys():
                 context.create_table(
                     table_name, _input[self.source_node_dfs[table_name]].data)
@@ -472,6 +486,7 @@ class OutcomeDef(Node):
         self.cleanWindow = node["cleanWindow"]
     
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rCohortIncidence = ro.packages.importr('CohortIncidence')
@@ -496,6 +511,7 @@ class TimeAtRiskNode(Node):
         self.endOffset = _node.get("endOffset", 0)
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rCohortIncidence = ro.packages.importr('CohortIncidence')
@@ -521,6 +537,7 @@ class CohortIncidenceModuleSpec(Node):
         self.incidenceAnalysis = _node["incidenceAnalysis"]
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSource = ro.r['source']
@@ -572,6 +589,7 @@ class CharacterizationModuleSpecNode(Node):
         return None
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSource = ro.r['source']
@@ -602,6 +620,7 @@ class DefaultCovariateSettingsNode(Node):
         return None
     
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rFeatureExtraction = ro.packages.importr('FeatureExtraction')
@@ -616,6 +635,7 @@ class CohortDefinitionSharedResource(Node):
         super().__init__(node)
     
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rCohortGenerator = ro.packages.importr('CohortGenerator')
@@ -646,6 +666,7 @@ class NegativeControlOutcomeCohortSharedResource(Node):
         return None
     
     def task(self, _input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSource = ro.r['source']
@@ -670,6 +691,7 @@ class CohortGeneratorSpecNode(Node):
         self.generate_stats = _node["generateStats"] # Ensure boolean
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try: 
                 rSource = ro.r['source']
@@ -699,6 +721,7 @@ class CohortDiagnosticsModuleSpecNode(Node):
         self.incremental = _node["incremental"]
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSource = ro.r['source']
@@ -732,6 +755,7 @@ class CMOutcomes(Node):
         }
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rCohortMethod = ro.packages.importr('CohortMethod')
@@ -760,6 +784,7 @@ class TargetComparatorOutcomes(Node):
         return None
 
     def task(self, _input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rappend = ro.r['append']
@@ -786,6 +811,7 @@ class CohortMethodAnalysis(Node):
         self.psArgs = node["psArgs"]
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rCohortMethod = ro.packages.importr('CohortMethod')
@@ -828,6 +854,7 @@ class CohortMethodModuleSpecNode(Node):
         self.analysesToExclude = _node["cohortMethodConfigs"]
 
     def task(self, _input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSource = ro.r['source']
@@ -866,6 +893,7 @@ class EraCovariateSettings(Node):
         self.exposureOfInterest = _node["exposureOfInterest"]
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
@@ -897,6 +925,7 @@ class CalendarCovariateSettingsNode(Node):
         self.computeConfidenceIntervals = _node['computeConfidenceIntervals']
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
@@ -919,6 +948,7 @@ class SeasonalityCovariateSettingsNode(Node):
         self.computeConfidenceIntervals = _node['computeConfidenceIntervals']
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
@@ -941,6 +971,7 @@ class StudyPopulationArgs(Node):
         self.cohortMethodArgs = _node["cohortMethodArgs"]
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 data = {}
@@ -991,6 +1022,7 @@ class NegativeControlCohortSet(Node):
         super().__init__(node)
 
     def task(self, task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rCohortGenerator = ro.packages.importr('CohortGenerator')
@@ -1013,6 +1045,7 @@ class SCCSAnalysis(Node):
         self.sccsIntervalDataArgs = node['sccsIntervalDataArgs']
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
@@ -1070,6 +1103,7 @@ class SCCSModuleSpec(Node):
         self.combineDataFetchAcrossOutcomes = node["combineDataFetchAcrossOutcomes"]
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSource = ro.r['source']
@@ -1091,6 +1125,7 @@ class PLPModuleSpec(Node):
         super().__init__(node)
 
     def makeModelDesignSettings(rTargetId, rOutcomeId, rPopSettings, rCovarSettings):
+        ro = importlib.import_module('rpy2.robjects')
         rPatientLevelPrediction = ro.packages.importr('PatientLevelPrediction')
         rCreateModelDesign = rPatientLevelPrediction.createModelDesign
         rRestrictPlpDataSettings = rPatientLevelPrediction.createRestrictPlpDataSettings()
@@ -1110,6 +1145,7 @@ class PLPModuleSpec(Node):
         )
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSource = ro.r['source']
@@ -1146,6 +1182,7 @@ class ExposuresOutcome(Node):
         self.exposureOfInterestIds = node["exposureOfInterestIds"]
 
     def task(self, input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
@@ -1179,6 +1216,7 @@ class StrategusNode(Node):
         self.moduleSpecTypes = [CohortGeneratorSpecNode, CohortDiagnosticsModuleSpecNode, CohortIncidenceModuleSpec, CharacterizationModuleSpecNode, CohortMethodModuleSpecNode]
 
     def task(self, _input: Dict[str, Result], task_run_context):
+        ro = importlib.import_module('rpy2.robjects')
         with ro.default_converter.context():
             try:
                 rStrategus = ro.packages.importr('Strategus')

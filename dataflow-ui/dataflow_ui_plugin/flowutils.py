@@ -1,9 +1,8 @@
 import importlib
 import numpy as np
 import pandas as pd
-import dask.dataframe as dd
+#import dask.dataframe as dd
 
-ro = importlib.import_module('rpy2.robjects')
 
 def get_node_list(graph):
     nodes = {}
@@ -33,6 +32,8 @@ def get_incoming_edges(graph, nodes, nodename):
     return connected_nodes
 
 def convert_py_to_R(python_obj):
+    dd = importlib.import_module("dask.dataframe")
+    ro = importlib.import_module('rpy2.robjects')
     # Convert python object into rpy2 robject
     if python_obj is None:
         return ro.r("NULL")
@@ -64,6 +65,7 @@ def convert_py_to_R(python_obj):
         return python_obj
 
 def convert_R_to_py(r_obj, name=""):
+    ro = importlib.import_module('rpy2.robjects')
     result = r_obj
     remove_list = True
     if r_obj == ro.vectors.NULL:
@@ -92,6 +94,7 @@ def convert_R_to_py(r_obj, name=""):
             return result
 
 def serialize_to_json(data):
+    dd = importlib.import_module("dask.dataframe")
     if isinstance(data, dd.DataFrame):
         dd_to_pd_df = data.compute()
         json_df = dd_to_pd_df.to_json(orient="records")

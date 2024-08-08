@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
     install_requires=["prefect-shell==0.2.2", "prefect==2.14.6", "s3fs==2023.1.0", 
                       "aiobotocore==2.4.2", "botocore==1.27.59", "pandas==2.2.2",
-                      "dask==2023.3.1", "pytest==7.4.4"],
+                      "pytest==7.4.4", "numpy==2.0.0"],
     include_package_data=True,
     package_data={},
     data_files=[('metadata', ['metadata/alp-job.json'])],
