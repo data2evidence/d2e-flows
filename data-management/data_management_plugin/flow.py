@@ -15,7 +15,7 @@ def data_management_plugin(options: dataModelType):
     match options.flow_action_type:
         case flowActionType.CREATE_DATA_MODEL:
             dbsvc_module.create_datamodel_flow(options)
-        case flowActionType.UPDATE_DATA_MODEL:
+        case flowActionType.UPDATE_DATA_MODEL | flowActionType.CHANGELOG_SYNC:
             dbsvc_module.update_datamodel_flow(options)
         case flowActionType.ROLLBACK_COUNT:
             dbsvc_module.rollback_count_flow(options)
