@@ -1,7 +1,7 @@
 {
-    "name": "i2b2_plugin",
-    "type": "datamodel",
-    "datamodels": ["i2b2"],
-    "entrypoint": "i2b2_plugin/flow.py",
-    "tags": ["i2b2"]
-  }
+  "name": "i2b2_plugin",
+  "type": "datamodel",
+  "datamodels": ["v1.8.1"],
+  "entrypoint": "i2b2_plugin/flow.py",
+  "tags": ["i2b2"]
+}
