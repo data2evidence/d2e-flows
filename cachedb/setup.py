@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='create_duckdb_file_plugin',
+    name='create_cachedb_file_plugin',
     version='0.1.0',
     packages=find_packages(),
     install_requires=["prefect==2.14.6", "s3fs==2023.1.0", "prefect-shell==0.2.2",
