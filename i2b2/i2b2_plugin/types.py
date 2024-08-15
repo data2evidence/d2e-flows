@@ -15,7 +15,7 @@ class i2b2PluginType(BaseModel):
     database_code: str = ""
     schema_name: Optional[str]
     data_model: str
-    load_demo_data: bool = False
+    load_data: bool = False
     datasets: Optional[List] = None
     token: Optional[str] = ""
     
