@@ -62,12 +62,6 @@ def dataflow_ui_plugin(json_graph, options):
 
     n = execute_nodes_flow_wo(generated_nodes, sorted_nodes, testmode)  # flow
 
-    # Persist nodes' results in following cases
-    # 1. On test mode when trace is enabled
-    # 2. Executions in non-test mode
-    if ((testmode is False) or (testmode is True and tracemode is True)):
-        persist_results_flow(n, trace_config, root_flow_run_id)
-
     if _options["trace_config"]["trace_mode"]:
         for k in n.keys():
             nodes_out[k] = n[k]
@@ -217,7 +211,7 @@ def execute_nodes_flow(graph, sorted_nodes, test):
 @task(task_run_name="execute-nodes-taskrun-{nodename}",
       result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")), 
       result_storage_key="{flow_run.id}_{parameters[nodename]}.json",
-      result_serializer=JSONSerializer(object_encoder="nodes.nodes.serialize_result_to_json"), log_prints=True,
+      result_serializer=JSONSerializer(object_encoder="dataflow_ui_plugin.nodes.serialize_result_to_json"), log_prints=True,
       persist_result=True)
 def execute_node_task(nodename, node_type, node, input, test):
     # Get task run context
@@ -237,62 +231,3 @@ def execute_node_task(nodename, node_type, node, input, test):
             case _:
                 result = _node.task(input, task_run_context)
     return result
-
-
-@task(task_run_name="persist-result-taskrun-{nodename}",
-      log_prints=True)
-def persist_node_task(nodename, result, trace_db, root_flow_run_id):
-    result_json = {}
-    result_json["result"] = serialize_to_json(result.data)
-    
-    dbutils_module = importlib("utils.DBUtils")
-    results_db_engine = dbutils_module.GetConfigDBConnection()
-
-    with results_db_engine.connect() as connection:
-        try:
-            metadata = sql.MetaData(schema="dataflow")
-            result_table = sql.Table("dataflow_result", metadata,
-                                 autoload_with=connection, schema="dataflow")
-            insert_stmt = sql.insert(result_table).values(
-                node_name=nodename,
-                flow_run_id=result.flow_run_id,
-                task_run_id=result.task_run_id,
-                root_flow_run_id=root_flow_run_id,
-                task_run_result=result_json,
-                created_by="xyz",
-                modified_by="xyz",
-                error=result.error,
-                error_message=result.data if result.error else None
-            )
-            connection.execute(insert_stmt)
-            connection.commit()
-        except Exception as e:
-            get_run_logger().error(
-                f"Failed to persist results for task run '{result.task_run_name}': {e}")
-        else:
-            get_run_logger().info(
-                f"Successfully persisted results for task run '{result.task_run_name}'")
-
-
-@flow(name="persist-results",
-      flow_run_name="persist-results-flowrun",
-      log_prints=True)
-def persist_results_flow(nodes, trace, root_flow_run_id):
-    get_run_logger().debug(f"To check results nodes: {nodes}")
-    try:
-        for name in nodes:
-
-            # unpack ordered dict
-            if isinstance(nodes[name], OrderedDict):
-                ordered_dict_result = nodes[name]
-                for node in ordered_dict_result:
-                    result = ordered_dict_result[node].data
-                    persist_node_task(
-                        name, result, trace["trace_db"], root_flow_run_id)  # task
-            else:
-                result = nodes[name]
-                persist_node_task(
-                    name, result, trace["trace_db"], root_flow_run_id)  # task
-    except Exception as e:
-        get_run_logger().error(e)
-
