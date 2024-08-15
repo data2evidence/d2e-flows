@@ -1,7 +1,7 @@
 import os
 import duckdb
 from prefect import get_run_logger
-from create_duckdb_file_plugin.config import CreateDuckdbDatabaseFileType, CreateDuckdbDatabaseFileModules
+from create_cachedb_file_plugin.config import CreateDuckdbDatabaseFileType, CreateDuckdbDatabaseFileModules
 
 # These imports are now coming in from dynamic imports as CreateDuckdbDatabaseFileModules
 # from utils.types import DatabaseDialects, PG_TENANT_USERS, DatabaseDialects
