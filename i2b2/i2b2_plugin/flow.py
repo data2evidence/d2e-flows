@@ -64,7 +64,7 @@ def create_i2b2_dataset(options: i2b2PluginType):
         )
         
         # task to load demo data based on flag
-        if options.load_data:
+        if options.load_demo_data:
             load_demo_data(dbdao)
 
     except Exception as e:
