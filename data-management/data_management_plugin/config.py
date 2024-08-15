@@ -15,6 +15,7 @@ class flowActionType(str, Enum):
     ROLLBACK_TAG = "rollback_tag"
     GET_VERSION_INFO = "get_version_info"
     CREATE_CDMSCHEMA = "create_cdm_schema"
+    CHANGELOG_SYNC = "changelog_sync"
 
 class dataModelType(BaseModel):
     flow_action_type: flowActionType
