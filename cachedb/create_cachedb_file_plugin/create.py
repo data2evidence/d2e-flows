@@ -23,8 +23,9 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
 
     database_code = options.databaseCode
     schema_name = options.schemaName
-    duckdb_database_name = f"{database_code}_{schema_name}"
-    
+    create_for_cdw_config_validation = options.createForCdwConfigValidation
+    duckdb_database_name = "cdw_config_svc_validation" if create_for_cdw_config_validation else f"{database_code}_{schema_name}"
+
     dbutils = modules.dbutils.DBUtils(database_code)
 
     # Get dialect from database code
@@ -37,12 +38,13 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
         raise ValueError(error_message)
 
     # TODO: Add switch case after unifiying envConverter postgres dialect value
-    copy_postgres_to_duckdb(dbutils, database_code, schema_name, duckdb_database_name, modules)
+    copy_postgres_to_duckdb(dbutils, database_code,
+                            schema_name, duckdb_database_name, modules, create_for_cdw_config_validation)
     logger.info(f"""Duckdb database file: {
                 duckdb_database_name} has been successfully created.""")
 
 
-def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, duckdb_database_name: str, modules: CreateDuckdbDatabaseFileModules):
+def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, duckdb_database_name: str, modules: CreateDuckdbDatabaseFileModules, create_for_cdw_config_validation: bool):
     logger = get_run_logger()
     # Get table names from db
     db_dao = modules.dao_DBDao.DBDao(
@@ -51,21 +53,38 @@ def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, d
 
     # Get credentials for database code
     db_credentials = dbutils_obj.extract_database_credentials()
-
     # copy tables from postgres into duckdb
     for table in table_names:
         try:
             logger.info(f"Copying table: {table} from postgres into duckdb...")
-            with duckdb.connect(f"{os.getenv('DUCKDB__DATA_FOLDER')}/{duckdb_database_name}") as con:
+
+            duckdb_file_path = _resolve_duckdb_file_path(
+                duckdb_database_name, create_for_cdw_config_validation)
+            with duckdb.connect(duckdb_file_path) as con:
+
+                # If create_for_cdw_config_validation is True, add a LIMIT 0 to select statement so that only an empty table is created
+                limit_statement = "LIMIT 0" if create_for_cdw_config_validation else ""
+
                 result = con.execute(
                     f"""CREATE TABLE {duckdb_database_name}.{table} AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
-                        db_credentials['databaseName']} user={db_credentials['user']} password={db_credentials['password']}', '{schema_name}', '{table}'))"""
+                        db_credentials['databaseName']} user={db_credentials['user']} password={db_credentials['password']}', '{schema_name}', '{table}') {limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
         except Exception as err:
             logger.error(f"Table:{table} loading failed with error: {err}f")
             raise (err)
     logger.info("Postgres tables succesfully copied into duckdb database file")
+
+
+def _resolve_duckdb_file_path(duckdb_database_name: str, create_for_cdw_config_validation: bool):
+    '''
+    Gets duckdb data folder based on create_for_cdw_config_validation flag
+    '''
+    if create_for_cdw_config_validation:
+        # Returns a hardcoded file path when creating duckdb file for cdw_config validation
+        return f"{os.getenv('CDW_CONFIG_DUCKDB__DATA_FOLDER')}/{duckdb_database_name}"
+    else:
+        return f"{os.getenv('DUCKDB__DATA_FOLDER')}/{duckdb_database_name}"
 
 
 if __name__ == '__main__':
