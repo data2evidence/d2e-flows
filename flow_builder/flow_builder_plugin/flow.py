@@ -8,6 +8,7 @@ from prefect import flow, get_run_logger, deploy
 from prefect.utilities.dockerutils import build_image
 from prefect.deployments.runner import RunnerDeployment
 
+
 def download_package(package_spec):
     """
     Download a package from a Git URL or npm registry to a specific directory using pnpm.
@@ -20,6 +21,7 @@ def download_package(package_spec):
         subprocess.run(["pnpm", "add", package_spec], check=True)
     except Exception as e:
         get_run_logger(e)
+
 
 @flow
 def build_flow(name, url):
@@ -34,7 +36,7 @@ def build_flow(name, url):
         package_json_obj = {}
         with open('package.json', 'r') as package_json_file:
             package_json_obj = json.loads(package_json_file.read())
-        
+
         logger.info(msg=json.dumps(package_json_obj))
         config = package_json_obj.get('config', {})
         plugin_version = package_json_obj.get('version', '0.1.0')
@@ -45,11 +47,11 @@ def build_flow(name, url):
         platform = package_json_obj.get('platform', 'linux/amd64')
 
         os.chdir(ori_cwd)
-        build_image(Path(plugin_path), platform=platform, tag=f"{flow_name}:{plugin_version}", 
+        build_image(Path(plugin_path), platform=platform, tag=f"{flow_name}:{plugin_version}",
                     stream_progress_to=sys.stdout, pull=True)
         deploy(
             RunnerDeployment.from_entrypoint(
-                entrypoint=f"{plugin_path}/{flow_entrypoint}", 
+                entrypoint=f"{plugin_path}/{flow_entrypoint}",
                 name=f"{flow_name}",
                 parameters=flow_params,
                 job_variables={
@@ -57,7 +59,7 @@ def build_flow(name, url):
                     "env": {"PREFECT_API_URL": "http://alp-dataflow-gen-1.alp.local:41120"}
                 }
             ),
-            work_pool_name="docker-pool", 
+            work_pool_name="docker-pool",
             image=f"{flow_name}:{plugin_version}",
             push=False,
             build=False
@@ -66,6 +68,7 @@ def build_flow(name, url):
     finally:
         logger.info(f'removing {plugin_path}')
         shutil.rmtree('/tmp/node_modules')
+
 
 if __name__ == '__main__':
     kwargs = {}
@@ -85,4 +88,6 @@ if __name__ == '__main__':
                 push=False
             )
         case 'test':
-            build_flow('npm-flow-plugin', 'git+https://<PAT_TOKEN>:x-oauth-basic@github.com/alp-os/<REPO_NAME>#path:<DIR_PATH_OF_FLOW>')
+            build_flow(
+                'npm-flow-plugin', 'git+https://<PAT_TOKEN>:x-oauth-basic@github.com/alp-os/<REPO_NAME>#path:<DIR_PATH_OF_FLOW>')
+            # build_flow('npm-flow-plugin', '/usr/src/app/d2e-plugins/npm-flow') # To test with only folder
