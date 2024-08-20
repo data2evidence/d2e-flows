@@ -8,12 +8,6 @@ import traceback as tb
 from functools import partial
 from typing import List, Dict
 
-import dask_sql
-import dask.dataframe as dd
-from dask.utils import tmpfile
-
-ro = importlib.import_module('rpy2.robjects')
-
 import sqlalchemy
 from sqlalchemy.sql import select
 from sqlalchemy import MetaData, Table, create_engine
@@ -28,6 +22,7 @@ class Node:
     def __init__(self, node):
         self.id = node["id"]
         self.type = node["type"]
+        self.ro = importlib.import_module('rpy2.robjects')
 
 
 class Flow(Node):
@@ -44,10 +39,15 @@ class Result:
     def __init__(self, error: bool, data, node: Node, task_run_context):
         self.error = error
         self.node = node
-        self.data = data
         self.task_run_id = str(task_run_context.get("id"))
         self.task_run_name = str(task_run_context.get("name"))
         self.flow_run_id = str(task_run_context.get("flow_run_id"))
+        self.data = {
+            "result": data,
+            "error": self.error,
+            "errorMessage": data if self.error else None,
+            "nodeName": self.node.id
+        }
 
 
 class SqlNode(Node):
@@ -58,7 +58,8 @@ class SqlNode(Node):
 
     def task(self, _input: Dict[str, Result], task_run_context):
         try:
-            c = dask_sql.Context()
+            dask_sql_module = importlib.import_module("dask_sql")
+            c = dask_sql_module.Context()
             for tablename in self.tables.keys():
                 input_element = _input
                 for path in self.tables[tablename]:
@@ -101,9 +102,10 @@ class RNode(Node):
         self.r_code = ''''''+_node["r_code"]+''''''
 
     def test(self, _input: Dict[str, Result], task_run_context):
-        with ro.conversion.localconverter(ro.default_converter):
-            r_inst = ro.r(self.r_code)
-            r_test_exec = ro.globalenv['test_exec']
+        
+        with self.ro.conversion.localconverter(self.ro.default_converter):
+            r_inst = self.ro.r(self.r_code)
+            r_test_exec = self.ro.globalenv['test_exec']
             global_params = {"r_test_exec": r_test_exec, "convert_R_to_py": convert_R_to_py,
                              "myinput": convert_py_to_R(_input), "output": {}}
             e = exec(
@@ -113,9 +115,10 @@ class RNode(Node):
 
     def task(self, _input: Dict[str, Result], task_run_context):
         try:
-            with ro.ro.conversion.localconverter(ro.default_converter):
-                r_inst = ro.r(self.r_code)
-                r_exec = ro.globalenv['exec']
+            
+            with self.ro.self.ro.conversion.localconverter(self.ro.default_converter):
+                r_inst = self.ro.r(self.r_code)
+                r_exec = self.ro.globalenv['exec']
                 global_params = {"r_exec": r_exec, "convert_R_to_py": convert_R_to_py,
                                  "myinput": convert_py_to_R(_input), "output": {}}
                 e = exec(f'output = convert_R_to_py(r_exec(myinput))',
@@ -137,6 +140,7 @@ class CsvNode(Node):
         # self.types = _node["datatypes"]
 
     def _load_dask_dataframe(self):
+        dd = importlib.import_module("dask.dataframe")
         if self.hasheader:
             # dtype=self.types
             dd_df = dd.read_csv(self.file, delimiter=self.delimiter)
@@ -196,9 +200,11 @@ class DbQueryReader(Node):
             "columns": _node["columns"], "data": _node["testdata"]}
 
     def test(self, task_run_context):
+        dd = importlib.import_module("dask.dataframe")
         return Result(False,  dd.from_pandas(pd.read_json(json.dumps(self.testdata), orient="split"), npartitions=1), self, task_run_context)
 
     def task(self, task_run_context):
+        dd = importlib.import_module("dask.dataframe")
         # return dd.read_sql_query(sqlalchemy.select(sqlalchemy.text(self.sqlquery)), self.dbconn, self.index_col, divisions=self.divisions)
         dbutils_module = importlib.import_module("utils.DBUtils")
         types_module = importlib.import_module("utils.types")
@@ -279,7 +285,8 @@ class DataMappingNode(Node):
         self.source_node_dfs = _node["tables"]
 
     def _create_query(self, _input):
-        with tmpfile() as f:
+        dask_utils = importlib.import_module("dask.utils")
+        with dask_utils.tmpfile() as f:
             db = "sqlite:///%s" % f
 
             engine = create_engine(db, echo=False)
@@ -343,7 +350,8 @@ class DataMappingNode(Node):
     def task(self, _input: Dict[str, Result], task_run_context):  # executes the retrieved sql query
         try:
             sql_query = self._create_query(_input)
-            context = dask_sql.Context()
+            dask_sql_module = importlib.import_module("dask_sql")
+            context = dask_sql_module.Context()
             for table_name in self.source_node_dfs.keys():
                 context.create_table(
                     table_name, _input[self.source_node_dfs[table_name]].data)
@@ -472,9 +480,10 @@ class OutcomeDef(Node):
         self.cleanWindow = node["cleanWindow"]
     
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rCohortIncidence = ro.packages.importr('CohortIncidence')
+                rCohortIncidence = self.ro.packages.importr('CohortIncidence')
                 rOutcomeDef = rCohortIncidence.createOutcomeDef(
                     id = convert_py_to_R(self.defId), 
                     name = convert_py_to_R(self.defName), 
@@ -496,9 +505,10 @@ class TimeAtRiskNode(Node):
         self.endOffset = _node.get("endOffset", 0)
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rCohortIncidence = ro.packages.importr('CohortIncidence')
+                rCohortIncidence = self.ro.packages.importr('CohortIncidence')
                 rTimeAtRisk = rCohortIncidence.createTimeAtRiskDef(
                     id = convert_py_to_R(self.id),
                     startWith = self["startWith"],
@@ -521,11 +531,12 @@ class CohortIncidenceModuleSpec(Node):
         self.incidenceAnalysis = _node["incidenceAnalysis"]
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource('https://raw.githubusercontent.com/OHDSI/CohortIncidenceModule/v0.4.0/SettingsFunctions.R')
-                rCohortIncidence = ro.packages.importr('CohortIncidence')
+                rCohortIncidence = self.ro.packages.importr('CohortIncidence')
                 rTargets = []
                 for o in self.cohortRefs:
                     rTargets.append(rCohortIncidence.createCohortRef(id = convert_py_to_R(o['id']), name = o['name']))
@@ -548,7 +559,7 @@ class CohortIncidenceModuleSpec(Node):
                     analysisList = [rAnalysis1], # a list of rAnalyses is possible, for now UI supports just one
                     strataSettings = rStrataSettings
                 )
-                rCreateCohortIncidenceModuleSpecifications = ro.globalenv["createCohortIncidenceModuleSpecifications"]
+                rCreateCohortIncidenceModuleSpecifications = self.ro.globalenv["createCohortIncidenceModuleSpecifications"]
                 rCohortIncidenceSpec = rCreateCohortIncidenceModuleSpecifications(irDesign = rIncidenceDesign['toList']())
                 return Result(False,  rCohortIncidenceSpec, self, task_run_context)
             except Exception as e:
@@ -572,11 +583,12 @@ class CharacterizationModuleSpecNode(Node):
         return None
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource("https://raw.githubusercontent.com/OHDSI/CharacterizationModule/v0.5.0/SettingsFunctions.R")
-                rCreateCharacterizationModuleSpecifications = ro.globalenv['createCharacterizationModuleSpecifications']
+                rCreateCharacterizationModuleSpecifications = self.ro.globalenv['createCharacterizationModuleSpecifications']
                 # ensure rCovariateSettings has at least one value
                 rCovariateSettings = get_results_by_class_type(input, DefaultCovariateSettingsNode)
                 rCharacterizationSpec = rCreateCharacterizationModuleSpecifications(
@@ -602,9 +614,10 @@ class DefaultCovariateSettingsNode(Node):
         return None
     
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rFeatureExtraction = ro.packages.importr('FeatureExtraction')
+                rFeatureExtraction = self.ro.packages.importr('FeatureExtraction')
                 rCovariateSettings = rFeatureExtraction.createDefaultCovariateSettings()
                 return Result(False,  rCovariateSettings, self, task_run_context)
             except Exception as e:
@@ -616,9 +629,10 @@ class CohortDefinitionSharedResource(Node):
         super().__init__(node)
     
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rCohortGenerator = ro.packages.importr('CohortGenerator')
+                rCohortGenerator = self.ro.packages.importr('CohortGenerator')
                 rGetCohortDefinitionSet = rCohortGenerator.getCohortDefinitionSet
                 # hardcoded to use testdata in Strategus R package
                 rCohortDefinitionSet = rGetCohortDefinitionSet(
@@ -627,9 +641,9 @@ class CohortDefinitionSharedResource(Node):
                     sqlFolder = 'testdata/sql',
                     packageName = 'Strategus'
                 )
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource("https://raw.githubusercontent.com/OHDSI/CohortGeneratorModule/v0.3.0/SettingsFunctions.R")
-                rCreateCohortSharedResourceSpecifications = ro.globalenv['createCohortSharedResourceSpecifications']
+                rCreateCohortSharedResourceSpecifications = self.ro.globalenv['createCohortSharedResourceSpecifications']
                 rCohortDefinitionSharedResource = rCreateCohortSharedResourceSpecifications(cohortDefinitionSet = rCohortDefinitionSet)
                 return Result(False,  rCohortDefinitionSharedResource, self, task_run_context)
             except Exception as e:
@@ -646,13 +660,14 @@ class NegativeControlOutcomeCohortSharedResource(Node):
         return None
     
     def task(self, _input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource("https://raw.githubusercontent.com/OHDSI/CohortGeneratorModule/v0.3.0/SettingsFunctions.R")
                 # TODO: ensure the length of rNcoCohortSet is at least 1
                 rNcoCohortSet = get_results_by_class_type(_input, NegativeControlCohortSet)
-                rCreateNegativeControlOutcomeCohortSharedResourceSpecifications = ro.globalenv['createNegativeControlOutcomeCohortSharedResourceSpecifications']
+                rCreateNegativeControlOutcomeCohortSharedResourceSpecifications = self.ro.globalenv['createNegativeControlOutcomeCohortSharedResourceSpecifications']
                 rNegativeCoSharedResource = rCreateNegativeControlOutcomeCohortSharedResourceSpecifications(
                     negativeControlOutcomeCohortSet = rNcoCohortSet[0],
                     occurrenceType = convert_py_to_R(self.occurenceType),
@@ -670,11 +685,12 @@ class CohortGeneratorSpecNode(Node):
         self.generate_stats = _node["generateStats"] # Ensure boolean
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try: 
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource(os.getenv("OHDSI__R_COHORT_GENERATOR_MODULE_SETTINGS_URL"))
-                rCreateCohortGeneratorModuleSpecifications = ro.globalenv['createCohortGeneratorModuleSpecifications']
+                rCreateCohortGeneratorModuleSpecifications = self.ro.globalenv['createCohortGeneratorModuleSpecifications']
                 rCohortGeneratorModuleSpecifications = rCreateCohortGeneratorModuleSpecifications(convert_py_to_R(self.incremental), convert_py_to_R(self.generate_stats))
                 return Result(False,  rCohortGeneratorModuleSpecifications, self, task_run_context)
             except Exception as e:
@@ -699,11 +715,12 @@ class CohortDiagnosticsModuleSpecNode(Node):
         self.incremental = _node["incremental"]
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource(os.getenv("OHDSI__R_COHORT_DIAGNOSTICS_MODULE_SETTINGS_URL"))
-                rCreateCohortDiagnosticsModuleSpecifications = ro.globalenv["createCohortDiagnosticsModuleSpecifications"]
+                rCreateCohortDiagnosticsModuleSpecifications = self.ro.globalenv["createCohortDiagnosticsModuleSpecifications"]
                 rCohortDiagnosticsSpec = rCreateCohortDiagnosticsModuleSpecifications(
                     runInclusionStatistics = convert_py_to_R(self.runInclusionStatistics),
                     runIncludedSourceConcepts = convert_py_to_R(self.runIncludedSourceConcepts),
@@ -732,10 +749,11 @@ class CMOutcomes(Node):
         }
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rCohortMethod = ro.packages.importr('CohortMethod')
-                rlapply = ro.r['lapply']
+                rCohortMethod = self.ro.packages.importr('CohortMethod')
+                rlapply = self.ro.r['lapply']
                 kwargs = {i[0]: i[1] for i in self.config.items() if (i[1] != "" or i[1] is False)}
                 rOutcome = rlapply(
                     X = convert_py_to_R(self.ncoCohortSetIds),
@@ -760,10 +778,11 @@ class TargetComparatorOutcomes(Node):
         return None
 
     def task(self, _input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rappend = ro.r['append']
-                rCohortMethod = ro.packages.importr('CohortMethod')
+                rappend = self.ro.r['append']
+                rCohortMethod = self.ro.packages.importr('CohortMethod')
                 rOutcomes = get_results_by_class_type(_input, CMOutcomes)
                 rCreateTargetComparatorOutcomes = rCohortMethod.createTargetComparatorOutcomes(
                     targetId = convert_py_to_R(self.targetId),
@@ -786,9 +805,10 @@ class CohortMethodAnalysis(Node):
         self.psArgs = node["psArgs"]
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rCohortMethod = ro.packages.importr('CohortMethod')
+                rCohortMethod = self.ro.packages.importr('CohortMethod')
                 rCreateCmAnalysis = rCohortMethod.createCmAnalysis
                 rCreateGetDbCohortMethodDataArgs = rCohortMethod.createGetDbCohortMethodDataArgs
                 # TODO: ensure rCovarSettings length is at least 1
@@ -828,11 +848,12 @@ class CohortMethodModuleSpecNode(Node):
         self.analysesToExclude = _node["cohortMethodConfigs"]
 
     def task(self, _input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource('https://raw.githubusercontent.com/OHDSI/CohortMethodModule/v0.3.0/SettingsFunctions.R')
-                rCreateCohortMethodModuleSpecifications = ro.globalenv["createCohortMethodModuleSpecifications"]
+                rCreateCohortMethodModuleSpecifications = self.ro.globalenv["createCohortMethodModuleSpecifications"]
                 # TODO: ensure rCmAnalysisList and rTargetComparatorOutcomesList are at least of length 1
                 rCmAnalysisList = get_results_by_class_type(_input, CohortMethodAnalysis)
                 rTargetComparatorOutcomesList = get_results_by_class_type(_input, TargetComparatorOutcomes)
@@ -866,9 +887,10 @@ class EraCovariateSettings(Node):
         self.exposureOfInterest = _node["exposureOfInterest"]
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
+                rSelfControlledCaseSeries = self.ro.packages.importr('SelfControlledCaseSeries')
                 rCreateEraCovariateSettings = rSelfControlledCaseSeries.createEraCovariateSettings
                 rCovarPreExp = rCreateEraCovariateSettings(
                     label = convert_py_to_R(self.label),
@@ -897,9 +919,10 @@ class CalendarCovariateSettingsNode(Node):
         self.computeConfidenceIntervals = _node['computeConfidenceIntervals']
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
+                rSelfControlledCaseSeries = self.ro.packages.importr('SelfControlledCaseSeries')
                 rCreateCalendarTimeCovariateSettings = rSelfControlledCaseSeries.createCalendarTimeCovariateSettings
                 rCalendarTimeSettings = rCreateCalendarTimeCovariateSettings(
                     calendarTimeKnots = convert_py_to_R(self.calendarTimeKnots),
@@ -919,9 +942,10 @@ class SeasonalityCovariateSettingsNode(Node):
         self.computeConfidenceIntervals = _node['computeConfidenceIntervals']
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
+                rSelfControlledCaseSeries = self.ro.packages.importr('SelfControlledCaseSeries')
                 rCreateSeasonalityCovariateSettings = rSelfControlledCaseSeries.createSeasonalityCovariateSettings
                 rSeasonalitySettings = rCreateSeasonalityCovariateSettings(
                     seasonKnots = convert_py_to_R(self.seasonKnots),
@@ -941,11 +965,12 @@ class StudyPopulationArgs(Node):
         self.cohortMethodArgs = _node["cohortMethodArgs"]
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
                 data = {}
                 if(self.sccsArgs):
-                    rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
+                    rSelfControlledCaseSeries = self.ro.packages.importr('SelfControlledCaseSeries')
                     rCreateCreateStudyPopulationArgs = rSelfControlledCaseSeries.createCreateStudyPopulationArgs
                     rCreateStudyPopulation6AndOlderArgs = rCreateCreateStudyPopulationArgs(
                         minAge = convert_py_to_R(self.sccsArgs["minAge"]),
@@ -955,7 +980,7 @@ class StudyPopulationArgs(Node):
 
                 rCreateStudyPopArgs = None
                 if(self.cohortMethodArgs):
-                    rCohortMethod = ro.packages.importr('CohortMethod')
+                    rCohortMethod = self.ro.packages.importr('CohortMethod')
                     rCreateCreateStudyPopulationArgs = rCohortMethod.createCreateStudyPopulationArgs
                     rCreateStudyPopArgs = rCreateCreateStudyPopulationArgs(
                         minDaysAtRisk = convert_py_to_R(self.cohortMethodArgs["minDaysAtRisk"]),
@@ -968,7 +993,7 @@ class StudyPopulationArgs(Node):
 
                 rPlpPopulationSettings = None
                 if(self.patientLevelPredictionArgs):
-                    rPatientLevelPrediction = ro.packages.importr('PatientLevelPrediction')
+                    rPatientLevelPrediction = self.ro.packages.importr('PatientLevelPrediction')
                     rPlpPopulationSettings = rPatientLevelPrediction.createStudyPopulationSettings(
                         startAnchor = convert_py_to_R(self.patientLevelPredictionArgs["startAnchor"]),
                         riskWindowStart = convert_py_to_R(self.patientLevelPredictionArgs["riskWindowStart"]),
@@ -991,10 +1016,11 @@ class NegativeControlCohortSet(Node):
         super().__init__(node)
 
     def task(self, task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rCohortGenerator = ro.packages.importr('CohortGenerator')
-                rSystemFile = ro.r['system.file']
+                rCohortGenerator = self.ro.packages.importr('CohortGenerator')
+                rSystemFile = self.ro.r['system.file']
                 rReadCsv = rCohortGenerator.readCsv
                 rFile = rSystemFile('testdata/negative_controls_concept_set.csv', package='Strategus')
                 # hardcoded to use testdata in Strategus R package
@@ -1013,9 +1039,10 @@ class SCCSAnalysis(Node):
         self.sccsIntervalDataArgs = node['sccsIntervalDataArgs']
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
+                rSelfControlledCaseSeries = self.ro.packages.importr('SelfControlledCaseSeries')
                 rCreateSccsAnalysis = rSelfControlledCaseSeries.createSccsAnalysis
 
                 rCreateGetDbSccsDataArgs = rSelfControlledCaseSeries.createGetDbSccsDataArgs
@@ -1038,7 +1065,7 @@ class SCCSAnalysis(Node):
                 )
 
                 rCreateFitSccsModelArgs = rSelfControlledCaseSeries.createFitSccsModelArgs
-                rCyclops = ro.packages.importr('Cyclops')
+                rCyclops = self.ro.packages.importr('Cyclops')
                 rCreateControl = rCyclops.createControl
                 rFitSccsModelArgs = rCreateFitSccsModelArgs(
                     control = rCreateControl(
@@ -1070,12 +1097,13 @@ class SCCSModuleSpec(Node):
         self.combineDataFetchAcrossOutcomes = node["combineDataFetchAcrossOutcomes"]
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource('https://raw.githubusercontent.com/OHDSI/SelfControlledCaseSeriesModule/v0.4.1/SettingsFunctions.R')
                 rSccsAnalysisList = get_results_by_class_type(input, SCCSAnalysis)
-                rCreatSelfControlledCaseSeriesModuleSpecifications = ro.globalenv['creatSelfControlledCaseSeriesModuleSpecifications']
+                rCreatSelfControlledCaseSeriesModuleSpecifications = self.ro.globalenv['creatSelfControlledCaseSeriesModuleSpecifications']
                 rSccsModuleSpec = rCreatSelfControlledCaseSeriesModuleSpecifications(
                     sccsAnalysisList = rSccsAnalysisList,
                     exposuresOutcomeList = get_results_by_class_type(input, ExposuresOutcome), 
@@ -1090,8 +1118,9 @@ class PLPModuleSpec(Node):
     def __init__(self, node):
         super().__init__(node)
 
-    def makeModelDesignSettings(rTargetId, rOutcomeId, rPopSettings, rCovarSettings):
-        rPatientLevelPrediction = ro.packages.importr('PatientLevelPrediction')
+    def makeModelDesignSettings(self, rTargetId, rOutcomeId, rPopSettings, rCovarSettings):
+        
+        rPatientLevelPrediction = self.ro.packages.importr('PatientLevelPrediction')
         rCreateModelDesign = rPatientLevelPrediction.createModelDesign
         rRestrictPlpDataSettings = rPatientLevelPrediction.createRestrictPlpDataSettings()
         rPreprocessSettings = rPatientLevelPrediction.createPreprocessSettings()
@@ -1110,9 +1139,10 @@ class PLPModuleSpec(Node):
         )
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSource = ro.r['source']
+                rSource = self.ro.r['source']
                 rSource('https://raw.githubusercontent.com/OHDSI/PatientLevelPredictionModule/v0.3.0/SettingsFunctions.R')
                 studyPopulationResults = get_results_by_class_type(input, StudyPopulationArgs)
                 # filter patientLevelPredictionArgs from StudyPopulationResults (as it contains other args)
@@ -1132,7 +1162,7 @@ class PLPModuleSpec(Node):
                             )
                             rModelDesignList.append([rModelDesignSettings])
 
-                rCreatePatientLevelPredictionModuleSpecifications = ro.globalenv['createPatientLevelPredictionModuleSpecifications']
+                rCreatePatientLevelPredictionModuleSpecifications = self.ro.globalenv['createPatientLevelPredictionModuleSpecifications']
                 rPlpModuleSpecifications = rCreatePatientLevelPredictionModuleSpecifications(modelDesignList = rModelDesignList)
                 return Result(False,  rPlpModuleSpecifications, self, task_run_context)
             except Exception as e:
@@ -1146,9 +1176,10 @@ class ExposuresOutcome(Node):
         self.exposureOfInterestIds = node["exposureOfInterestIds"]
 
     def task(self, input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rSelfControlledCaseSeries = ro.packages.importr('SelfControlledCaseSeries')
+                rSelfControlledCaseSeries = self.ro.packages.importr('SelfControlledCaseSeries')
                 rExposuresOutcomeList = []
                 rCreateExposuresOutcome = rSelfControlledCaseSeries.createExposuresOutcome
                 rCreateExposure = rSelfControlledCaseSeries.createExposure
@@ -1179,11 +1210,12 @@ class StrategusNode(Node):
         self.moduleSpecTypes = [CohortGeneratorSpecNode, CohortDiagnosticsModuleSpecNode, CohortIncidenceModuleSpec, CharacterizationModuleSpecNode, CohortMethodModuleSpecNode]
 
     def task(self, _input: Dict[str, Result], task_run_context):
-        with ro.default_converter.context():
+        
+        with self.ro.default_converter.context():
             try:
-                rStrategus = ro.packages.importr('Strategus')
-                rDplyr = ro.packages.importr('dplyr')
-                pipe = ro.r('`%>%`')
+                rStrategus = self.ro.packages.importr('Strategus')
+                rDplyr = self.ro.packages.importr('dplyr')
+                pipe = self.ro.r('`%>%`')
 
                 rSpec = rStrategus.createEmptyAnalysisSpecificiations()
                 for sharedResourceType in self.sharedResourcesTypes:
@@ -1203,7 +1235,7 @@ class StrategusNode(Node):
                 # os.environ['DATABASECONNECTOR_JAR_FOLDER'] = databaseConnectorJarFolder
                 # os.environ['STRATEGUS_KEYRING_PASSWORD']='Toor1234'
                 # db_credentials = extract_db_credentials('alpdev_pg')
-                # rDatabaseConnector = ro.packages.importr('DatabaseConnector')
+                # rDatabaseConnector = self.ro.packages.importr('DatabaseConnector')
                 # rConnectionDetails = rDatabaseConnector.createConnectionDetails(
                 #     dbms='postgresql', 
                 #     connectionString=f'jdbc:{db_credentials["dialect"]}://{db_credentials["host"]}:{db_credentials["port"]}/{db_credentials["databaseName"]}',
