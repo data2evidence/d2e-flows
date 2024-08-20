@@ -37,6 +37,10 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
         logger.error(error_message)
         raise ValueError(error_message)
 
+    # If file already exists, delete first before moving to copy step
+    _remove_existing_file_if_exists(
+        duckdb_database_name, create_for_cdw_config_validation)
+
     # TODO: Add switch case after unifiying envConverter postgres dialect value
     copy_postgres_to_duckdb(dbutils, database_code,
                             schema_name, duckdb_database_name, modules, create_for_cdw_config_validation)
@@ -49,10 +53,14 @@ def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, d
     # Get table names from db
     db_dao = modules.dao_DBDao.DBDao(
         database_code, schema_name, modules.utils_types.UserType.READ_USER)
-    table_names = db_dao.get_table_names()
+
+    # Include views when creating duckdb file for cdw config validation
+    table_names = db_dao.get_table_names(
+        include_views=create_for_cdw_config_validation)
 
     # Get credentials for database code
     db_credentials = dbutils_obj.extract_database_credentials()
+
     # copy tables from postgres into duckdb
     for table in table_names:
         try:
@@ -66,7 +74,7 @@ def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, d
                 limit_statement = "LIMIT 0" if create_for_cdw_config_validation else ""
 
                 result = con.execute(
-                    f"""CREATE TABLE {duckdb_database_name}.{table} AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
+                    f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
                         db_credentials['databaseName']} user={db_credentials['user']} password={db_credentials['password']}', '{schema_name}', '{table}') {limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
@@ -74,6 +82,15 @@ def copy_postgres_to_duckdb(dbutils_obj, database_code: str, schema_name: str, d
             logger.error(f"Table:{table} loading failed with error: {err}f")
             raise (err)
     logger.info("Postgres tables succesfully copied into duckdb database file")
+
+
+def _remove_existing_file_if_exists(duckdb_database_name: str, create_for_cdw_config_validation: bool):
+    logger = get_run_logger()
+    duckdb_file_path = _resolve_duckdb_file_path(
+        duckdb_database_name, create_for_cdw_config_validation)
+    if os.path.isfile(duckdb_file_path):
+        logger.info(f"Removing existing duckdb file at {duckdb_file_path}")
+        os.remove(duckdb_file_path)
 
 
 def _resolve_duckdb_file_path(duckdb_database_name: str, create_for_cdw_config_validation: bool):
@@ -93,5 +110,6 @@ if __name__ == '__main__':
     options = CreateDuckdbDatabaseFileType(
         databaseCode=database_code,
         schemaName=schema_name,
+        createForCdwConfigValidation=False
     )
     create_duckdb_database_file(options)
