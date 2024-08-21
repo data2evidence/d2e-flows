@@ -5,7 +5,7 @@ from typing import Optional, List
 
 class DatabaseDialects(str, Enum):
     HANA = "hana"
-    POSTGRES = "postgres"
+    POSTGRES = "postgresql"
 
 
 class DatamartCopyTableConfig(BaseModel):

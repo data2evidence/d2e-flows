@@ -28,4 +28,4 @@ class LiquibaseAction(str, Enum):
 
 class DatabaseDialects(str, Enum):
     HANA = "hana"
-    POSTGRES = "postgres"
+    POSTGRES = "postgresql"

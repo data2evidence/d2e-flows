@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, UUID4
 
 class DatabaseDialects(str, Enum):
     HANA = "hana"
-    POSTGRES = "postgres"
+    POSTGRES = "postgresql"
 
 
 
