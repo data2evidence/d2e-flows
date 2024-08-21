@@ -29,9 +29,8 @@ def data_load_plugin(options: DataloadOptions):
     tables_to_truncate = [f.table_name for f in files if f.truncate]
     chunksize = options.chunksize if options.chunksize else None
     dbutils_module = importlib.import_module('utils.DBUtils')
-    admin_user = importlib.import_module('utils.types').UserType.ADMIN_USER
     dbutils = dbutils_module.DBUtils(database_code)
-    engine = dbutils.create_database_engine(admin_user)
+    engine = dbutils.create_database_engine(schema)
 
     # Truncating
     with engine.connect() as connection:
