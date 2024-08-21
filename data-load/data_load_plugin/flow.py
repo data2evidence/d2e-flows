@@ -178,4 +178,4 @@ def psql_insert_copy_from(table, conn, keys, data_iter):
         print(f"table_name is {table_name}")
         #sql = 'COPY {} ({}) FROM STDIN WITH CSV'.format(
         #    table_name, columns)
-        cur.copy_from(s_buf, table_name, columns=(columns), sep=",")
+        cur.copy_from(s_buf, table_name, sep=",")
