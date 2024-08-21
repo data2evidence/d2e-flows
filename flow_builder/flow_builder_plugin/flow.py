@@ -56,6 +56,7 @@ def build_flow(name, url):
                 parameters=flow_params,
                 job_variables={
                     "image_pull_policy": "Never",
+                    "stream_output": True, "network_mode": "host",
                     "env": {"PREFECT_API_URL": "http://alp-dataflow-gen-1.alp.local:41120"}
                 }
             ),
