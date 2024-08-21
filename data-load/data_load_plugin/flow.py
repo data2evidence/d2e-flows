@@ -176,6 +176,7 @@ def psql_insert_copy_from(table, conn, keys, data_iter):
         print(f"columns is {columns}")
         print(f"s_buf is {s_buf}")
         print(f"table_name is {table.name}")
-        #sql = 'COPY {} ({}) FROM STDIN WITH CSV'.format(
-        #    table_name, columns)
-        cur.copy_from(s_buf, table.name, sep=",")
+        sql = 'COPY {} ({}) FROM STDIN'.format(
+            table_name, columns)
+        #cur.copy_from(s_buf, table.name, sep=",")
+        cur.copy_expert(sql=sql, file=s_buf)
