@@ -64,9 +64,9 @@ def data_load_plugin(options: DataloadOptions):
                         else:
                             table_column_names = [column_name[0] for column_name in res]
                             common_columns = list(set(csv_column_names) & set(table_column_names))
-                            data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy)
+                            data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy_from)
                 elif header is None:
-                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy)
+                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy_from)
         except Exception as e:
             logger.error(f"'Data load failed for the table '{schema}.{file.table_name}' at the chunk index: {i}  with error: {e}")
             raise e
@@ -157,4 +157,25 @@ def psql_insert_copy(table, conn, keys, data_iter):
 
         sql = 'COPY {} ({}) FROM STDIN WITH CSV'.format(
             table_name, columns)
-        cur.copy_expert(sql=sql, file=s_buf)
+        cur.copy_from(sql=sql, file=s_buf)
+        
+def psql_insert_copy_from(table, conn, keys, data_iter):
+    dbapi_conn = conn.connection
+    with dbapi_conn.cursor() as cur:
+        s_buf = StringIO()
+        writer = csv.writer(s_buf)
+        writer.writerows(data_iter)
+        s_buf.seek(0)
+
+        columns = ', '.join('"{}"'.format(k) for k in keys)
+        if table.schema:
+            table_name = '{}.{}'.format(table.schema, table.name)
+        else:
+            table_name = table.name
+
+        print(f"columns is {columns}")
+        print(f"s_buf is {s_buf}")
+        print(f"table_name is {table_name}")
+        #sql = 'COPY {} ({}) FROM STDIN WITH CSV'.format(
+        #    table_name, columns)
+        cur.copy_from(s_buf, table_name, columns=(columns), sep=",")
