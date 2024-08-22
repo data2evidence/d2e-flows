@@ -66,8 +66,8 @@ def data_characterization_plugin(options: DCOptionsType):
     dbutils = dbutils_module.DBUtils(database_code)
     admin_user = user_type_module.UserType.ADMIN_USER
     read_user = user_type_module.UserType.READ_USER
-    results_schema_dao = dbdao_module.DBDao(database_code, results_schema, admin_user)
-    user_dao = user_dao_module.UserDao(database_code, results_schema, admin_user)
+    results_schema_dao = dbdao_module.DBDao(database_code, results_schema, vocab_schema_name)
+    user_dao = user_dao_module.UserDao(database_code, results_schema)
     dialect = dbutils.get_database_dialect()
     
     match dialect:

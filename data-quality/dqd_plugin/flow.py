@@ -105,7 +105,9 @@ def execute_dqd(
     dbutils = dbutils_module.DBUtils(database_code)
     
     set_db_driver_env = dbutils.set_db_driver_env()
-    set_read_user_connection = dbutils.get_database_connector_connection_string(read_user, release_date)
+    set_read_user_connection = dbutils.get_database_connector_connection_string(schema_name, vocab_schema_name, release_date)
+    
+    logger.info(f"set_read_user_connection is {set_read_user_connection}")
 
     logger.info(f'''Running DQD with input parameters:
                     schemaName: {schema_name},
