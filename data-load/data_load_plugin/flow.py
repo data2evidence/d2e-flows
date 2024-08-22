@@ -64,9 +64,9 @@ def data_load_plugin(options: DataloadOptions):
                         else:
                             table_column_names = [column_name[0] for column_name in res]
                             common_columns = list(set(csv_column_names) & set(table_column_names))
-                            data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy_from)
+                            data[common_columns].to_sql(file.table_name, engine, if_exists='append', index=False, schema=schema, chunksize=chunksize)
                 elif header is None:
-                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize, method=psql_insert_copy_from)
+                    data.to_sql(file.table_name, engine, if_exists="append", index=False, schema=schema, chunksize=chunksize)
         except Exception as e:
             logger.error(f"'Data load failed for the table '{schema}.{file.table_name}' at the chunk index: {i}  with error: {e}")
             raise e
