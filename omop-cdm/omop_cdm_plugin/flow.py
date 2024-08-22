@@ -56,11 +56,11 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
 
         # import helper function to create schema
         dbdao_module = importlib.import_module('dao.DBDao')
-        omop_cdm_dao = dbdao_module.DBDao(database_code, schema_name, admin_user)
+        omop_cdm_dao = dbdao_module.DBDao(database_code, schema_name, vocab_schema)
         
         # import helper function to create roles
         userdao_module = importlib.import_module('dao.UserDao')
-        userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
+        userdao = userdao_module.UserDao(database_code, schema_name)
         
         # import helper function to get database connection
         dbutils_module = importlib.import_module('utils.DBUtils')
@@ -91,7 +91,7 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
         
         if schema_name != vocab_schema:
             # Insert CDM Version
-            vocab_schema_dao = dbdao_module.DBDao(database_code, vocab_schema, admin_user)
+            vocab_schema_dao = dbdao_module.DBDao(database_code, vocab_schema)
             insert_cdm_version_wo = insert_cdm_version.with_options(
                 on_failure=[partial(drop_schema_hook,
                                     **dict(schema_dao=omop_cdm_dao))]
