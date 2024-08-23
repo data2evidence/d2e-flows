@@ -16,3 +16,38 @@ class CreateDuckdbDatabaseFileModules(BaseModel):
     utils_types: Any
     dbutils: Any
     dao_DBDao: Any
+
+
+DUCKDB_FULLTEXT_SEARCH_CONFIG = {
+    "concept": {
+        "document_identifier": "concept_id",
+    },
+    "concept_relationship": {
+        # primary key does not exist in concept_relationship table
+        "document_identifier": "fts_document_identifier_id",
+    },
+    "relationship": {
+        "document_identifier": "relationship_id",
+    },
+    "vocabulary": {
+        "document_identifier": "vocabulary_id",
+    },
+    "concept_synonym": {
+        # primary key does not exist in concept_synonym table,
+        "document_identifier": "fts_document_identifier_id",
+    },
+    "concept_class": {
+        "document_identifier": "concept_class_id",
+    },
+    "domain": {
+        "document_identifier": "domain_id",
+    },
+    "concept_ancestor": {
+        # primary key does not exist in concept_ancestor table
+        "document_identifier": "fts_document_identifier_id",
+    },
+    "concept_recommended": {
+        # primary key does not exist in concept_ancestor table
+        "document_identifier": "fts_document_identifier_id",
+    },
+}

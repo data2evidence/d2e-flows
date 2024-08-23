@@ -1,0 +1,59 @@
+import duckdb
+from prefect import get_run_logger
+from typing import Union
+from create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG
+from create_cachedb_file_plugin.util import resolve_duckdb_file_path
+
+
+def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str | int], columns: list[str]):
+    return f""" PRAGMA
+    create_fts_index({table_name},
+        {document_identifier},
+        {", ".join(columns)},
+        stemmer='porter', 
+        stopwords='english', 
+        ignore='(\\.|[^a-z])+', 
+        strip_accents=1, 
+        lower=1, 
+        overwrite=1)
+    """
+
+
+def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
+    '''
+    Create duckdb full text search indexes based on columns specified in DUCKDB_FULLTEXT_SEARCH_CONFIG
+    '''
+    logger = get_run_logger()
+
+    for vocab_table_name in DUCKDB_FULLTEXT_SEARCH_CONFIG.keys():
+        logger.info(
+            f"Creating duckdb fulltext search index for table:{vocab_table_name}...")
+        config_document_identifier = DUCKDB_FULLTEXT_SEARCH_CONFIG[
+            vocab_table_name]["document_identifier"]
+        columns = [column.get("name")
+                   for column in db_dao.get_columns(vocab_table_name)]
+
+        fts_creation_sql = get_duckdb_fts_creation_sql(
+            table_name=vocab_table_name,
+            document_identifier=DUCKDB_FULLTEXT_SEARCH_CONFIG[vocab_table_name]["document_identifier"],
+            columns=columns
+        )
+
+        duckdb_file_path = resolve_duckdb_file_path(
+            duckdb_database_name, create_for_cdw_config_validation)
+        with duckdb.connect(duckdb_file_path) as con:
+            # If document_identifier is not in table columns, add a new column fts_document_identifier_id which is a auto-increment integer column to act as the table's unique id column.
+            # This is required as duckdb FTS requires a unique conlumn as the document identifier
+            if config_document_identifier not in columns:
+                logger.info(
+                    f"Creating unique auto increment column...")
+                sequence_name = f"{vocab_table_name}_id_sequence"
+                con.execute(f"CREATE SEQUENCE {sequence_name} START 1;")
+                con.execute(
+                    f"ALTER TABLE {vocab_table_name} ADD COLUMN {config_document_identifier} INTEGER DEFAULT nextval('{sequence_name}');")
+
+            con.execute(fts_creation_sql)
+            logger.info(
+                f"Fulltext search index created successfully")
+    logger.info(
+        f"""Duckdb fulltext search indexes successfully created.""")
