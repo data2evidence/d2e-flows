@@ -1,0 +1,39 @@
+{
+  "name": "d2e-plugins",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "docker build . -t ph/flow --platform=linux/amd64"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alp-os/d2e-plugins.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alp-os/d2e-plugins/issues"
+  },
+  "homepage": "https://github.com/alp-os/d2e-plugins#readme",
+  "trex" : {
+    "flow": {
+    "dockerimage": "ph/flow:latest",
+    "flows": [
+      {
+        "name": "cohort_generator_plugin",
+        "type": "cohort_generator",
+        "entrypoint": "flows.cohort_generator.cohort_generator_plugin.flow.cohort_generator_plugin",
+        "tags": [
+        ]
+      },
+      {
+        "name": "hello_world",
+        "type": "",
+        "entrypoint": "flows.helloworld.flow.hello",
+        "tags": [
+        ]
+      }
+    ]
+  }}
+}
