@@ -23,6 +23,7 @@ class Node:
         self.id = node["id"]
         self.type = node["type"]
         self.ro = importlib.import_module('rpy2.robjects')
+        self.use_cache_db = False
 
 
 class Flow(Node):
@@ -168,6 +169,7 @@ class DbWriter(Node):
         self.tablename = _node["dbtablename"]
         self.database = _node["database"] 
         self.dataframe = _node["dataframe"]
+        self.use_cache_db = _node["use_cache_db"]
 
     def test(self, _input: Dict[str, Result], task_run_context):
         return False
@@ -176,10 +178,10 @@ class DbWriter(Node):
         input_element = _input
         
         dbutils_module = importlib.import_module("utils.DBUtils")
-        types_module = importlib.import_module("utils.types")
-        admin_user = types_module.UserType.ADMIN_USER
-        dbutils = dbutils_module.DBUtils(self.database)
-        dbconn = dbutils.create_database_engine(admin_user)
+        admin_user = importlib.import_module("utils.types").UserType.ADMIN_USER
+        dbutils = dbutils_module.DBUtils(use_cache_db=self.use_cache_db,
+                                         database_code=self.database)
+        dbconn = dbutils.create_database_engine(user_type=admin_user)
 
         try:
             for path in self.dataframe:
@@ -198,6 +200,7 @@ class DbQueryReader(Node):
         self.database = _node["database"]
         self.testdata = {
             "columns": _node["columns"], "data": _node["testdata"]}
+        self.use_cache_db = _node["use_cache_db"]
 
     def test(self, task_run_context):
         dd = importlib.import_module("dask.dataframe")
@@ -207,10 +210,10 @@ class DbQueryReader(Node):
         dd = importlib.import_module("dask.dataframe")
         # return dd.read_sql_query(sqlalchemy.select(sqlalchemy.text(self.sqlquery)), self.dbconn, self.index_col, divisions=self.divisions)
         dbutils_module = importlib.import_module("utils.DBUtils")
-        types_module = importlib.import_module("utils.types")
-        read_user = types_module.UserType.READ_USER
-        dbutils = dbutils_module.DBUtils(self.database)
-        dbconn = dbutils.create_database_engine(read_user)
+        read_user = importlib.import_module("utils.types").UserType.READ_USER
+        dbutils = dbutils_module.DBUtils(use_cache_db=self.use_cache_db,
+                                         database_code=self.database)
+        dbconn = dbutils.create_database_engine(user_type=read_user)
 
         try:
             ddf = dd.from_pandas(pd.read_sql_query(
@@ -233,6 +236,7 @@ class SqlQueryNode(Node):
         if "params" in _node:
             self.params = _node["params"]
         self.database = _node["database"]
+        self.use_cache_db = _node["use_cache_db"]
 
     def _map_input(self, _input):
         _params = {}
@@ -248,16 +252,16 @@ class SqlQueryNode(Node):
         res = None
 
         dbutils_module = importlib.import_module("utils.DBUtils")
-        types_module = importlib.import_module("utils.types")
-        admin_user = types_module.UserType.ADMIN_USER
-        dbutils = dbutils_module.DBUtils(self.database)
-        dbconn = dbutils.create_database_engine(admin_user)
+        admin_user = importlib.import_module("utils.types").UserType.ADMIN_USER
+        dbutils = dbutils_module.DBUtils(use_cache_db=self.use_cache_db,
+                                         database_code=self.database)
+        dbconn = dbutils.create_database_engine(user_type=admin_user)
 
         with dbconn.connect() as connection:
             if self._is_select:
-                res = dbconn.execute(sqlalchemy.text(sqlquery), _params)
+                res = connection.execute(sqlalchemy.text(sqlquery), _params)
             else:
-                dbconn.execute(sqlalchemy.text(sqlquery), _params)
+                connection.execute(sqlalchemy.text(sqlquery), _params)
             if res:
                 rows = res.fetchall()
                 query_results = [dict(row) for row in rows]
