@@ -45,27 +45,25 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
     database_code = options.database_code
     schema_name = options.schema_name
     vocab_schema = options.vocab_schema
-    data_model = options.data_model
     cdm_version = options.cdm_version
     release_version =  options.release_version
+    use_cache_db = options.use_cache_db
 
     try:
         setup_plugin(release_version) # To dynamically import helper functions from dataflow-gen
         types_module = importlib.import_module('utils.types')
-        admin_user = types_module.UserType.ADMIN_USER
 
         # import helper function to create schema
         dbdao_module = importlib.import_module('dao.DBDao')
-        omop_cdm_dao = dbdao_module.DBDao(database_code, schema_name, admin_user)
+        omop_cdm_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                          database_code=database_code, 
+                                          schema_name=schema_name)
         
         # import helper function to create roles
         userdao_module = importlib.import_module('dao.UserDao')
-        userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
-        
-        # import helper function to get database connection
-        dbutils_module = importlib.import_module('utils.DBUtils')
-        dbutils = dbutils_module.DBUtils(database_code)
-        tenant_configs = dbutils.extract_database_credentials()
+        userdao = userdao_module.UserDao(use_cache_db=use_cache_db,
+                                         database_code=database_code, 
+                                         schema_name=schema_name)
         
         create_schema(omop_cdm_dao, logger)
 
@@ -75,7 +73,7 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
             on_failure=[partial(drop_schema_hook,
                                 **dict(schema_dao=omop_cdm_dao))]
         )
-        create_cdm_tables_wo(database_code, schema_name, cdm_version, admin_user, logger)
+        create_cdm_tables_wo(omop_cdm_dao, cdm_version, logger)
         
         # Grant permissions
         create_and_assign_roles_wo = create_and_assign_roles.with_options(
@@ -85,13 +83,14 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
         
         create_and_assign_roles_wo(
             userdao=userdao,
-            tenant_configs=tenant_configs,
             cdm_version=cdm_version
         )
         
         if schema_name != vocab_schema:
             # Insert CDM Version
-            vocab_schema_dao = dbdao_module.DBDao(database_code, vocab_schema, admin_user)
+            vocab_schema_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                                  database_code=database_code, 
+                                                  schema_name=vocab_schema)
             insert_cdm_version_wo = insert_cdm_version.with_options(
                 on_failure=[partial(drop_schema_hook,
                                     **dict(schema_dao=omop_cdm_dao))]
@@ -122,17 +121,15 @@ def create_schema(dbdao, logger):
 
 
 @task(log_prints=True)
-def create_cdm_tables(database_code, schema_name, cdm_version, user, logger):
+def create_cdm_tables(dbdao, cdm_version: str, logger):
     # currently only supports pg dialect
     r_libs_user_directory = os.getenv("R_LIBS_USER")
     robjects = importlib.import_module('rpy2.robjects')
-    dbutils_module = importlib.import_module('utils.DBUtils')
-    dbutils = dbutils_module.DBUtils(database_code)
     
-    set_connection_string = dbutils.get_database_connector_connection_string(user)
+    set_connection_string = dbdao.get_database_connector_connection_string(dbdao.schema_name)
     print(f"set_connection_string is {set_connection_string}")
     
-    logger.info(f"Running CommonDataModel version '{cdm_version}' on schema '{schema_name}' in database '{database_code}'")
+    logger.info(f"Running CommonDataModel version '{cdm_version}' on schema '{dbdao.schema_name}' in database '{dbdao.database_code}'")
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(
             f'''
@@ -140,26 +137,28 @@ def create_cdm_tables(database_code, schema_name, cdm_version, user, logger):
             library('CommonDataModel', lib.loc = '{r_libs_user_directory}')
             {set_connection_string}
             cdm_version <- "{cdm_version}"
-            schema_name <- "{schema_name}"
+            schema_name <- "{dbdao.schema_name}"
             CommonDataModel::executeDdl(connectionDetails = connectionDetails, cdmVersion = cdm_version, cdmDatabaseSchema = schema_name, executeDdl = TRUE, executePrimaryKey = TRUE, executeForeignKey = FALSE)
             '''
         )
-    logger.info(f"Succesfully ran CommonDataModel version '{cdm_version}' on schema '{schema_name}' in database '{database_code}'")
+    logger.info(f"Succesfully ran CommonDataModel version '{cdm_version}' on schema '{dbdao.schema_name}' in database '{dbdao.database_code}'")
 
 
 def update_dataset_metadata(options: OmopCDMPluginOptions):
     logger = get_run_logger()
     dataset_list = options.datasets
     token = options.token
+    use_cache_db = options.use_cache_db
+    
     if (dataset_list is None) or (len(dataset_list) == 0):
         logger.debug("No datasets fetched from portal")
     else:
         logger.info(f"Successfully fetched {len(dataset_list)} datasets from portal")
         for dataset in dataset_list:
-            get_and_update_attributes(token, dataset)
+            get_and_update_attributes(token, dataset, use_cache_db)
 
 @task(log_prints=True)
-def get_and_update_attributes(token: str, dataset: dict):
+def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
     logger = get_run_logger()
 
     sys.path.append('/app/pysrc')
@@ -167,8 +166,6 @@ def get_and_update_attributes(token: str, dataset: dict):
     types_modules = importlib.import_module('utils.types')
     portal_server_api_module = importlib.import_module('api.PortalServerAPI')
     
-    admin_user = types_modules.UserType.ADMIN_USER
-        
     try:
         dataset_id = dataset.get("id")
         database_code = dataset.get("databaseCode")
@@ -177,7 +174,9 @@ def get_and_update_attributes(token: str, dataset: dict):
         missing_key = ke.args[0]
         logger.error(f"'{missing_key} not found in dataset'")
     else:
-        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user) 
+        dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                   database_code=database_code, 
+                                   schema_name=schema_name)
         portal_server_api = portal_server_api_module.PortalServerAPI(token)
         
         # check if schema exists

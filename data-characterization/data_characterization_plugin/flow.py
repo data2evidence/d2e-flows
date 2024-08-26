@@ -41,7 +41,6 @@ def data_characterization_plugin(options: DCOptionsType):
     logger = get_run_logger()
     setup_plugin()
 
-    dbutils_module = importlib.import_module("utils.DBUtils")
     user_type_module = importlib.import_module("utils.types")
     robjects = importlib.import_module("rpy2.robjects")
     user_dao_module = importlib.import_module("dao.UserDao")
@@ -55,6 +54,7 @@ def data_characterization_plugin(options: DCOptionsType):
     results_schema = options.resultsSchema
     flow_name = options.flowName
     changelog_file = options.changelogFile
+    use_cache_db = options.use_cache_db
 
     # comma separated values in a string
     exclude_analysis_ids = options.excludeAnalysisIds
@@ -63,12 +63,16 @@ def data_characterization_plugin(options: DCOptionsType):
     flow_run_id = str(flow_run_context.get("id"))
     output_folder = f"/output/{flow_run_id}"
     
-    dbutils = dbutils_module.DBUtils(database_code)
     admin_user = user_type_module.UserType.ADMIN_USER
     read_user = user_type_module.UserType.READ_USER
-    results_schema_dao = dbdao_module.DBDao(database_code, results_schema, admin_user)
-    user_dao = user_dao_module.UserDao(database_code, results_schema, admin_user)
-    dialect = dbutils.get_database_dialect()
+    results_schema_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                            database_code=database_code, 
+                                            schema_name=results_schema)
+    
+    user_dao = user_dao_module.UserDao(use_cache_db=use_cache_db,
+                                       database_code=database_code, 
+                                       schema_name=results_schema)
+    dialect = results_schema_dao.get_database_dialect()
     
     match dialect:
         case DatabaseDialects.POSTGRES:
@@ -85,22 +89,21 @@ def data_characterization_plugin(options: DCOptionsType):
         vocab_schema_name,
         flow_name,
         changelog_file,
-        dbutils,
         results_schema_dao,
         user_dao
     )
 
     r_libs_user_directory = os.getenv("R_LIBS_USER")
-    set_db_driver_env_string = dbutils.set_db_driver_env()
+    set_db_driver_env_string = results_schema_dao.set_db_driver_env()
     
-    set_admin_connection_string = dbutils.get_database_connector_connection_string(
-        admin_user,
-        release_date
+    set_admin_connection_string = results_schema_dao.get_database_connector_connection_string(
+        user_type=admin_user,
+        release_date=release_date
     )
     
-    set_read_connection_string = dbutils.get_database_connector_connection_string(
-        read_user,
-        release_date
+    set_read_connection_string = results_schema_dao.get_database_connector_connection_string(
+        user_type=read_user,
+        release_date=release_date
     )       
 
     dc_status = execute_data_characterization(schema_name,
@@ -134,15 +137,13 @@ def create_data_characterization_schema(
     vocab_schema_name: str,
     flow_name: str,
     changelog_file: str,
-    dbutils,
     results_schema_dao,
     user_dao
 ):
     try:
         plugin_classpath = get_plugin_classpath(flow_name)
-        dialect = dbutils.get_database_dialect()
-        
-        tenant_configs = dbutils.extract_database_credentials()
+        dialect = results_schema_dao.get_database_dialect()
+        tenant_configs = results_schema_dao.get_tenant_configs()
         
         # create tables with liquibase
         action = LiquibaseAction.UPDATE
@@ -178,8 +179,7 @@ def create_data_characterization_schema(
         create_and_assign_roles_wo = create_and_assign_roles.with_options(
             on_failure=[partial(drop_schema_hook,
                                 **dict(schema_dao=results_schema_dao))])
-        create_and_assign_roles_wo(
-            user_dao, tenant_configs, dialect)
+        create_and_assign_roles_wo(user_dao)
 
         print(f"Data Characterization results schema '{results_schema}' successfully created and privileges assigned!")
 

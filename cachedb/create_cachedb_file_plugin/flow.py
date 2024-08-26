@@ -17,7 +17,6 @@ def create_cachedb_file_plugin(options: CreateDuckdbDatabaseFileType):
 
     modules = CreateDuckdbDatabaseFileModules(
         utils_types=importlib.import_module('utils.types'),
-        dbutils=importlib.import_module('utils.DBUtils'),
         dao_DBDao=importlib.import_module('dao.DBDao'),
     )
     create_duckdb_database_file(options, modules)

@@ -5,7 +5,7 @@ from typing import Optional, List
 
 class DatabaseDialects(str, Enum):
     HANA = "hana"
-    POSTGRES = "postgres"
+    POSTGRES = "postgresql"
 
 
 class DatamartCopyTableConfig(BaseModel):
@@ -23,7 +23,7 @@ class DatamartOptionsType(BaseModel):
     sourceSchema: str
     vocabSchema: str
     snapshotCopyConfig: DatamartCopyConfig
-
+    
 
 class DatamartFlowAction(str, Enum):
     CREATE_SNAPSHOT = "create_snapshot"  # Copy as a new db schema
@@ -40,6 +40,10 @@ class CreateDatamartOptions(BaseModel):
     snapshot_copy_config: Optional[DatamartCopyConfig]
     datasets: Optional[List] = None
     token: Optional[str] = ""
+
+    @property
+    def use_cache_db(self) -> str:
+        return True
 
 
 RELEASE_VERSION_MAPPING = {

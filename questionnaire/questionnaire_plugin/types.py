@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, UUID4
 
 class DatabaseDialects(str, Enum):
     HANA = "hana"
-    POSTGRES = "postgres"
+    POSTGRES = "postgresql"
 
 
 
@@ -33,6 +33,10 @@ class QuestionnaireOptionsType(BaseModel):
     questionnaire_id: Optional[str]
     token: Optional[str]
     
+    @property
+    def use_cache_db(self) -> str:
+        return True
+
 
 class QuestionnaireResponseType(QuestionnaireBaseModel):
     questionnaire_id: str

@@ -22,6 +22,7 @@ def add_search_index_plugin(options: MeilisearchAddIndexType):
     database_code = options.databaseCode
     vocab_schema_name = options.vocabSchemaName
     table_name = options.tableName
+    use_cache_db = options.use_cache_db
     CHUNK_SIZE = options.chunk_size
     MEILISEARCH_INDEX_CONFIG = options.meilisearch_index_config
     
@@ -49,7 +50,9 @@ def add_search_index_plugin(options: MeilisearchAddIndexType):
     index_name = f"{database_code}_{vocab_schema_name}_{table_name}"
     # Initialize helper classes
     meilisearch_svc_api = meilisearch_svc_api_module.MeilisearchSvcAPI()
-    vocab_dao = vocabdao_module.VocabDao(database_code, vocab_schema_name)
+    vocab_dao = vocabdao_module.VocabDao(use_cache_db=use_cache_db,
+                                         database_code=database_code, 
+                                         schema_name=vocab_schema_name)
     # logger.info(f"Getting stream connection")
     conn = vocab_dao.get_stream_connection(yield_per=CHUNK_SIZE)
     

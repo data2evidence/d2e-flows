@@ -15,3 +15,7 @@ class DqdOptionsType(DqdBaseOptionsType):
     checkNames: Optional[List[str]]
     cohortDatabaseSchema: Optional[str]
     cohortTableName: Optional[str]
+    
+    @property
+    def use_cache_db(self) -> str:
+        return False

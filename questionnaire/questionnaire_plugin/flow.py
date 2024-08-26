@@ -24,11 +24,12 @@ def questionnaire_plugin(options: QuestionnaireOptionsType):
     questionnaire_definition = options.questionnaire_definition
     schema_name = options.schema_name
     database_code = options.database_code
+    use_cache_db = options.use_cache_db
     
     dbdao_module = importlib.import_module("dao.DBDao")
-    types_module = importlib.import_module("utils.types")
-    admin_user = types_module.UserType.admin_user
-    dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
+    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                               database_code=database_code, 
+                               schema_name=schema_name)
     
     match options.flow_action_type:
         case FlowActionType.CREATE_QUESTIONNAIRE_DEFINITION:

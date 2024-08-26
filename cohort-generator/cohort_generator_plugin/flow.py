@@ -39,12 +39,17 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     description = options.description
     owner = options.owner
     token = options.token
+    use_cache_db = options.use_cache_db
     
-    analytics_svc_api_module = importlib.import_module('api.AnalyticsSvcAPI')
-    analytics_svc_api = analytics_svc_api_module.AnalyticsSvcAPI(token)
-    dbutils = importlib.import_module('utils.DBUtils').DBUtils(database_code)
+    analytics_svc_api_module = importlib.import_module('api.AnalyticsSvcAPI')    
+    dbdao_module = importlib.import_module('dao.DBDao')
     admin_user = importlib.import_module("utils.types").UserType.ADMIN_USER
     robjects = importlib.import_module('rpy2.robjects')
+    
+    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                               database_code=database_code, 
+                               schema_name=schema_name)
+    analytics_svc_api = analytics_svc_api_module.AnalyticsSvcAPI(token)
     
     cohort_json_expression = json.dumps(cohort_json.expression)
     cohort_name = cohort_json.name
@@ -56,7 +61,7 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
                                                     cohort_json_expression,
                                                     cohort_name)
 
-    create_cohort(dbutils,
+    create_cohort(dbdao,
                   admin_user,
                   schema_name,
                   cohort_definition_id,
@@ -80,15 +85,14 @@ def create_cohort_definition(analytics_svc_api, dataset_id: str, description: st
 
 
 @task(log_prints=True)
-def create_cohort(dbutils, admin_user, schema_name: str, cohort_definition_id: int, 
+def create_cohort(dbdao, admin_user, schema_name: str, cohort_definition_id: int, 
                   cohort_json_expression: str, cohort_name: str, vocab_schema_name: str, 
                   robjects):
     
-    set_db_driver_env_string = dbutils.set_db_driver_env()
+    set_db_driver_env_string = dbdao.set_db_driver_env()
     
-    set_connection_string = dbutils.get_database_connector_connection_string(
-        admin_user,
-        None
+    set_connection_string = dbdao.get_database_connector_connection_string(
+        user_type=admin_user
     )
    
     r_libs_user_directory = os.getenv("R_LIBS_USER")

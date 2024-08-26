@@ -39,13 +39,20 @@ def dicom_etl_plugin(options: DICOMETLOptions):
     vocab_schema_name = options.vocab_schema_name
     cdm_schema_name = options.cdm_schema_name
     to_truncate = options.to_truncate
+    use_cache_db = options.use_cache_db
 
     admin_user = importlib.import_module('utils.types').PG_TENANT_USERS.ADMIN_USER
     dbdao_module = importlib.import_module('dao.DBDao')
 
-    mi_dbdao = dbdao_module.DBDao(database_code, medical_imaging_schema_name, admin_user)
-    vocab_dbdao = dbdao_module.DBDao(database_code, vocab_schema_name, admin_user)
-    cdm_dbdao = dbdao_module.DBDao(database_code, cdm_schema_name, admin_user)
+    mi_dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                  database_code=database_code, 
+                                  schema_name=medical_imaging_schema_name)
+    vocab_dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                     database_code=database_code, 
+                                     schema_name=vocab_schema_name)
+    cdm_dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                   database_code=database_code, 
+                                   schema_name=cdm_schema_name)
     
     match flow_action_type:
         case FlowActionType.LOAD_VOCAB:

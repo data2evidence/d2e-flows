@@ -23,15 +23,19 @@ def data_load_plugin(options: DataloadOptions):
     logger = get_run_logger()
     files = options.files
     database_code = options.database_code
+    use_cache_db = options.use_cache_db
     header = 0 if options.header else None
     escape_char = options.escape_character if options.escape_character else None
     schema = options.schema_name
     tables_to_truncate = [f.table_name for f in files if f.truncate]
     chunksize = options.chunksize if options.chunksize else None
-    dbutils_module = importlib.import_module('utils.DBUtils')
-    admin_user = importlib.import_module('utils.types').UserType.ADMIN_USER
-    dbutils = dbutils_module.DBUtils(database_code)
-    engine = dbutils.create_database_engine(admin_user)
+    
+    dbdao_module = importlib.import_module('dao.DBDao')
+    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                               database_code=database_code, 
+                               schema_name=schema)
+
+    engine = dbdao.engine
 
     # Truncating
     with engine.connect() as connection:

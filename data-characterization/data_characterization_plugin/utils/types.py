@@ -12,6 +12,10 @@ class DCOptionsType(BaseModel):
     releaseDate: str
     resultsSchema: str
     excludeAnalysisIds: str
+
+    @property
+    def use_cache_db(self) -> str:
+        return False
     
     @property
     def flowName(self) -> str:
@@ -28,4 +32,4 @@ class LiquibaseAction(str, Enum):
 
 class DatabaseDialects(str, Enum):
     HANA = "hana"
-    POSTGRES = "postgres"
+    POSTGRES = "postgresql"
