@@ -10,9 +10,9 @@ def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str 
     create_fts_index({table_name},
         {document_identifier},
         {", ".join(columns)},
-        stemmer='porter', 
-        stopwords='english', 
-        ignore='(\\.|[^a-z])+', 
+        stemmer='none', 
+        stopwords='none', 
+        ignore='(\\.|[^a-z0-9])+', 
         strip_accents=1, 
         lower=1, 
         overwrite=1)
