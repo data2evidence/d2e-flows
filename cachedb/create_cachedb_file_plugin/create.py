@@ -74,7 +74,7 @@ def copy_postgres_to_duckdb(dbdao, duckdb_database_name: str, create_for_cdw_con
                 
                 result = con.execute(
                     f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={tenant_configs['host']} port={tenant_configs['port']} dbname={
-                        tenant_configs['databaseName']} user={tenant_configs['user']} password={tenant_configs['password']}', '{dbdao.schema_name}', '{table}'){limit_statement})"""
+                        tenant_configs['databaseName']} user={tenant_configs['adminUser']} password={tenant_configs['adminPassword']}', '{dbdao.schema_name}', '{table}'){limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
         except Exception as err:
