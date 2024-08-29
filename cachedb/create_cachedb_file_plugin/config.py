@@ -54,4 +54,7 @@ DUCKDB_FULLTEXT_SEARCH_CONFIG = {
         # primary key does not exist in concept_ancestor table
         "document_identifier": "fts_document_identifier_id",
     },
+    "note": {
+        "document_identifier": "note_id",
+    },
 }
