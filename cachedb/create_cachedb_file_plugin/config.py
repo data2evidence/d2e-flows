@@ -22,10 +22,12 @@ DUCKDB_FULLTEXT_SEARCH_CONFIG = {
     "concept": {
         "document_identifier": "concept_id",
     },
-    "concept_relationship": {
-        # primary key does not exist in concept_relationship table
-        "document_identifier": "fts_document_identifier_id",
-    },
+    # TODO: Temp commented out due to OOM error. Discuss if table is required or not.
+    # https://github.com/alp-os/internal/issues/1064
+    # "concept_relationship": {
+    #     # primary key does not exist in concept_relationship table
+    #     "document_identifier": "fts_document_identifier_id",
+    # },
     "relationship": {
         "document_identifier": "relationship_id",
     },
@@ -42,10 +44,12 @@ DUCKDB_FULLTEXT_SEARCH_CONFIG = {
     "domain": {
         "document_identifier": "domain_id",
     },
-    "concept_ancestor": {
-        # primary key does not exist in concept_ancestor table
-        "document_identifier": "fts_document_identifier_id",
-    },
+    # TODO: Temp commented out due to OOM error. Discuss if table is required or not.
+    # https://github.com/alp-os/internal/issues/1064
+    # "concept_ancestor": {
+    #     # primary key does not exist in concept_ancestor table
+    #     "document_identifier": "fts_document_identifier_id",
+    # },
     "concept_recommended": {
         # primary key does not exist in concept_ancestor table
         "document_identifier": "fts_document_identifier_id",
