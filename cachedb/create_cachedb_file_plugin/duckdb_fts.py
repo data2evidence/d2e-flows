@@ -46,11 +46,13 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_c
             # This is required as duckdb FTS requires a unique conlumn as the document identifier
             if config_document_identifier not in columns:
                 logger.info(
-                    f"Creating unique auto increment column...")
+                    f"Adding unique auto increment column...")
                 sequence_name = f"{vocab_table_name}_id_sequence"
                 con.execute(f"CREATE SEQUENCE {sequence_name} START 1;")
                 con.execute(
                     f"ALTER TABLE {vocab_table_name} ADD COLUMN {config_document_identifier} INTEGER DEFAULT nextval('{sequence_name}');")
+                logger.info(
+                    f"Colum successfully addded")
 
             con.execute(fts_creation_sql)
             logger.info(
