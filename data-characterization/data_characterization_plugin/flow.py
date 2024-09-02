@@ -84,8 +84,7 @@ def data_characterization_plugin(options: DCOptionsType):
             vocab_schema_name = vocab_schema_name.upper()
             schema_name = schema_name.upper()      
     
-    create_data_characterization_schema(
-        results_schema,
+    dc_schema = create_data_characterization_schema(
         vocab_schema_name,
         flow_name,
         changelog_file,
@@ -93,57 +92,55 @@ def data_characterization_plugin(options: DCOptionsType):
         user_dao
     )
 
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
-    set_db_driver_env_string = results_schema_dao.set_db_driver_env()
-    
-    set_admin_connection_string = results_schema_dao.get_database_connector_connection_string(
-        user_type=admin_user,
-        release_date=release_date
-    )
-    
-    set_read_connection_string = results_schema_dao.get_database_connector_connection_string(
-        user_type=read_user,
-        release_date=release_date
-    )       
+    if dc_schema:
+        r_libs_user_directory = os.getenv("R_LIBS_USER")
+        
+        set_admin_connection_string = results_schema_dao.get_database_connector_connection_string(
+            user_type=admin_user,
+            release_date=release_date
+        )
+        
+        set_read_connection_string = results_schema_dao.get_database_connector_connection_string(
+            user_type=read_user,
+            release_date=release_date
+        )       
 
-    dc_status = execute_data_characterization(schema_name,
-                                  cdm_version_number,
-                                  vocab_schema_name,
-                                  results_schema,
-                                  exclude_analysis_ids,
-                                  output_folder,
-                                  robjects,
-                                  r_libs_user_directory,
-                                  set_db_driver_env_string,
-                                  set_admin_connection_string,
-                                  results_schema_dao)
+        dc_status = execute_data_characterization(schema_name=schema_name,
+                                                  cdm_version_number=cdm_version_number,
+                                                  vocab_schema_name=vocab_schema_name,
+                                                  results_schema_dao=results_schema_dao,
+                                                  exclude_analysis_ids=exclude_analysis_ids,
+                                                  output_folder=output_folder,
+                                                  robjects=robjects,
+                                                  r_libs_user_directory=r_libs_user_directory,
+                                                  set_connection_string=set_admin_connection_string,
+                                                  flow_run_id=flow_run_id)
 
-    if dc_status:
-        msg = dc_status.get("error_message")
-        raise Exception(f"An error occurred while executing data characterization: {msg}")
+        if dc_status:
+            msg = dc_status.get("error_message")
+            raise Exception(f"An error occurred while executing data characterization: {msg}")
 
-    execute_export_to_ares(schema_name,
-                           vocab_schema_name,
-                           results_schema,
-                           output_folder,
-                           robjects,
-                           r_libs_user_directory,
-                           set_db_driver_env_string,
-                           set_read_connection_string)
+        execute_export_to_ares(schema_name=schema_name, 
+                                                       vocab_schema_name=vocab_schema_name,
+                                                       results_schema_dao=results_schema_dao,
+                                                       output_folder=output_folder,
+                                                       robjects=robjects,
+                                                       r_libs_user_directory=r_libs_user_directory,
+                                                       set_connection_string=set_read_connection_string,
+                                                       flow_run_id=flow_run_id)
 
 
-def create_data_characterization_schema(
-    results_schema: str,
-    vocab_schema_name: str,
-    flow_name: str,
-    changelog_file: str,
-    results_schema_dao,
-    user_dao
-):
+def create_data_characterization_schema(vocab_schema_name: str,
+                                        flow_name: str,
+                                        changelog_file: str,
+                                        results_schema_dao,
+                                        user_dao):
     try:
         plugin_classpath = get_plugin_classpath(flow_name)
         dialect = results_schema_dao.get_database_dialect()
-        tenant_configs = results_schema_dao.get_tenant_configs()
+        tenant_configs = results_schema_dao.tenant_configs
+        
+        create_schema(results_schema_dao)
         
         # create tables with liquibase
         action = LiquibaseAction.UPDATE
@@ -154,7 +151,7 @@ def create_data_characterization_schema(
         create_tables_wo(action=action,
                          dialect=dialect,
                          changelog_file=changelog_file,
-                         schema_name=results_schema,
+                         schema_name=results_schema_dao.schema_name,
                          vocab_schema=vocab_schema_name,
                          tenant_configs=tenant_configs,
                          plugin_classpath=plugin_classpath,
@@ -172,7 +169,7 @@ def create_data_characterization_schema(
         else:
             print("Skipping Alteration of system configuration")
             print("Skipping creation of Audit policy for system configuration")
-            print(f"Skipping creation of new audit policy for {results_schema}")
+            print(f"Skipping creation of new audit policy for {results_schema_dao.schema_name}")
             
         
         # assign permissions to role/user
@@ -181,11 +178,13 @@ def create_data_characterization_schema(
                                 **dict(schema_dao=results_schema_dao))])
         create_and_assign_roles_wo(user_dao)
 
-        print(f"Data Characterization results schema '{results_schema}' successfully created and privileges assigned!")
+        print(f"Data Characterization results schema '{results_schema_dao.schema_name}' successfully created and privileges assigned!")
 
     except Exception as e:
         print(e)
         raise e
+    else:
+        return True
 
 
 @task(log_prints=True,
@@ -194,16 +193,15 @@ def create_data_characterization_schema(
       result_serializer=JSONSerializer(),
       persist_result=True)
 def execute_data_characterization(schema_name: str,
-                                cdm_version_number: str,
-                                vocab_schema_name: str,
-                                results_schema: str,
-                                exclude_analysis_ids: str,
-                                output_folder: str,
-                                robjects,
-                                r_libs_user_directory: str,
-                                set_db_driver_env_string: str,
-                                set_connection_string: str,
-                                results_schema_dao):
+                                  cdm_version_number: str,
+                                  vocab_schema_name: str,
+                                  results_schema_dao,
+                                  exclude_analysis_ids: str,
+                                  output_folder: str,
+                                  robjects,
+                                  r_libs_user_directory: str,
+                                  set_connection_string: str,
+                                  flow_run_id: str):
     try:
         logger = get_run_logger()
         threads = os.getenv('ACHILLES_THREAD_COUNT')
@@ -213,12 +211,12 @@ def execute_data_characterization(schema_name: str,
             robjects.r(f'''
                     .libPaths(c('{r_libs_user_directory}',.libPaths()))
                     library('Achilles', lib.loc = '{r_libs_user_directory}')
-                    {set_db_driver_env_string}
+                    {results_schema_dao.set_db_driver_env()}
                     {set_connection_string}
                     cdmVersion <- '{cdm_version_number}'
                     cdmDatabaseSchema <- '{schema_name}'
                     vocabDatabaseSchema <- '{vocab_schema_name}'
-                    resultsDatabaseSchema <- '{results_schema}'
+                    resultsDatabaseSchema <- '{results_schema_dao.schema_name}'
                     outputFolder <- '{output_folder}'
                     numThreads <- {threads}
                     createTable <- TRUE
@@ -235,10 +233,7 @@ def execute_data_characterization(schema_name: str,
         # drop schema
         logger.info(f"Dropping schema")
         results_schema_dao.drop_schema()
-        
-        flow_run_context = FlowRunContext.get().flow_run.dict()
-        flow_run_id = str(flow_run_context.get("id"))
-        
+
         error_result = {
             "flow_run_id": flow_run_id,
             "result": result_json,
@@ -256,13 +251,13 @@ def execute_data_characterization(schema_name: str,
       persist_result=True)
 async def execute_export_to_ares(schema_name: str,
                                  vocab_schema_name: str,
-                                 results_schema: str,
+                                 results_schema_dao,
                                  output_folder: str,
                                  robjects,
                                  r_libs_user_directory: str,
-                                 set_db_driver_env_string: str,
                                  set_connection_string: str,
-                                 results_schema_dao):
+                                 flow_run_id: str
+                                 ):
     try:
         logger = get_run_logger()
         logger.info('Running exportToAres')
@@ -270,11 +265,11 @@ async def execute_export_to_ares(schema_name: str,
             robjects.r(f'''
                     .libPaths(c('{r_libs_user_directory}',.libPaths()))
                     library('Achilles', lib.loc = '{r_libs_user_directory}')
-                    {set_db_driver_env_string}
+                    {results_schema_dao.set_db_driver_env()}
                     {set_connection_string}
                     cdmDatabaseSchema <- '{schema_name}'
                     vocabDatabaseSchema <- '{vocab_schema_name}'
-                    resultsDatabaseSchema <- '{results_schema}'
+                    resultsDatabaseSchema <- '{results_schema_dao.schema_name}'
                     outputPath <- '{output_folder}'
                     Achilles::exportToAres(
                         connectionDetails = connectionDetails,
@@ -287,14 +282,14 @@ async def execute_export_to_ares(schema_name: str,
             ''')
             return get_export_to_ares_results_from_file(output_folder, schema_name)
     except Exception as e:
+        logger.error(f"execute_export_to_ares task failed")
         error_message = get_export_to_ares_execute_error_message_from_file(output_folder, schema_name)
         logger.error(error_message)
         
-        # drop schema
         logger.info(f"Dropping Data Characterization results schema '{results_schema_dao.schema_name}'..")
         results_schema_dao.drop_schema()
         
-        raise e
+        raise Exception(f"An error occurred while executing export to ares: {error_message}") 
 
 def get_plugin_classpath(flow_name: str) -> str:
     return f'{os.getcwd()}/{flow_name}/'

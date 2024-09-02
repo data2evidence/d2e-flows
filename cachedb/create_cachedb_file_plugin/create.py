@@ -57,7 +57,7 @@ def copy_postgres_to_duckdb(dbdao, duckdb_database_name: str, create_for_cdw_con
     table_names = dbdao.get_table_names(include_views=create_for_cdw_config_validation)
 
     # Get credentials for database code
-    tenant_configs = dbdao.get_tenant_configs(dbdao.schema_name)
+    db_credentials = dbdao.tenant_configs
 
     # copy tables from postgres into duckdb
     for table in table_names:
@@ -67,14 +67,14 @@ def copy_postgres_to_duckdb(dbdao, duckdb_database_name: str, create_for_cdw_con
             duckdb_file_path = _resolve_duckdb_file_path(
                 duckdb_database_name, create_for_cdw_config_validation)
             
-            with duckdb.connect(f"{os.getenv('DUCKDB__DATA_FOLDER')}/{duckdb_database_name}") as con:
+            with duckdb.connect(duckdb_file_path) as con:
                 
                 # If create_for_cdw_config_validation is True, add a LIMIT 0 to select statement so that only an empty table is created
                 limit_statement = "LIMIT 0" if create_for_cdw_config_validation else ""
                 
                 result = con.execute(
-                    f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={tenant_configs['host']} port={tenant_configs['port']} dbname={
-                        tenant_configs['databaseName']} user={tenant_configs['adminUser']} password={tenant_configs['adminPassword']}', '{dbdao.schema_name}', '{table}'){limit_statement})"""
+                    f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
+                        db_credentials['databaseName']} user={db_credentials['adminUser']} password={db_credentials['adminPassword']}', '{dbdao.schema_name}', '{table}'){limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
         except Exception as err:

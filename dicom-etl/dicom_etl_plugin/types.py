@@ -33,4 +33,4 @@ class DICOMETLOptions(BaseModel):
 
     @property
     def use_cache_db(self) -> str:
-        return True
+        return False

@@ -12,7 +12,7 @@ class CreateDuckdbDatabaseFileType(BaseModel):
 
     @property
     def use_cache_db(self) -> str:
-        return True
+        return False
 
 class CreateDuckdbDatabaseFileModules(BaseModel):
     # TODO: TBD disscuss a better way to handle dynamic imports

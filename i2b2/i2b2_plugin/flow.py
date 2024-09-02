@@ -43,7 +43,7 @@ def create_i2b2_dataset(options: i2b2PluginType):
                                          database_code=database_code, 
                                          schema_name=schema_name)
         
-        tenant_configs = dbdao.get_tenant_configs()
+        tenant_configs = dbdao.tenant_configs
         
         
         setup_plugin(tag_name)
@@ -61,7 +61,6 @@ def create_i2b2_dataset(options: i2b2PluginType):
         # prefect task to grant read privilege to tenant read user
         dbsvc_module.create_and_assign_roles(
             userdao=userdao,
-            tenant_configs=tenant_configs,
             data_model="i2b2",
             dialect=types_modules.DatabaseDialects.POSTGRES
         )

@@ -77,7 +77,7 @@ def generate_cohort_survival_data(
 
     # Get credentials for database code
     robjects = importlib.import_module('rpy2.robjects')
-    db_credentials = dbdao.get_tenant_configs()
+    db_credentials = dbdao.tenant_configs
 
     with robjects.conversion.localconverter(robjects.default_converter):
         result = robjects.r(

@@ -5,7 +5,7 @@ from typing import Optional, List
 
 class DatabaseDialects(str, Enum):
     HANA = "hana"
-    POSTGRES = "postgresql"
+    POSTGRES = "postgres"
 
 
 class DatamartCopyTableConfig(BaseModel):
@@ -43,7 +43,7 @@ class CreateDatamartOptions(BaseModel):
 
     @property
     def use_cache_db(self) -> str:
-        return True
+        return False
 
 
 RELEASE_VERSION_MAPPING = {
