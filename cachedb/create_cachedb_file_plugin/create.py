@@ -63,5 +63,6 @@ if __name__ == '__main__':
     options = CreateDuckdbDatabaseFileType(
         databaseCode=database_code,
         schemaName=schema_name,
+        createForCdwConfigValidation=False
     )
     create_duckdb_database_file(options)
