@@ -48,17 +48,12 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
         duckdb_database_name, create_for_cdw_config_validation)
 
 
-    # Get table names from db
-    db_dao = modules.dao_DBDao.DBDao(
-        database_code, schema_name, modules.utils_types.UserType.READ_USER)
-
     # TODO: Add switch case after unifiying envConverter postgres dialect value
-    copy_postgres_to_duckdb(dbutils, db_dao,
-                            schema_name, duckdb_database_name, create_for_cdw_config_validation)
+    copy_postgres_to_duckdb(dbdao, duckdb_database_name, create_for_cdw_config_validation)
 
     # Dont create fulltext search index for cdw config validation duckdb files
     if not create_for_cdw_config_validation:
-        create_duckdb_fts_index(db_dao, duckdb_database_name,
+        create_duckdb_fts_index(dbdao, duckdb_database_name,
                                 create_for_cdw_config_validation)
 
 
