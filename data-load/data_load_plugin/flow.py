@@ -2,7 +2,7 @@ import sys
 import csv
 import importlib
 import numpy as np
-import pandas as pd
+#import pandas as pd
 from io import StringIO
 import sqlalchemy as sql
 
@@ -79,6 +79,7 @@ def data_load_plugin(options: DataloadOptions):
             logger.info(f"Data load succeeded for table '{schema}.{file.table_name}'!")
 
 def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
+    pd = importlib.import_module("pandas")
     i = 1
     if chunksize:
         for chunk in pd.read_csv(filepath, escapechar=escapechar, header=header, delimiter=delimiter, encoding=encoding, chunksize=chunksize, keep_default_na=False):
@@ -88,6 +89,7 @@ def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
         yield i, pd.read_csv(filepath)
         
 def format_vocab_synpuf_data(data, table_name):
+    pd = importlib.import_module("pandas")
     match table_name:
         case "concept_relationship" | "concept" | "drug_strength":
             data["valid_start_date"] = pd.to_datetime(data["valid_start_date"].astype(str))
