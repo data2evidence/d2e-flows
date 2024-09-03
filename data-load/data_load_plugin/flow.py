@@ -1,3 +1,6 @@
+import prefect
+print(f"import path of prefect flow is {prefect.__file__}")
+
 import sys
 import csv
 import importlib
@@ -7,7 +10,6 @@ from io import StringIO
 import sqlalchemy as sql
 
 from prefect import flow, get_run_logger
-print(f"import path of prefect flow is {prefect.__file__}")
 from prefect.task_runners import SequentialTaskRunner
 
 from data_load_plugin.utils.types import DataloadOptions
