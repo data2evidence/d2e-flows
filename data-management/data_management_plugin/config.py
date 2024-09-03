@@ -32,7 +32,7 @@ class dataModelType(BaseModel):
 
     @property
     def use_cache_db(self) -> str:
-        return False
+        return True
 
     @property
     def flow_name(self) -> str:
