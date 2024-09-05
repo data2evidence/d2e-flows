@@ -38,22 +38,23 @@ def setup_plugin():
 @flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
 def cohort_survival_plugin(options: CohortSurvivalOptionsType):
     setup_plugin()
-    
+
     logger = get_run_logger()
     logger.info("Running Cohort Survival")
-    
+
     database_code = options.databaseCode
     schema_name = options.schemaName
     target_cohort_definition_id = options.targetCohortDefinitionId
     outcome_cohort_definition_id = options.outcomeCohortDefinitionId
-    
+
     generate_cohort_survival_data(
         database_code,
         schema_name,
         target_cohort_definition_id,
         outcome_cohort_definition_id
     )
-    
+
+
 @task(
     result_storage=RFS.load(
         os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")),
@@ -72,7 +73,7 @@ def generate_cohort_survival_data(
 
     # Get credentials for database code
     robjects = importlib.import_module('rpy2.robjects')
-    dbutils = importlib.import_module("types.DBUtils").DBUtils(database_code)
+    dbutils = importlib.import_module("utils.DBUtils").DBUtils(database_code)
     db_credentials = dbutils.extract_database_credentials()
 
     with robjects.conversion.localconverter(robjects.default_converter):
