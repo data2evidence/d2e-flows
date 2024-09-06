@@ -96,11 +96,13 @@ def data_characterization_plugin(options: DCOptionsType):
         r_libs_user_directory = os.getenv("R_LIBS_USER")
         
         set_admin_connection_string = results_schema_dao.get_database_connector_connection_string(
+            schema_name=results_schema_dao.schema_name,
             user_type=admin_user,
             release_date=release_date
         )
         
         set_read_connection_string = results_schema_dao.get_database_connector_connection_string(
+            schema_name=results_schema_dao.schema_name,
             user_type=read_user,
             release_date=release_date
         )       

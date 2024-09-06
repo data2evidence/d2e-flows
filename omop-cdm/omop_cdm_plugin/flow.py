@@ -126,8 +126,7 @@ def create_cdm_tables(dbdao, cdm_version: str, logger):
     r_libs_user_directory = os.getenv("R_LIBS_USER")
     robjects = importlib.import_module('rpy2.robjects')
     
-    set_connection_string = dbdao.get_database_connector_connection_string(dbdao.schema_name)
-    print(f"set_connection_string is {set_connection_string}")
+    set_connection_string = dbdao.get_database_connector_connection_string(schema_name=dbdao.schema_name)
     
     logger.info(f"Running CommonDataModel version '{cdm_version}' on schema '{dbdao.schema_name}' in database '{dbdao.database_code}'")
     with robjects.conversion.localconverter(robjects.default_converter):
