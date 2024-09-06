@@ -3,7 +3,7 @@ from prefect import get_run_logger
 from create_cachedb_file_plugin.util import resolve_duckdb_file_path
 
 
-def copy_postgres_to_duckdb(dbutils_obj, db_dao: any, schema_name: str, duckdb_database_name: str, create_for_cdw_config_validation: bool):
+def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     logger = get_run_logger()
 
     # Include views when creating duckdb file for cdw config validation
@@ -11,7 +11,7 @@ def copy_postgres_to_duckdb(dbutils_obj, db_dao: any, schema_name: str, duckdb_d
         include_views=create_for_cdw_config_validation)
 
     # Get credentials for database code
-    db_credentials = dbutils_obj.extract_database_credentials()
+    db_credentials = db_dao.tenant_configs
 
     # copy tables from postgres into duckdb
     for table in table_names:
@@ -27,7 +27,7 @@ def copy_postgres_to_duckdb(dbutils_obj, db_dao: any, schema_name: str, duckdb_d
 
                 result = con.execute(
                     f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
-                        db_credentials['databaseName']} user={db_credentials['user']} password={db_credentials['password']}', '{schema_name}', '{table}') {limit_statement})"""
+                        db_credentials['databaseName']} user={db_credentials['user']} password={db_credentials['password']}', '{db_dao.schema_name}', '{table}') {limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
         except Exception as err:

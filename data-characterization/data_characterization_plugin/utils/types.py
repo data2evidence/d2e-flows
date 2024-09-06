@@ -12,6 +12,10 @@ class DCOptionsType(BaseModel):
     releaseDate: str
     resultsSchema: str
     excludeAnalysisIds: str
+
+    @property
+    def use_cache_db(self) -> str:
+        return False
     
     @property
     def flowName(self) -> str:

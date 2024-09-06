@@ -21,6 +21,7 @@ def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbe
     vocab_schema_name = options.vocabSchemaName
     table_name = options.tableName
     token = options.token
+    use_cache_db = options.use_cache_db
     CHUNK_SIZE = options.chunk_size
     MEILISEARCH_INDEX_CONFIG = options.meilisearch_index_config
     
@@ -52,7 +53,9 @@ def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbe
     hybrid_search_name = f"{config['source'].replace('/', '')}_{config['model'].replace('/', '')}";
     index_name = f"{database_code}_{vocab_schema_name}_{table_name}_{hybrid_search_name}"
     
-    vocab_dao = vocabdao_module.VocabDao(database_code, vocab_schema_name)
+    vocab_dao = vocabdao_module.VocabDao(use_cache_db=use_cache_db,
+                                         database_code=database_code, 
+                                         schema_name=vocab_schema_name)
     # logger.info(f"Getting stream connection")
     conn = vocab_dao.get_stream_connection(yield_per=CHUNK_SIZE)
     try:

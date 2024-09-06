@@ -3,7 +3,6 @@ from prefect import flow, task, get_run_logger
 from prefect_shell import ShellOperation
 from i2b2_plugin.types import *
 from i2b2_plugin.utils import *
-from typing import Dict
 import importlib
 import sys
 import os
@@ -27,6 +26,7 @@ def create_i2b2_dataset(options: i2b2PluginType):
     schema_name = options.schema_name
     tag_name = options.tag_name
     data_model = options.data_model
+    use_cache_db = options.use_cache_db
 
     try:
         sys.path.append('/app/pysrc')
@@ -34,13 +34,16 @@ def create_i2b2_dataset(options: i2b2PluginType):
         types_modules = importlib.import_module('utils.types')
         userdao_module = importlib.import_module('dao.UserDao')
         dbsvc_module = importlib.import_module('flows.alp_db_svc.dataset.main')
-        dbutils_module = importlib.import_module('utils.DBUtils')
-        dbutils = dbutils_module.DBUtils(database_code)
 
-        admin_user = types_modules.UserType.ADMIN_USER
-        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user)
-        userdao = userdao_module.UserDao(database_code, schema_name, admin_user)
-        tenant_configs = dbutils.extract_database_credentials()
+        dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                   database_code=database_code, 
+                                   schema_name=schema_name)
+        
+        userdao = userdao_module.UserDao(use_cache_db=use_cache_db,
+                                         database_code=database_code, 
+                                         schema_name=schema_name)
+        
+        tenant_configs = dbdao.tenant_configs
         
         
         setup_plugin(tag_name)
@@ -53,12 +56,11 @@ def create_i2b2_dataset(options: i2b2PluginType):
         create_crc_stored_procedures(version)
         
         # task to create i2b2 metadata table
-        create_metadata_table(dbdao, schema_name, tag_name, data_model[1:])
+        create_metadata_table(dbdao, tag_name, data_model[1:])
         
         # prefect task to grant read privilege to tenant read user
         dbsvc_module.create_and_assign_roles(
             userdao=userdao,
-            tenant_configs=tenant_configs,
             data_model="i2b2",
             dialect=types_modules.DatabaseDialects.POSTGRES
         )
@@ -76,12 +78,13 @@ def update_dataset_metadata(options: i2b2PluginType):
     logger = get_run_logger()
     dataset_list = options.datasets
     token = options.token
+    use_cache_db = True #options.use_cache_db
     if (dataset_list is None) or (len(dataset_list) == 0):
         logger.debug("No datasets fetched from portal")
     else:
         logger.info(f"Successfully fetched {len(dataset_list)} datasets from portal")
         for dataset in dataset_list:
-            get_and_update_attributes(token, dataset)
+            get_and_update_attributes(token, dataset, use_cache_db)
 
 
 @task(log_prints=True)
@@ -103,7 +106,7 @@ async def setup_plugin(tag_name: str):
 
 
 @task(log_prints=True)
-def overwrite_db_properties(tag_name: str, tenant_configs: Dict, schema_name: str):
+def overwrite_db_properties(tag_name: str, tenant_configs: dict, schema_name: str):
     logger = get_run_logger()
     try:
         new_install_dir = f"{path_to_ant(tag_name)}/NewInstall/Crcdata"
@@ -162,7 +165,7 @@ def load_demo_data(dbdao):
 
 
 @task(log_prints=True)
-def create_metadata_table(dbdao, schema_name: str, tag_name: str, version: str):
+def create_metadata_table(dbdao, tag_name: str, version: str):
     columns_to_create = {
             "schema_name": String,
             "created_date": TIMESTAMP,
@@ -173,7 +176,7 @@ def create_metadata_table(dbdao, schema_name: str, tag_name: str, version: str):
         }
     dbdao.create_table('dataset_metadata', columns_to_create)
     values_to_insert = {
-        "schema_name": schema_name,
+        "schema_name": dbdao.schema_name,
         "created_date": datetime.now(),
         "updated_date": datetime.now(),
         "tag": tag_name,
@@ -192,16 +195,13 @@ def ingest_data():
 
 
 @task(log_prints=True)
-def get_and_update_attributes(token: str, dataset: Dict):
+def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
     logger = get_run_logger()
 
     sys.path.append('/app/pysrc')
     dbdao_module = importlib.import_module('dao.DBDao')
-    types_modules = importlib.import_module('utils.types')
     portal_server_api_module = importlib.import_module('api.PortalServerAPI')
     
-    admin_user = types_modules.UserType.ADMIN_USER
-        
     try:
         dataset_id = dataset.get("id")
         database_code = dataset.get("databaseCode")
@@ -211,7 +211,9 @@ def get_and_update_attributes(token: str, dataset: Dict):
         missing_key = ke.args[0]
         logger.error(f"'{missing_key} not found in dataset'")
     else:
-        dbdao = dbdao_module.DBDao(database_code, schema_name, admin_user) 
+        dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                                   database_code=database_code, 
+                                   schema_name=schema_name)
         portal_server_api = portal_server_api_module.PortalServerAPI(token)
         
         # check if schema exists

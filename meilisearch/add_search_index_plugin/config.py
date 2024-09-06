@@ -114,3 +114,7 @@ class MeilisearchAddIndexType(BaseModel):
     @property
     def chunk_size(self) -> int:
         return CHUNK_SIZE  
+
+    @property
+    def use_cache_db(self) -> str:
+        return False

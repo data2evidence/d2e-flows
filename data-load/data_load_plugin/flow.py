@@ -1,8 +1,11 @@
+import prefect
+print(f"import path of prefect flow is {prefect.__file__}")
+
 import sys
 import csv
 import importlib
 import numpy as np
-import pandas as pd
+#import pandas as pd
 from io import StringIO
 import sqlalchemy as sql
 
@@ -23,15 +26,19 @@ def data_load_plugin(options: DataloadOptions):
     logger = get_run_logger()
     files = options.files
     database_code = options.database_code
+    use_cache_db = options.use_cache_db
     header = 0 if options.header else None
     escape_char = options.escape_character if options.escape_character else None
     schema = options.schema_name
     tables_to_truncate = [f.table_name for f in files if f.truncate]
     chunksize = options.chunksize if options.chunksize else None
-    dbutils_module = importlib.import_module('utils.DBUtils')
-    admin_user = importlib.import_module('utils.types').UserType.ADMIN_USER
-    dbutils = dbutils_module.DBUtils(database_code)
-    engine = dbutils.create_database_engine(admin_user)
+    
+    dbdao_module = importlib.import_module('dao.DBDao')
+    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                               database_code=database_code, 
+                               schema_name=schema)
+
+    engine = dbdao.engine
 
     # Truncating
     with engine.connect() as connection:
@@ -75,6 +82,7 @@ def data_load_plugin(options: DataloadOptions):
             logger.info(f"Data load succeeded for table '{schema}.{file.table_name}'!")
 
 def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
+    pd = importlib.import_module("pandas")
     i = 1
     if chunksize:
         for chunk in pd.read_csv(filepath, escapechar=escapechar, header=header, delimiter=delimiter, encoding=encoding, chunksize=chunksize, keep_default_na=False):
@@ -84,6 +92,7 @@ def read_csv(filepath, escapechar, header, delimiter, encoding, chunksize):
         yield i, pd.read_csv(filepath)
         
 def format_vocab_synpuf_data(data, table_name):
+    pd = importlib.import_module("pandas")
     match table_name:
         case "concept_relationship" | "concept" | "drug_strength":
             data["valid_start_date"] = pd.to_datetime(data["valid_start_date"].astype(str))
