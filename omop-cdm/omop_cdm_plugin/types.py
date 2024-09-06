@@ -28,7 +28,7 @@ class OmopCDMPluginOptions(BaseModel):
 
     @property
     def use_cache_db(self) -> str:
-        return True
+        return False
 
     @property
     def cdm_version(self) -> str:
