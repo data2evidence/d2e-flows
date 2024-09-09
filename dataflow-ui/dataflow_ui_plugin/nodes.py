@@ -1234,32 +1234,34 @@ class StrategusNode(Node):
                     # rSpec = rStrategus.addModuleSpecifications(rSpec, moduleSpecResults[0])
                 print(rSpec.r_repr())
 
-                # TODO: internal-656
-                # databaseConnectorJarFolder = '/app/inst/drivers'
-                # os.environ['DATABASECONNECTOR_JAR_FOLDER'] = databaseConnectorJarFolder
-                # os.environ['STRATEGUS_KEYRING_PASSWORD']='Toor1234'
-                # db_credentials = extract_db_credentials('alpdev_pg')
-                # rDatabaseConnector = self.ro.packages.importr('DatabaseConnector')
-                # rConnectionDetails = rDatabaseConnector.createConnectionDetails(
-                #     dbms='postgresql', 
-                #     connectionString=f'jdbc:{db_credentials["dialect"]}://{db_credentials["host"]}:{db_credentials["port"]}/{db_credentials["databaseName"]}',
-                #     user=db_credentials["adminUser"],
-                #     password=db_credentials["adminPassword"],
-                #     pathToDriver = '/app/inst/drivers'
-                # )
-                # rStrategus.storeConnectionDetails(
-                #     connectionDetails = rConnectionDetails,
-                #     connectionDetailsReference = "alpdev_pg"
-                # )
-                # rExecutionSettings = rStrategus.createCdmExecutionSettings(
-                #     connectionDetailsReference = "alpdev_pg",
-                #     workDatabaseSchema = "cdmdefault",
-                #     cdmDatabaseSchema = "cdmdefault",
-                #     workFolder = '/tmp/work_folder',
-                #     resultsFolder = '/tmp/results_folder'
-                # )
+                databaseConnectorJarFolder = '/app/inst/drivers'
+                os.environ['DATABASECONNECTOR_JAR_FOLDER'] = databaseConnectorJarFolder
+                os.environ['STRATEGUS_KEYRING_PASSWORD'] = os.environ['STRATEGUS__KEYRING_PASSWORD']
 
-                # rStrategus.execute(analysisSpecifications = rSpec, executionSettings = rExecutionSettings)
+                database_code = 'alpdev_pg'
+                dbutils = importlib.import_module("utils.DBUtils").DBUtils(database_code)
+                db_credentials = dbutils.extract_database_credentials()
+                rDatabaseConnector = self.ro.packages.importr('DatabaseConnector')
+                rConnectionDetails = rDatabaseConnector.createConnectionDetails(
+                    dbms='postgresql', 
+                    connectionString=f'jdbc:{db_credentials["dialect"]}://{db_credentials["host"]}:{db_credentials["port"]}/{db_credentials["databaseName"]}',
+                    user=db_credentials["adminUser"],
+                    password=db_credentials["adminPassword"],
+                    pathToDriver = '/app/inst/drivers'
+                )
+                rStrategus.storeConnectionDetails(
+                    connectionDetails = rConnectionDetails,
+                    connectionDetailsReference = database_code
+                )
+                rExecutionSettings = rStrategus.createCdmExecutionSettings(
+                    connectionDetailsReference = database_code,
+                    workDatabaseSchema = "cdmdefault",
+                    cdmDatabaseSchema = "cdmdefault",
+                    workFolder = '/tmp/work_folder',
+                    resultsFolder = '/tmp/results_folder'
+                )
+
+                rStrategus.execute(analysisSpecifications = rSpec, executionSettings = rExecutionSettings)
                 return Result(False, rSpec, self, task_run_context)
             except Exception as e:
                 return Result(True, tb.format_exc(), self, task_run_context)
