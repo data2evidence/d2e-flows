@@ -7,7 +7,6 @@ from create_cachedb_file_plugin.util import remove_existing_file_if_exists
 
 # These imports are now coming in from dynamic imports as CreateDuckdbDatabaseFileModules
 # from utils.types import DatabaseDialects, PG_TENANT_USERS, DatabaseDialects
-# from utils.DBUtils import DBUtils
 # from dao.DBDao import DBDao
 
 
@@ -25,15 +24,18 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
 
     database_code = options.databaseCode
     schema_name = options.schemaName
+    use_cache_db = options.use_cache_db
     create_for_cdw_config_validation = options.createForCdwConfigValidation
 
     # Set hardcoded name for duckdb databae file if create_for_cdw_config_validation is TRUE
     duckdb_database_name = "cdw_config_svc_validation" if create_for_cdw_config_validation else f"{database_code}_{schema_name}"
-
-    dbutils = modules.dbutils.DBUtils(database_code)
+    
+    dbdao = modules.dao_DBDao.DBDao(use_cache_db=use_cache_db,
+                                    database_code=database_code,
+                                    schema_name=schema_name)
 
     # Get dialect from database code
-    dialect = dbutils.get_database_dialect()
+    dialect = dbdao.db_dialect
 
     if dialect not in SUPPORTED_DUCKDB_DIALECTS:
         error_message = f"""Input dialect: {
@@ -45,17 +47,13 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
     remove_existing_file_if_exists(
         duckdb_database_name, create_for_cdw_config_validation)
 
-    # Get table names from db
-    db_dao = modules.dao_DBDao.DBDao(
-        database_code, schema_name, modules.utils_types.UserType.READ_USER)
 
     # TODO: Add switch case after unifiying envConverter postgres dialect value
-    copy_postgres_to_duckdb(dbutils, db_dao,
-                            schema_name, duckdb_database_name, create_for_cdw_config_validation)
+    copy_postgres_to_duckdb(dbdao, duckdb_database_name, create_for_cdw_config_validation)
 
     # Dont create fulltext search index for cdw config validation duckdb files
     if not create_for_cdw_config_validation:
-        create_duckdb_fts_index(db_dao, duckdb_database_name,
+        create_duckdb_fts_index(dbdao, duckdb_database_name,
                                 create_for_cdw_config_validation)
 
 

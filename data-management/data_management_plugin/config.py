@@ -31,6 +31,10 @@ class dataModelType(BaseModel):
     datasets: Optional[List]
 
     @property
+    def use_cache_db(self) -> str:
+        return False
+
+    @property
     def flow_name(self) -> str:
         return FLOW_NAME
 

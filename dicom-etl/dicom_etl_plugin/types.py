@@ -30,3 +30,7 @@ class DICOMETLOptions(BaseModel):
     upload_files: Optional[bool] = False
     missing_person_id_options: Optional[MissingPersonIDOptions] # How to handle on missing person id
     person_to_patient_mapping: Optional[PersonPatientMapping]
+
+    @property
+    def use_cache_db(self) -> str:
+        return False

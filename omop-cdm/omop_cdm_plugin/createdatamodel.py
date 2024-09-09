@@ -57,7 +57,7 @@ def insert_cdm_version(cdm_version: str, schema_dao, vocab_schema_dao):
 
 
 @task(log_prints=True)
-def create_and_assign_roles(userdao, tenant_configs, cdm_version: str):
+def create_and_assign_roles(userdao, cdm_version: str):
     logger = get_run_logger()
     # Check if schema read role exists
 
@@ -74,35 +74,30 @@ def create_and_assign_roles(userdao, tenant_configs, cdm_version: str):
     userdao.grant_read_privileges(schema_read_role)
 
     # Check if read user exists
-    read_user = tenant_configs.get("readUser")
-
-    read_user_exists = userdao.check_user_exists(read_user)
+    read_user_exists = userdao.check_user_exists(userdao.read_user)
     if read_user_exists:
-        logger.info(f"{read_user} user already exists")
+        logger.info(f"{userdao.read_user} user already exists")
     else:
-        logger.info(f"{read_user} user does not exist")
-        read_password = tenant_configs.get("readPassword")
-        logger.info(f"Creating user '{read_user}'")
-        userdao.create_user(read_user, read_password)
+        logger.info(f"{userdao.read_user} user does not exist")
+        logger.info(f"Creating user '{userdao.read_user}'")
+        userdao.create_user(userdao.read_user)
 
     # Check if read role exists
-    read_role = tenant_configs.get("readRole")
-
-    read_role_exists = userdao.check_role_exists(read_role)
+    read_role_exists = userdao.check_role_exists(userdao.read_role)
     if read_role_exists:
-        logger.info(f"'{read_role}' role already exists")
+        logger.info(f"'{userdao.read_role}' role already exists")
     else:
-        logger.info(f"'{read_role}' role does not exist")
+        logger.info(f"'{userdao.read_role}' role does not exist")
         logger.info(
-            f"Creating '{read_role}' role and assigning to '{read_user}' user")
-        userdao.create_and_assign_role(read_user, read_role)
+            f"Creating '{userdao.read_role}' role and assigning to '{userdao.read_user}' user")
+        userdao.create_and_assign_read_role(userdao.read_user, userdao.read_role)
 
     # Grant read role read privileges
-    logger.info(f"Granting read privileges to '{read_role}' role")
-    userdao.grant_read_privileges(read_role)
+    logger.info(f"Granting read privileges to '{userdao.read_role}' role")
+    userdao.grant_read_privileges(userdao.read_role)
     
     if cdm_version == CDMVersion.OMOP54:
         # v5.3 does not have cohort table
         # Grant write cohort and cohort_definition table privileges to read role
-        logger.info(f"Granting cohort write privileges to '{read_role}' role")
-        userdao.grant_cohort_write_privileges(read_role)
+        logger.info(f"Granting cohort write privileges to '{userdao.read_role}' role")
+        userdao.grant_cohort_write_privileges(userdao.read_role)

@@ -90,7 +90,7 @@ def parse_datamart_copy_config(snapshot_copy_config) -> tuple[str, list, list]:
 
 
 def create_copy_table(dbdao, target_schema, table, select_statement):
-    rows_copied = dbdao.create_table_from_query(target_schema,  table, select_statement)
+    rows_copied = dbdao.create_table_from_query(target_schema, table, select_statement)
     return rows_copied
 
 

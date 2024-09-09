@@ -38,6 +38,7 @@ def dqd_plugin(options: DqdOptionsType):
     cdm_version_number = options.cdmVersionNumber
     vocab_schema_name = options.vocabSchemaName
     release_date = options.releaseDate
+    use_cache_db = options.use_cache_db
 
     if options.cohortDefinitionId:
         cohort_definition_id = f"c({options.cohortDefinitionId})"
@@ -67,15 +68,16 @@ def dqd_plugin(options: DqdOptionsType):
     flow_run_id = str(flow_run_context.get("id"))
     output_folder = f'/output/{flow_run_id}'
     execute_dqd(schema_name,
-                   database_code,
-                   cdm_version_number,
-                   vocab_schema_name,
-                   release_date,
-                   cohort_definition_id,
-                   output_folder,
-                   check_names,
-                   cohort_database_schema,
-                   cohort_table_name)
+                database_code,
+                cdm_version_number,
+                vocab_schema_name,
+                release_date,
+                cohort_definition_id,
+                output_folder,
+                check_names,
+                cohort_database_schema,
+                cohort_table_name,
+                use_cache_db)
     
 @task(result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")), 
       result_storage_key="{flow_run.id}_dqd.json",
@@ -92,20 +94,24 @@ def execute_dqd(
     check_names: str,
     cohort_database_schema: str,
     cohort_table_name: str,
+    use_cache_db: bool
 ):
     logger = get_run_logger()
 
     threads = os.getenv('DQD_THREAD_COUNT')
     r_libs_user_directory = os.getenv("R_LIBS_USER")
     
-    
-    dbutils_module = importlib.import_module('utils.DBUtils')
+    dbdao_module = importlib.import_module('dao.DBDao')
     types_module = importlib.import_module('utils.types')
     read_user = types_module.UserType.READ_USER
-    dbutils = dbutils_module.DBUtils(database_code)
     
-    set_db_driver_env = dbutils.set_db_driver_env()
-    set_read_user_connection = dbutils.get_database_connector_connection_string(read_user, release_date)
+    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                               database_code=database_code, 
+                               schema_name=schema_name)
+    
+    set_db_driver_env = dbdao.set_db_driver_env()
+    set_read_user_connection = dbdao.get_database_connector_connection_string(user_type=read_user, 
+                                                                              release_date=release_date)
 
     logger.info(f'''Running DQD with input parameters:
                     schemaName: {schema_name},

@@ -108,6 +108,10 @@ class MeilisearchAddIndexWithEmbeddingsType(BaseModel):
     tableName: str
     
     @property
+    def use_cache_db(self) -> str:
+        return False
+    
+    @property
     def meilisearch_index_config(self) -> Dict:
         return MEILISEARCH_INDEX_CONFIG    
 

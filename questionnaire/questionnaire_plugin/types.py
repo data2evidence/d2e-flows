@@ -33,6 +33,10 @@ class QuestionnaireOptionsType(BaseModel):
     questionnaire_id: Optional[str]
     token: Optional[str]
     
+    @property
+    def use_cache_db(self) -> str:
+        return False
+
 
 class QuestionnaireResponseType(QuestionnaireBaseModel):
     questionnaire_id: str

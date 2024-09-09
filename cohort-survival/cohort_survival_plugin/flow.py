@@ -42,14 +42,20 @@ def cohort_survival_plugin(options: CohortSurvivalOptionsType):
     logger = get_run_logger()
     logger.info("Running Cohort Survival")
 
+    dbdao_module = importlib.import_module('dao.DBDao')
+
     database_code = options.databaseCode
     schema_name = options.schemaName
+    use_cache_db = options.use_cache_db
     target_cohort_definition_id = options.targetCohortDefinitionId
     outcome_cohort_definition_id = options.outcomeCohortDefinitionId
 
+    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+                               database_code=database_code,
+                               schema_name=schema_name)
+
     generate_cohort_survival_data(
-        database_code,
-        schema_name,
+        dbdao,
         target_cohort_definition_id,
         outcome_cohort_definition_id
     )
@@ -63,18 +69,16 @@ def cohort_survival_plugin(options: CohortSurvivalOptionsType):
     persist_result=True,
 )
 def generate_cohort_survival_data(
-    database_code: str,
-    schema_name: str,
+    dbdao,
     target_cohort_definition_id: int,
     outcome_cohort_definition_id: int,
 ):
-    filename = f"{database_code}_{schema_name}"
+    filename = f"{dbdao.database_code}_{dbdao.schema_name}"
     r_libs_user_directory = os.getenv("R_LIBS_USER")
 
     # Get credentials for database code
     robjects = importlib.import_module('rpy2.robjects')
-    dbutils = importlib.import_module("utils.DBUtils").DBUtils(database_code)
-    db_credentials = dbutils.extract_database_credentials()
+    db_credentials = dbdao.tenant_configs
 
     with robjects.conversion.localconverter(robjects.default_converter):
         result = robjects.r(
@@ -99,7 +103,7 @@ def generate_cohort_survival_data(
             pg_dbname <- "{db_credentials['databaseName']}"
             pg_user <- "{db_credentials['adminUser']}"
             pg_password <- "{db_credentials['adminPassword']}"
-            pg_schema <- "{schema_name}"
+            pg_schema <- "{dbdao.schema_name}"
 
             con <- NULL
             tryCatch(
