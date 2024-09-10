@@ -25,7 +25,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: d2e-plugins-1.0.0.tgz
-          tag: trex/latest
+          tag: trex-latest
           target_commit: trex
           prerelease: true
           overwrite: true
