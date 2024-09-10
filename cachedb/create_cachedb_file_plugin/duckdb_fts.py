@@ -38,7 +38,6 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_c
             document_identifier=DUCKDB_FULLTEXT_SEARCH_CONFIG[vocab_table_name]["document_identifier"],
             columns=columns
         )
-        print("findme, fts_creation_sql", fts_creation_sql)
 
         duckdb_file_path = resolve_duckdb_file_path(
             duckdb_database_name, create_for_cdw_config_validation)
