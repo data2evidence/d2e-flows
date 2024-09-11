@@ -92,6 +92,7 @@ def create_cohort(dbdao, admin_user, schema_name: str, cohort_definition_id: int
     set_db_driver_env_string = dbdao.set_db_driver_env()
     
     set_connection_string = dbdao.get_database_connector_connection_string(
+        schema_name=dbdao.schema_name,
         user_type=admin_user
     )
    
