@@ -38,7 +38,7 @@ COPY --chown=docker:docker --chmod=711 ./pysrc pysrc
 COPY --chown=docker:docker --chmod=711 ./flows flows
 COPY --chown=docker:docker --chmod=711 ./__init__.py .
 RUN pip install httpx
-RUN pip install prefect-docker
+RUN pip install prefect-docker==0.5.5
 
 RUN mkdir /output
 RUN chown -R docker:docker /output
