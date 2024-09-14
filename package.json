@@ -1,6 +1,6 @@
 {
   "name": "@alp-os/d2e-plugins",
-  "version": "1.0.0",
+  "version": "0.0.99",
   "description": "",
   "main": "index.js",
   "scripts": {
