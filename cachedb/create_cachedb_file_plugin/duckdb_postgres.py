@@ -18,8 +18,7 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
         try:
             logger.info(f"Copying table: {table} from postgres into duckdb...")
 
-            duckdb_file_path = resolve_duckdb_file_path(
-                duckdb_database_name, create_for_cdw_config_validation)
+            duckdb_file_path = resolve_duckdb_file_path(duckdb_database_name)
             with duckdb.connect(duckdb_file_path) as con:
 
                 # If create_for_cdw_config_validation is True, add a LIMIT 0 to select statement so that only an empty table is created
