@@ -1,0 +1,6 @@
+{
+    "name": "strategus",
+    "type": "ui_flow",
+    "entrypoint": "strategus_plugin/flow.py",
+    "tags": []
+}
