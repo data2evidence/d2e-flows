@@ -6,13 +6,14 @@ from create_cachedb_file_plugin.util import resolve_duckdb_file_path
 
 
 def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str | int], columns: list[str]):
+    # TODO: Add single quotes to ignore regex after upgrading to a duckdb version which has the fix. Ticket reference: https://github.com/alp-os/internal/issues/1115
     return f""" PRAGMA
     create_fts_index({table_name},
         {document_identifier},
         {", ".join(columns)},
         stemmer='english', 
         stopwords='english', 
-        ignore='(\\.|[^a-z0-9])+', 
+        ignore='(\\.|[^a-z0-9!@#$%^&*()\-`.+,\\\/"])+',
         strip_accents=1, 
         lower=1, 
         overwrite=1)
