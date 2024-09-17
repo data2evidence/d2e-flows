@@ -28,7 +28,7 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
     create_for_cdw_config_validation = options.createForCdwConfigValidation
 
     # Set hardcoded name for duckdb databae file if create_for_cdw_config_validation is TRUE
-    duckdb_database_name = "cdw_config_svc_validation" if create_for_cdw_config_validation else f"{database_code}_{schema_name}"
+    duckdb_database_name = "cdw_config_svc_validation_schema" if create_for_cdw_config_validation else f"{database_code}_{schema_name}"
     
     dbdao = modules.dao_DBDao.DBDao(use_cache_db=use_cache_db,
                                     database_code=database_code,
