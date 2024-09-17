@@ -14,11 +14,6 @@ class CreateDuckdbDatabaseFileType(BaseModel):
     def use_cache_db(self) -> str:
         return False
 
-class CreateDuckdbDatabaseFileModules(BaseModel):
-    # TODO: TBD disscuss a better way to handle dynamic imports
-    utils_types: Any
-    dao_DBDao: Any
-
 
 DUCKDB_FULLTEXT_SEARCH_CONFIG = {
     "concept": {

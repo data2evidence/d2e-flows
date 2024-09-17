@@ -34,23 +34,6 @@ async def setup_apache_ant(tag_name: str):
             'ant -version'
         ]).run()
     
-def get_patient_count(dbdao) -> str:
-    try:
-        patient_count = dbdao.get_distinct_count("patient_dimension", "patient_num")
-    except Exception as e:
-        error_msg = f"Error retrieving patient count"
-        print(f"{error_msg}: {e}")
-        patient_count = error_msg
-    return str(patient_count)
-
-def get_patient_count(dbdao) -> str:
-    try:
-        patient_count = dbdao.get_distinct_count("patient_dimension", "patient_num")
-    except Exception as e:
-        error_msg = f"Error retrieving patient count"
-        print(f"{error_msg}: {e}")
-        patient_count = error_msg
-    return str(patient_count)
 
 def get_metadata_date(dbdao, column_name: str) -> str:
     try:

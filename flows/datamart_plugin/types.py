@@ -3,11 +3,6 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 
-class DatabaseDialects(str, Enum):
-    HANA = "hana"
-    POSTGRES = "postgres"
-
-
 class DatamartCopyTableConfig(BaseModel):
     tableName: str
     columnsToBeCopied: List[str]

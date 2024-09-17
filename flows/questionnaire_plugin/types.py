@@ -4,11 +4,6 @@ from typing import Optional, Dict, List
 from pydantic import BaseModel, Field, UUID4
 
 
-class DatabaseDialects(str, Enum):
-    HANA = "hana"
-    POSTGRES = "postgres"
-
-
 
 class FlowActionType(str, Enum):
     CREATE_QUESTIONNAIRE_DEFINITION = "create_questionnaire_definition"

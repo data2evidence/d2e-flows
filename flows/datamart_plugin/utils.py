@@ -1,8 +1,11 @@
 from sqlalchemy import select
 import re
 
-from datamart_plugin.const import *
-from datamart_plugin.types import *
+from flows.datamart_plugin.const import *
+from flows.datamart_plugin.types import *
+
+from shared_utils.versioninfo import extract_version
+
 
 def get_tables_to_copy(source_dbdao, table_filter: list[DatamartCopyTableConfig], logger) -> list[str]:
     # get all tables in source_schema
@@ -94,77 +97,15 @@ def create_copy_table(dbdao, target_schema, table, select_statement):
     return rows_copied
 
 
-def get_cdm_release_date(dbdao, logger) -> str:
-    try:
-        cdm_release_date = dbdao.get_value(table_name="cdm_source", column_name="cdm_release_date")
-    except Exception as e:
-        error_msg = f"Error retrieving cdm_release_date"
-        logger.error(f"{error_msg}: {e}")
-        cdm_release_date = error_msg
-    return str(cdm_release_date)
-
-
-def get_patient_count(dbdao, logger) -> str:
-    try:
-        patient_count = dbdao.get_distinct_count("person", "person_id")
-    except Exception as e:
-        error_msg = f"Error retrieving patient count"
-        logger.error(f"{error_msg}: {e}")
-        patient_count = error_msg
-    return str(patient_count)
-
-
-def get_total_entity_count(entity_count_distribution: dict, logger) -> str:
-    try:
-        total_entity_count = 0
-        for entity, entity_count in entity_count_distribution.items():
-            # value could be str(int) or "error"
-            if entity_count == "error":
-                continue
-            else:
-                total_entity_count += int(entity_count)
-    except Exception as e:
-        error_msg = f"Error retrieving entity count"
-        logger.error(f"{error_msg}: {e}")
-        total_entity_count = error_msg
-    return str(total_entity_count)
-
-
-def get_entity_count_distribution(dbdao, logger) -> EntityCountDistributionType:
-    entity_count_distribution = {}
-    # retrieve count for each entity table
-    for table, unique_id_column in NON_PERSON_ENTITIES.items():
-        try:
-            entity_count = dbdao.get_distinct_count(table, unique_id_column)
-        except Exception as e:
-            logger.error(f"Error retrieving entity count for {table}: {e}")
-            entity_count = "error"
-        entity_count_key = table.replace("_", " ").title() + " Count"
-        if entity_count != "error":
-            entity_count_distribution[entity_count_key] = str(entity_count)
-    return entity_count_distribution
-
-
-def get_cdm_version(dbdao, logger) -> str:
-    try:
-        cdm_version = dbdao.get_value("cdm_source", "cdm_version")
-    except Exception as e:
-        error_msg = f"Error retrieving CDM version"
-        logger.error(f"{error_msg}: {e}")
-        cdm_version = error_msg
-    return str(cdm_version)
-
-
-def get_schema_version(dbdao, logger) -> str:
+def get_schema_version(dbdao, cdm_version, logger) -> str:
     try:
         liquibase_migration = dbdao.check_table_exists("databasechangelog")
         if liquibase_migration:
             # data management plugin
             latest_executed_changeset = dbdao.get_last_executed_changeset()
-            current_schema_version = _extract_version(latest_executed_changeset)
+            current_schema_version = extract_version(latest_executed_changeset)
         else:
             # use omop cdm plugin
-            cdm_version = get_cdm_version(dbdao, logger)
             current_schema_version = RELEASE_VERSION_MAPPING.get(cdm_version)
             
     except Exception as e:
@@ -172,10 +113,3 @@ def get_schema_version(dbdao, logger) -> str:
         logger.error(f"{error_msg}: {e}")
         current_schema_version = error_msg
     return str(current_schema_version)
-
-
-def _extract_version(text_str: str) -> str:
-    changeset_folder = text_str.split("/")[4]
-    changeset_filename = text_str.split("/")[5].split("_")[0]
-    version = changeset_folder + "_" + changeset_filename
-    return version

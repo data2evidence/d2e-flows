@@ -2,7 +2,9 @@ from enum import Enum
 from pydantic import BaseModel
 
 FLOW_NAME = "data_characterization_plugin"
+CHARACTERIZATION_DATA_MODEL = "characterization"
 CHANGELOG_FILE = "liquibase-characterization.xml"
+ACHILLES_THREAD_COUNT = 5
 
 class DCOptionsType(BaseModel):
     schemaName: str
@@ -24,12 +26,3 @@ class DCOptionsType(BaseModel):
     @property
     def changelogFile(self) -> str:
         return CHANGELOG_FILE
-
-
-class LiquibaseAction(str, Enum):
-    UPDATE = "update"  # Create and update schema
-    
-
-class DatabaseDialects(str, Enum):
-    HANA = "hana"
-    POSTGRES = "postgres"

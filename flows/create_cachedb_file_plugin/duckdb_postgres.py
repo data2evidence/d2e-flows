@@ -1,6 +1,6 @@
 import duckdb
 from prefect import get_run_logger
-from create_cachedb_file_plugin.util import resolve_duckdb_file_path
+from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path
 
 
 def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
@@ -12,6 +12,9 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
 
     # Get credentials for database code
     db_credentials = db_dao.tenant_configs
+    
+    logger.info(f"db_credentials is {db_credentials}")
+    
 
     # copy tables from postgres into duckdb
     for table in table_names:
@@ -20,6 +23,7 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
 
             duckdb_file_path = resolve_duckdb_file_path(
                 duckdb_database_name, create_for_cdw_config_validation)
+
             with duckdb.connect(duckdb_file_path) as con:
 
                 # If create_for_cdw_config_validation is True, add a LIMIT 0 to select statement so that only an empty table is created
@@ -27,7 +31,7 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
 
                 result = con.execute(
                     f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
-                        db_credentials['databaseName']} user={db_credentials['user']} password={db_credentials['password']}', '{db_dao.schema_name}', '{table}') {limit_statement})"""
+                        db_credentials['databaseName']} user={db_credentials['adminUser']} password={db_credentials['adminPassword']}', '{db_dao.schema_name}', '{table}') {limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
         except Exception as err:

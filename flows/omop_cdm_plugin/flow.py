@@ -1,26 +1,26 @@
-import os
-import sys
 import json
-import importlib
+from rpy2 import robjects
 from functools import partial
 from datetime import datetime
 
-
+from prefect.variables import Variable
 from prefect_shell import ShellOperation
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
+from flows.omop_cdm_plugin.types import *
+from flows.omop_cdm_plugin.utils import *
 
-from omop_cdm_plugin.types import *
-from omop_cdm_plugin.utils import *
-from omop_cdm_plugin.hooks import *
-from omop_cdm_plugin.createdatamodel import *
+from shared_utils.versioninfo import *
+from shared_utils.types import UserType
+from shared_utils.dao.DBDao import DBDao
+from shared_utils.dao.UserDao import UserDao
+from shared_utils.create_dataset_tasks import *
+from shared_utils.api.PortalServerAPI import PortalServerAPI
 
 
 def setup_plugin(release_version):
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
+    r_libs_user_directory = Variable.get("r_libs_user").value
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -28,8 +28,7 @@ def setup_plugin(release_version):
                 f"Rscript -e \"remotes::install_github('OHDSI/CommonDataModel@{release_version}',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\""
             ]).run()
     else:
-        raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
-
+        raise ValueError("Prefect variable: 'r_libs_user' is empty.")
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def omop_cdm_plugin(options: OmopCDMPluginOptions):
@@ -39,33 +38,29 @@ def omop_cdm_plugin(options: OmopCDMPluginOptions):
         case FlowActionType.GET_VERSION_INFO:
             update_dataset_metadata(options)    
     
-    
+
 def create_omop_cdm_dataset(options: OmopCDMPluginOptions):   
     logger = get_run_logger()
     database_code = options.database_code
     schema_name = options.schema_name
     vocab_schema = options.vocab_schema
     cdm_version = options.cdm_version
-    release_version =  options.release_version
     use_cache_db = options.use_cache_db
+    release_version =  options.release_version
 
     try:
-        setup_plugin(release_version) # To dynamically import helper functions from dataflow-gen
-        types_module = importlib.import_module('utils.types')
+        setup_plugin(release_version)
+        
+        omop_cdm_dao = DBDao(use_cache_db=use_cache_db,
+                             database_code=database_code, 
+                             schema_name=schema_name)
+        
 
-        # import helper function to create schema
-        dbdao_module = importlib.import_module('dao.DBDao')
-        omop_cdm_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                          database_code=database_code, 
-                                          schema_name=schema_name)
+        userdao = UserDao(use_cache_db=use_cache_db,
+                          database_code=database_code, 
+                          schema_name=schema_name)
         
-        # import helper function to create roles
-        userdao_module = importlib.import_module('dao.UserDao')
-        userdao = userdao_module.UserDao(use_cache_db=use_cache_db,
-                                         database_code=database_code, 
-                                         schema_name=schema_name)
-        
-        create_schema(omop_cdm_dao, logger)
+        create_schema_task(omop_cdm_dao)
 
         # Run CommonDataModel package to create tables 
         # With drop schema hook on failure
@@ -76,21 +71,31 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
         create_cdm_tables_wo(omop_cdm_dao, cdm_version, logger)
         
         # Grant permissions
-        create_and_assign_roles_wo = create_and_assign_roles.with_options(
+        create_and_assign_roles_wo = create_and_assign_roles_task.with_options(
             on_failure=[partial(drop_schema_hook,
                                 **dict(schema_dao=omop_cdm_dao))]
         )        
         
         create_and_assign_roles_wo(
-            userdao=userdao,
-            cdm_version=cdm_version
+            userdao=userdao
         )
+
+        if cdm_version == CDMVersion.OMOP54:
+            # v5.3 does not have cohort table
+            # Grant write cohort and cohort_definition table privileges to read role
+            grant_cohort_write_privileges_wo = grant_cohort_write_privileges.with_options(
+                on_failure=[partial(drop_schema_hook,
+                                    **dict(schema_dao=omop_cdm_dao))]
+            )        
+            grant_cohort_write_privileges_wo(userdao, logger)
+        
         
         if schema_name != vocab_schema:
             # Insert CDM Version
-            vocab_schema_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                                  database_code=database_code, 
-                                                  schema_name=vocab_schema)
+            vocab_schema_dao = DBDao(use_cache_db=use_cache_db,
+                                     database_code=database_code, 
+                                     schema_name=vocab_schema)
+
             insert_cdm_version_wo = insert_cdm_version.with_options(
                 on_failure=[partial(drop_schema_hook,
                                     **dict(schema_dao=omop_cdm_dao))]
@@ -107,26 +112,17 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
     except Exception as e:
         logger.error(e)
         raise e
-        
-@task(log_prints=True)
-def create_schema(dbdao, logger):
-    # currently only supports pg dialect
-    schema_exists = dbdao.check_schema_exists()
-    if schema_exists == False:
-        dbdao.create_schema()
-    else:
-        error_msg = f"Schema {dbdao.schema_name} already exists in database {dbdao.database_code}"
-        logger.error(error_msg)
-        raise Exception(error_msg)
 
 
 @task(log_prints=True)
 def create_cdm_tables(dbdao, cdm_version: str, logger):
     # currently only supports pg dialect
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
-    robjects = importlib.import_module('rpy2.robjects')
-    
-    set_connection_string = dbdao.get_database_connector_connection_string(schema_name=dbdao.schema_name)
+    r_libs_user_directory = Variable.get("r_libs_user").value
+
+    admin_user =  UserType.ADMIN_USER
+    set_connection_string = dbdao.get_database_connector_connection_string(
+        user_type=admin_user
+    )
     
     logger.info(f"Running CommonDataModel version '{cdm_version}' on schema '{dbdao.schema_name}' in database '{dbdao.database_code}'")
     with robjects.conversion.localconverter(robjects.default_converter):
@@ -143,6 +139,12 @@ def create_cdm_tables(dbdao, cdm_version: str, logger):
     logger.info(f"Succesfully ran CommonDataModel version '{cdm_version}' on schema '{dbdao.schema_name}' in database '{dbdao.database_code}'")
 
 
+@task(log_prints=True)
+def grant_cohort_write_privileges(userdao: UserDao, logger):
+    logger.info(f"Granting cohort write privileges to '{userdao.read_role}' role")
+    userdao.grant_cohort_write_privileges(userdao.read_role)
+
+
 def update_dataset_metadata(options: OmopCDMPluginOptions):
     logger = get_run_logger()
     dataset_list = options.datasets
@@ -156,15 +158,11 @@ def update_dataset_metadata(options: OmopCDMPluginOptions):
         for dataset in dataset_list:
             get_and_update_attributes(token, dataset, use_cache_db)
 
+
 @task(log_prints=True)
 def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
     logger = get_run_logger()
 
-    sys.path.append('/app/pysrc')
-    dbdao_module = importlib.import_module('dao.DBDao')
-    types_modules = importlib.import_module('utils.types')
-    portal_server_api_module = importlib.import_module('api.PortalServerAPI')
-    
     try:
         dataset_id = dataset.get("id")
         database_code = dataset.get("databaseCode")
@@ -173,10 +171,10 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
         missing_key = ke.args[0]
         logger.error(f"'{missing_key} not found in dataset'")
     else:
-        dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                   database_code=database_code, 
-                                   schema_name=schema_name)
-        portal_server_api = portal_server_api_module.PortalServerAPI(token)
+        dbdao = DBDao(use_cache_db=use_cache_db,
+                      database_code=database_code, 
+                      schema_name=schema_name)
+        portal_server_api = PortalServerAPI(token)
         
         # check if schema exists
         schema_exists = dbdao.check_schema_exists()

@@ -1,8 +1,7 @@
-import importlib
 import numpy as np
 import pandas as pd
-#import dask.dataframe as dd
-
+from rpy2 import robjects
+import dask.dataframe as dd
 
 def get_node_list(graph):
     nodes = {}
@@ -32,56 +31,54 @@ def get_incoming_edges(graph, nodes, nodename):
     return connected_nodes
 
 def convert_py_to_R(python_obj):
-    dd = importlib.import_module("dask.dataframe")
-    ro = importlib.import_module('rpy2.robjects')
     # Convert python object into rpy2 robject
     if python_obj is None:
-        return ro.r("NULL")
+        return robjects.r("NULL")
     elif isinstance(python_obj, dd.DataFrame):
         dd_to_pd_df = python_obj.compute()
         return convert_py_to_R(dd_to_pd_df)
     elif isinstance(python_obj, pd.DataFrame):
-        with (ro.default_converter + ro.pandas2ri.converter).context():
-            r_df = ro.conversion.get_conversion().py2rpy(python_obj)
+        with (robjects.default_converter + robjects.pandas2ri.converter).context():
+            r_df = robjects.conversion.get_conversion().py2rpy(python_obj)
         return r_df
     elif isinstance(python_obj, np.ndarray):
-        return ro.FloatVector(python_obj)
+        return robjects.FloatVector(python_obj)
     elif isinstance(python_obj, (list, tuple, set, pd.Index)):
         if len(python_obj) == 0:
-            return ro.r("list()")
+            return robjects.r("list()")
         if isinstance(python_obj[0], float):
-            return ro.FloatVector(python_obj)
+            return robjects.FloatVector(python_obj)
         if isinstance(python_obj[0], int):
-            return ro.IntVector(python_obj)
-        return ro.StrVector(python_obj)
+            return robjects.IntVector(python_obj)
+        return robjects.StrVector(python_obj)
     elif isinstance(python_obj, (pd.Series)):
         return convert_py_to_R(dict(python_obj))
     elif isinstance(python_obj, dict):
         temp = {k: convert_py_to_R(v.data) for k, v in python_obj.items()
                 if v.data is not None}
         temp = {k: v for k, v in temp.items() if v is not None}
-        return ro.ListVector(temp)
+        return robjects.ListVector(temp)
     else:
         return python_obj
 
 def convert_R_to_py(r_obj, name=""):
-    ro = importlib.import_module('rpy2.robjects')
+    
     result = r_obj
     remove_list = True
-    if r_obj == ro.vectors.NULL:
+    if r_obj == robjects.vectors.NULL:
         return None
-    elif isinstance(r_obj, ro.vectors.DataFrame):
-        with (ro.default_converter + ro.pandas2ri.converter).context():
-            pd_df = ro.conversion.get_conversion().rpy2py(r_obj)
+    elif isinstance(r_obj, robjects.vectors.DataFrame):
+        with (robjects.default_converter + robjects.pandas2ri.converter).context():
+            pd_df = robjects.conversion.get_conversion().rpy2py(r_obj)
             return pd_df
-    elif isinstance(r_obj, (ro.vectors.StrVector,
-                           ro.vectors.FloatVector,
-                           ro.vectors.BoolVector,
-                           ro.vectors.IntVector)):
-        result = ro.conversion.get_conversion().rpy2py(r_obj[0])
+    elif isinstance(r_obj, (robjects.vectors.StrVector,
+                           robjects.vectors.FloatVector,
+                           robjects.vectors.BoolVector,
+                           robjects.vectors.IntVector)):
+        result = robjects.conversion.get_conversion().rpy2py(r_obj[0])
         return result
-    elif isinstance(r_obj, ro.vectors.ListVector):
-        if r_obj.names == ro.vectors.NULL:
+    elif isinstance(r_obj, robjects.vectors.ListVector):
+        if r_obj.names == robjects.vectors.NULL:
             if '__len__' in result.__dir__() and len(result) == 1 and remove_list:
                 return convert_R_to_py(result[0])
         else:
@@ -94,7 +91,6 @@ def convert_R_to_py(r_obj, name=""):
             return result
 
 def serialize_to_json(data):
-    dd = importlib.import_module("dask.dataframe")
     if isinstance(data, dd.DataFrame):
         dd_to_pd_df = data.compute()
         json_df = dd_to_pd_df.to_json(orient="records")

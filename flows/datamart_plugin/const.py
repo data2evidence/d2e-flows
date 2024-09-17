@@ -208,20 +208,3 @@ BASE_CONFIG_LIST = {
       "person_id_column": ""
     }
 }
-
-
-NON_PERSON_ENTITIES = {
-    "observation_period": "observation_period_id",
-    "death": "person_id",
-    "visit_occurrence": "visit_occurrence_id",
-    "visit_detail": "visit_detail_id",
-    "condition_occurrence": "condition_occurrence_id",
-    "drug_exposure": "drug_exposure_id",
-    "procedure_occurrence": "procedure_occurrence_id",
-    "device_exposure": "device_exposure_id",
-    "measurement": "measurement_id",
-    "observation": "observation_id",
-    "note": "note_id",
-    "episode": "episode_id",
-    "specimen": "specimen_id"
-}

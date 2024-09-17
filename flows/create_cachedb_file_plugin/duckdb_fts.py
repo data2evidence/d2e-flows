@@ -1,8 +1,11 @@
 import duckdb
-from prefect import get_run_logger
 from typing import Union
-from create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG
-from create_cachedb_file_plugin.util import resolve_duckdb_file_path
+
+from prefect import get_run_logger
+
+from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path
+from flows.create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG
+
 
 
 def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str | int], columns: list[str]):

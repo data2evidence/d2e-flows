@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from pydicom.tag import BaseTag
 
-from dicom_etl_plugin.types import *
+from flows.dicom_etl_plugin.types import *
 
 def get_image_occurrence_concept_ids(modality_code: str, anatomic_site: str, vocab_dbdao) -> Tuple[int, int]:
     # get standard concept id for modality

@@ -1,13 +1,21 @@
-from prefect.task_runners import SequentialTaskRunner
-from prefect import flow, task, get_run_logger
-from prefect_shell import ShellOperation
-from i2b2_plugin.types import *
-from i2b2_plugin.utils import *
-import importlib
-import sys
 import os
+from functools import partial
 from datetime import datetime
 from sqlalchemy import String, TIMESTAMP
+
+from prefect_shell import ShellOperation
+from prefect import flow, task, get_run_logger
+from prefect.task_runners import SequentialTaskRunner
+
+from flows.i2b2_plugin.types import *
+from flows.i2b2_plugin.utils import *
+
+from shared_utils.dao.DBDao import DBDao
+from shared_utils.dao.UserDao import UserDao
+from shared_utils.versioninfo import get_entity_count_str
+from shared_utils.api.PortalServerAPI import PortalServerAPI
+from shared_utils.create_dataset_tasks import create_and_assign_roles_task, drop_schema_hook
+
 
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
@@ -29,19 +37,13 @@ def create_i2b2_dataset(options: i2b2PluginType):
     use_cache_db = options.use_cache_db
 
     try:
-        sys.path.append('/app/pysrc')
-        dbdao_module = importlib.import_module('dao.DBDao')
-        types_modules = importlib.import_module('utils.types')
-        userdao_module = importlib.import_module('dao.UserDao')
-        dbsvc_module = importlib.import_module('flows.alp_db_svc.dataset.main')
-
-        dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                   database_code=database_code, 
-                                   schema_name=schema_name)
+        dbdao = DBDao(use_cache_db=use_cache_db,
+                      database_code=database_code, 
+                      schema_name=schema_name)
         
-        userdao = userdao_module.UserDao(use_cache_db=use_cache_db,
-                                         database_code=database_code, 
-                                         schema_name=schema_name)
+        userdao = UserDao(use_cache_db=use_cache_db,
+                          database_code=database_code, 
+                          schema_name=schema_name)
         
         tenant_configs = dbdao.tenant_configs
         
@@ -59,10 +61,13 @@ def create_i2b2_dataset(options: i2b2PluginType):
         create_metadata_table(dbdao, tag_name, data_model[1:])
         
         # prefect task to grant read privilege to tenant read user
-        dbsvc_module.create_and_assign_roles(
-            userdao=userdao,
-            data_model="i2b2",
-            dialect=types_modules.DatabaseDialects.POSTGRES
+        create_and_assign_roles_wo = create_and_assign_roles_task.with_options(
+            on_failure=[partial(drop_schema_hook,
+                                **dict(schema_dao=dbdao))]
+        )        
+        
+        create_and_assign_roles_wo(
+            userdao=userdao
         )
         
         # task to load demo data based on flag
@@ -78,7 +83,7 @@ def update_dataset_metadata(options: i2b2PluginType):
     logger = get_run_logger()
     dataset_list = options.datasets
     token = options.token
-    use_cache_db = True #options.use_cache_db
+    use_cache_db = options.use_cache_db
     if (dataset_list is None) or (len(dataset_list) == 0):
         logger.debug("No datasets fetched from portal")
     else:
@@ -90,7 +95,7 @@ def update_dataset_metadata(options: i2b2PluginType):
 @task(log_prints=True)
 async def setup_plugin(tag_name: str):
     logger = get_run_logger()
-    repo_dir = "i2b2_plugin/i2b2_data"
+    repo_dir = "flows/i2b2_plugin/i2b2_data"
     path = os.path.join(os.getcwd(), repo_dir)
     
     os.makedirs(f"{path}", 0o777, True)
@@ -197,10 +202,6 @@ def ingest_data():
 @task(log_prints=True)
 def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
     logger = get_run_logger()
-
-    sys.path.append('/app/pysrc')
-    dbdao_module = importlib.import_module('dao.DBDao')
-    portal_server_api_module = importlib.import_module('api.PortalServerAPI')
     
     try:
         dataset_id = dataset.get("id")
@@ -211,10 +212,10 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
         missing_key = ke.args[0]
         logger.error(f"'{missing_key} not found in dataset'")
     else:
-        dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
+        dbdao = DBDao(use_cache_db=use_cache_db,
                                    database_code=database_code, 
                                    schema_name=schema_name)
-        portal_server_api = portal_server_api_module.PortalServerAPI(token)
+        portal_server_api = PortalServerAPI(token)
         
         # check if schema exists
         schema_exists = dbdao.check_schema_exists()
@@ -226,12 +227,16 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
         else:
             try:
                 # update patient count or error msg
-                patient_count = get_patient_count(dbdao)
+                patient_count = get_entity_count_str(dbdao=dbdao, 
+                                                     table_name="patient_dimension", 
+                                                     column_name="patient_num",
+                                                     entity_name="patient_count",
+                                                     logger=logger)
                 portal_server_api.update_dataset_attributes_table(dataset_id, "patient_count", patient_count)
             except Exception as e:
-                logger.error(f"Failed to update attribute 'patient count' for dataset '{dataset_id}': {e}")
+                logger.error(f"Failed to update attribute 'patient_count' for dataset '{dataset_id}': {e}")
             else:
-                logger.info(f"Updated attribute 'patient count' for dataset '{dataset_id}' with value '{patient_count}'")
+                logger.info(f"Updated attribute 'patient_count' for dataset '{dataset_id}' with value '{patient_count}'")
 
             try:
                 # update release version or error msg

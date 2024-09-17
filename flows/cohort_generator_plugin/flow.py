@@ -1,19 +1,20 @@
-import os
-import sys
 import json
-import importlib
+from rpy2 import robjects
 
+from prefect.variables import Variable
 from prefect_shell import ShellOperation
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from cohort_generator_plugin.types import CohortGeneratorOptionsType
+from flows.cohort_generator_plugin.types import CohortGeneratorOptionsType
+
+from shared_utils.types import UserType
+from shared_utils.dao.DBDao import DBDao
+from shared_utils.api.AnalyticsSvcAPI import AnalyticsSvcAPI
 
 
 def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
+    r_libs_user_directory = Variable.get("r_libs_user").value
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -24,13 +25,12 @@ def setup_plugin():
         raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
 
 
+
 @flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
 def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     logger = get_run_logger()
     logger.info('Running Cohort Generator')
-    
-    setup_plugin() # To dynamically import helper functions from dataflow-gen    
-    
+        
     database_code = options.databaseCode
     schema_name = options.schemaName
     vocab_schema_name = options.vocabSchemaName
@@ -41,15 +41,12 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     token = options.token
     use_cache_db = options.use_cache_db
     
-    analytics_svc_api_module = importlib.import_module('api.AnalyticsSvcAPI')    
-    dbdao_module = importlib.import_module('dao.DBDao')
-    admin_user = importlib.import_module("utils.types").UserType.ADMIN_USER
-    robjects = importlib.import_module('rpy2.robjects')
+
+    dbdao = DBDao(use_cache_db=use_cache_db,
+                  database_code=database_code, 
+                  schema_name=schema_name)
     
-    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                               database_code=database_code, 
-                               schema_name=schema_name)
-    analytics_svc_api = analytics_svc_api_module.AnalyticsSvcAPI(token)
+    analytics_svc_api = AnalyticsSvcAPI(token)
     
     cohort_json_expression = json.dumps(cohort_json.expression)
     cohort_name = cohort_json.name
@@ -62,13 +59,12 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
                                                     cohort_name)
 
     create_cohort(dbdao,
-                  admin_user,
+                  UserType.ADMIN_USER,
                   schema_name,
                   cohort_definition_id,
                   cohort_json_expression,
                   cohort_name, 
-                  vocab_schema_name,
-                  robjects)
+                  vocab_schema_name)
     
 @task(log_prints=True)
 def create_cohort_definition(analytics_svc_api, dataset_id: str, description: str, owner: str, 
@@ -86,17 +82,15 @@ def create_cohort_definition(analytics_svc_api, dataset_id: str, description: st
 
 @task(log_prints=True)
 def create_cohort(dbdao, admin_user, schema_name: str, cohort_definition_id: int, 
-                  cohort_json_expression: str, cohort_name: str, vocab_schema_name: str, 
-                  robjects):
+                  cohort_json_expression: str, cohort_name: str, vocab_schema_name: str):
     
     set_db_driver_env_string = dbdao.set_db_driver_env()
     
     set_connection_string = dbdao.get_database_connector_connection_string(
-        schema_name=dbdao.schema_name,
         user_type=admin_user
     )
    
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
+    r_libs_user_directory = Variable.get("r_libs_user").value
     
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''

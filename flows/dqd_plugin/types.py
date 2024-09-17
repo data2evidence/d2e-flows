@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 
+DQD_THREAD_COUNT = 1
 
 class DqdBaseOptionsType(BaseModel):
     schemaName: str

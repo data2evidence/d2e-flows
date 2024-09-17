@@ -1,8 +1,8 @@
 import os
-import sys
-import importlib
+from rpy2 import robjects
 from functools import partial
 
+from prefect.variables import Variable
 from prefect_shell import ShellOperation
 from prefect.context import FlowRunContext
 from prefect.serializers import JSONSerializer
@@ -10,16 +10,18 @@ from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
 
-from data_characterization_plugin.hooks import *
-from data_characterization_plugin.utils.createschema import *
-from data_characterization_plugin.utils.types import DCOptionsType, DatabaseDialects, LiquibaseAction
+from flows.data_characterization_plugin.hooks import *
+from flows.data_characterization_plugin.types import *
 
+from shared_utils.dao.DBDao import DBDao
+from shared_utils.dao.UserDao import UserDao
+from shared_utils.create_dataset_tasks import *
+from shared_utils.types import UserType, SupportedDatabaseDialects, LiquibaseAction
 
 
 def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
+    r_libs_user_directory = Variable.get("r_libs_user").value
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -27,11 +29,9 @@ def setup_plugin():
                 f"Rscript -e \"remotes::install_github('OHDSI/Achilles@v1.7.2',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\""
             ]).run()
     else:
-        raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
+        raise ValueError("Prefect variable: 'r_libs_user' is empty.")
 
 
-# on_failure=[drop_data_characterization_schema],
-# on_cancellation=[drop_data_characterization_schema]
 @flow(log_prints=True, 
       persist_result=True,
       task_runner=SequentialTaskRunner,
@@ -40,11 +40,6 @@ def setup_plugin():
 def data_characterization_plugin(options: DCOptionsType):
     logger = get_run_logger()
     setup_plugin()
-
-    user_type_module = importlib.import_module("utils.types")
-    robjects = importlib.import_module("rpy2.robjects")
-    user_dao_module = importlib.import_module("dao.UserDao")
-    dbdao_module = importlib.import_module("dao.DBDao")
 
     schema_name = options.schemaName
     database_code = options.databaseCode
@@ -63,23 +58,25 @@ def data_characterization_plugin(options: DCOptionsType):
     flow_run_id = str(flow_run_context.get("id"))
     output_folder = f"/output/{flow_run_id}"
     
-    admin_user = user_type_module.UserType.ADMIN_USER
-    read_user = user_type_module.UserType.READ_USER
-    results_schema_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                            database_code=database_code, 
-                                            schema_name=results_schema)
+    admin_user = UserType.ADMIN_USER
+    read_user = UserType.READ_USER
     
-    user_dao = user_dao_module.UserDao(use_cache_db=use_cache_db,
-                                       database_code=database_code, 
-                                       schema_name=results_schema)
+    results_schema_dao = DBDao(use_cache_db=use_cache_db,
+                               database_code=database_code, 
+                               schema_name=results_schema)
+    
+    user_dao = UserDao(use_cache_db=use_cache_db,
+                       database_code=database_code, 
+                       schema_name=results_schema)
+    
     dialect = results_schema_dao.get_database_dialect()
     
     match dialect:
-        case DatabaseDialects.POSTGRES:
+        case SupportedDatabaseDialects.POSTGRES:
             results_schema = results_schema.lower()
             vocab_schema_name = vocab_schema_name.lower()
             schema_name = schema_name.lower()
-        case DatabaseDialects.HANA:
+        case SupportedDatabaseDialects.HANA:
             results_schema = results_schema.upper()
             vocab_schema_name = vocab_schema_name.upper()
             schema_name = schema_name.upper()      
@@ -89,20 +86,19 @@ def data_characterization_plugin(options: DCOptionsType):
         flow_name,
         changelog_file,
         results_schema_dao,
-        user_dao
+        user_dao,
+        logger
     )
 
     if dc_schema:
-        r_libs_user_directory = os.getenv("R_LIBS_USER")
+        r_libs_user_directory = Variable.get("r_libs_user").value
         
         set_admin_connection_string = results_schema_dao.get_database_connector_connection_string(
-            schema_name=results_schema_dao.schema_name,
             user_type=admin_user,
             release_date=release_date
         )
         
         set_read_connection_string = results_schema_dao.get_database_connector_connection_string(
-            schema_name=results_schema_dao.schema_name,
             user_type=read_user,
             release_date=release_date
         )       
@@ -113,7 +109,6 @@ def data_characterization_plugin(options: DCOptionsType):
                                                   results_schema_dao=results_schema_dao,
                                                   exclude_analysis_ids=exclude_analysis_ids,
                                                   output_folder=output_folder,
-                                                  robjects=robjects,
                                                   r_libs_user_directory=r_libs_user_directory,
                                                   set_connection_string=set_admin_connection_string,
                                                   flow_run_id=flow_run_id)
@@ -123,34 +118,34 @@ def data_characterization_plugin(options: DCOptionsType):
             raise Exception(f"An error occurred while executing data characterization: {msg}")
 
         execute_export_to_ares(schema_name=schema_name, 
-                                                       vocab_schema_name=vocab_schema_name,
-                                                       results_schema_dao=results_schema_dao,
-                                                       output_folder=output_folder,
-                                                       robjects=robjects,
-                                                       r_libs_user_directory=r_libs_user_directory,
-                                                       set_connection_string=set_read_connection_string,
-                                                       flow_run_id=flow_run_id)
+                               vocab_schema_name=vocab_schema_name,
+                               results_schema_dao=results_schema_dao,
+                               output_folder=output_folder,
+                               r_libs_user_directory=r_libs_user_directory,
+                               set_connection_string=set_read_connection_string,
+                               flow_run_id=flow_run_id)
 
 
 def create_data_characterization_schema(vocab_schema_name: str,
                                         flow_name: str,
                                         changelog_file: str,
                                         results_schema_dao,
-                                        user_dao):
+                                        user_dao, 
+                                        logger):
     try:
         plugin_classpath = get_plugin_classpath(flow_name)
         dialect = results_schema_dao.get_database_dialect()
         tenant_configs = results_schema_dao.tenant_configs
         
-        create_schema(results_schema_dao)
+        # create results schema
+        create_schema_task(results_schema_dao)
         
-        # create tables with liquibase
-        action = LiquibaseAction.UPDATE
-        
+        # create result tables with liquibase
         create_tables_wo = run_liquibase_update_task.with_options(
-            on_failure=[partial(drop_schema_hook,
-                                **dict(schema_dao=results_schema_dao))])
-        create_tables_wo(action=action,
+            on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
+        
+        create_tables_wo(action=LiquibaseAction.UPDATE,
+                         data_model=CHARACTERIZATION_DATA_MODEL,
                          dialect=dialect,
                          changelog_file=changelog_file,
                          schema_name=results_schema_dao.schema_name,
@@ -159,38 +154,29 @@ def create_data_characterization_schema(vocab_schema_name: str,
                          plugin_classpath=plugin_classpath,
                          )
 
-
-        # enable auditing
-        enable_audit_policies = tenant_configs.get("enableAuditPolicies")
-        if enable_audit_policies:
-
-            enable_and_create_audit_policies_wo = enable_and_create_audit_policies.with_options(
-                on_failure=[partial(drop_schema_hook,
-                                    **dict(schema_dao=results_schema_dao))])
-            enable_and_create_audit_policies_wo(results_schema_dao)
-        else:
-            print("Skipping Alteration of system configuration")
-            print("Skipping creation of Audit policy for system configuration")
-            print(f"Skipping creation of new audit policy for {results_schema_dao.schema_name}")
-            
+        # task
+        enable_audit_policies_wo = enable_and_create_audit_policies_task.with_options(
+            on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
         
-        # assign permissions to role/user
-        create_and_assign_roles_wo = create_and_assign_roles.with_options(
-            on_failure=[partial(drop_schema_hook,
-                                **dict(schema_dao=results_schema_dao))])
+        enable_audit_policies_wo(results_schema_dao)
+
+        # task 
+        create_and_assign_roles_wo = create_and_assign_roles_task.with_options(
+            on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
+        
         create_and_assign_roles_wo(user_dao)
 
-        print(f"Data Characterization results schema '{results_schema_dao.schema_name}' successfully created and privileges assigned!")
+        logger.info(f"Data Characterization results schema '{results_schema_dao.schema_name}' successfully created and privileges assigned!")
 
     except Exception as e:
-        print(e)
+        logger.error(e)
         raise e
     else:
         return True
 
 
 @task(log_prints=True,
-      result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")),
+      result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
       result_storage_key="{flow_run.id}_persist_data_characterization.json",
       result_serializer=JSONSerializer(),
       persist_result=True)
@@ -200,13 +186,12 @@ def execute_data_characterization(schema_name: str,
                                   results_schema_dao,
                                   exclude_analysis_ids: str,
                                   output_folder: str,
-                                  robjects,
                                   r_libs_user_directory: str,
                                   set_connection_string: str,
                                   flow_run_id: str):
     try:
         logger = get_run_logger()
-        threads = os.getenv('ACHILLES_THREAD_COUNT')
+        threads = ACHILLES_THREAD_COUNT
         logger.info('Running achilles')
         
         with robjects.conversion.localconverter(robjects.default_converter):
@@ -247,7 +232,7 @@ def execute_data_characterization(schema_name: str,
         
         
     
-@task(result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")),
+@task(result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
       result_storage_key="{flow_run.id}_export_to_ares.json",
       result_serializer=JSONSerializer(),
       persist_result=True)
@@ -255,7 +240,6 @@ async def execute_export_to_ares(schema_name: str,
                                  vocab_schema_name: str,
                                  results_schema_dao,
                                  output_folder: str,
-                                 robjects,
                                  r_libs_user_directory: str,
                                  set_connection_string: str,
                                  flow_run_id: str
@@ -293,5 +277,3 @@ async def execute_export_to_ares(schema_name: str,
         
         raise Exception(f"An error occurred while executing export to ares: {error_message}") 
 
-def get_plugin_classpath(flow_name: str) -> str:
-    return f'{os.getcwd()}/{flow_name}/'

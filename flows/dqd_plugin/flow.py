@@ -1,26 +1,25 @@
 import os
 import sys
 import json
-import importlib
-from functools import partial
+from rpy2 import robjects
 
+from prefect.variables import Variable
 from prefect_shell import ShellOperation
+from prefect.context import FlowRunContext
 from prefect.serializers import JSONSerializer
 from prefect import flow, task, get_run_logger
-from prefect.server.schemas.states import StateType
-from prefect.logging.loggers import task_run_logger
 from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
-from prefect.context import TaskRunContext, FlowRunContext
 
-from dqd_plugin.types import DqdOptionsType
+from flows.dqd_plugin.types import DqdOptionsType, DQD_THREAD_COUNT
+
+from shared_utils.dao.DBDao import DBDao
+from shared_utils.types import UserType
 
 
 def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
     # Install dqd R package from plugin
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
+    r_libs_user_directory = Variable.get("r_libs_user").value
     if (r_libs_user_directory):
         ShellOperation(
             commands=[
@@ -32,7 +31,7 @@ def setup_plugin():
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
 def dqd_plugin(options: DqdOptionsType):
-    setup_plugin() #dqd_flow_module = importlib.import_module('flows.alp_dqd.flow')
+    setup_plugin()
     schema_name = options.schemaName
     database_code = options.databaseCode
     cdm_version_number = options.cdmVersionNumber
@@ -79,7 +78,7 @@ def dqd_plugin(options: DqdOptionsType):
                 cohort_table_name,
                 use_cache_db)
     
-@task(result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")), 
+@task(result_storage=RFS.load(Variable.get("flows_results_sb_name").value), 
       result_storage_key="{flow_run.id}_dqd.json",
       result_serializer=JSONSerializer(),
       persist_result=True)
@@ -98,16 +97,12 @@ def execute_dqd(
 ):
     logger = get_run_logger()
 
-    threads = os.getenv('DQD_THREAD_COUNT')
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
+    threads = DQD_THREAD_COUNT
+    r_libs_user_directory = Variable.get("r_libs_user").value
     
-    dbdao_module = importlib.import_module('dao.DBDao')
-    types_module = importlib.import_module('utils.types')
-    read_user = types_module.UserType.READ_USER
+    read_user = UserType.READ_USER
     
-    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                               database_code=database_code, 
-                               schema_name=schema_name)
+    dbdao = DBDao(use_cache_db=use_cache_db, database_code=database_code, schema_name=schema_name)
     
     set_db_driver_env = dbdao.set_db_driver_env()
     set_read_user_connection = dbdao.get_database_connector_connection_string(schema_name=dbdao.schema_name,
@@ -128,7 +123,7 @@ def execute_dqd(
                 '''
                 )
     # raise Exception("test stop")
-    robjects = importlib.import_module('rpy2.robjects')
+
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''
                 {set_db_driver_env}

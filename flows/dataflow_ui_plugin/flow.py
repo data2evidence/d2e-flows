@@ -1,31 +1,24 @@
-import os
-import sys
 import traceback
-import importlib
 import sqlalchemy as sql
 from functools import partial
 from collections import OrderedDict
+from prefect_dask import DaskTaskRunner
 
+from prefect.variables import Variable
 from prefect import flow, task, get_run_logger
 from prefect.serializers import JSONSerializer
 from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
 from prefect.context import TaskRunContext, FlowRunContext
 
-from dataflow_ui_plugin.hooks import *
-from dataflow_ui_plugin.flowutils import *
-from dataflow_ui_plugin.nodes import generate_nodes_flow
-
-
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
+from flows.dataflow_ui_plugin.hooks import *
+from flows.dataflow_ui_plugin.flowutils import *
+from flows.dataflow_ui_plugin.nodes import generate_nodes_flow
 
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def dataflow_ui_plugin(json_graph, options):
     logger = get_run_logger()
-    setup_plugin()
 
     # Grab root flow id
     root_flow_run_context = FlowRunContext.get().flow_run.dict()
@@ -68,19 +61,18 @@ def dataflow_ui_plugin(json_graph, options):
     # return json.dumps(nodes_out) # use return if persisting prefect flow results
     
 def execute_subflow_cluster(node_graph, input, test):
-    prefect_dask_module = importlib.import_module("prefect_dask")
     scheduler_address = get_scheduler_address(node_graph)
     executor_type = node_graph["nodeobj"].executor_type
 
-    @flow(task_runner=prefect_dask_module.DaskTaskRunner(cluster_kwargs={"processes": False}), log_prints=True)
+    @flow(task_runner=DaskTaskRunner(cluster_kwargs={"processes": False}), log_prints=True)
     def execute_local_cluster(node_graph, input, test):
         return submit_tasks_to_runner(node_graph, input, test)
 
-    @flow(task_runner=prefect_dask_module.DaskTaskRunner(address=scheduler_address), log_prints=True)
+    @flow(task_runner=DaskTaskRunner(address=scheduler_address), log_prints=True)
     def execute_kube_cluster(node_graph, input, test):
         return submit_tasks_to_runner(node_graph, input, test)
 
-    @flow(task_runner=prefect_dask_module.DaskTaskRunner(address=scheduler_address), log_prints=True)
+    @flow(task_runner=DaskTaskRunner(address=scheduler_address), log_prints=True)
     def execute_mpi_cluster(node_graph, input, test):
         return submit_tasks_to_runner(node_graph, input, test)
 
@@ -209,7 +201,7 @@ def execute_nodes_flow(graph, sorted_nodes, test):
 
 
 @task(task_run_name="execute-nodes-taskrun-{nodename}",
-      result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")), 
+      result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
       result_storage_key="{flow_run.id}_{parameters[nodename]}.json",
       result_serializer=JSONSerializer(object_encoder="dataflow_ui_plugin.nodes.serialize_result_to_json"), log_prints=True,
       persist_result=True)

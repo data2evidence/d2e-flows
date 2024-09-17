@@ -1,6 +1,4 @@
-import sys
 import csv
-import importlib
 import numpy as np
 import pandas as pd
 from io import StringIO
@@ -9,18 +7,15 @@ import sqlalchemy as sql
 from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from data_load_plugin.utils.types import DataloadOptions
+from flows.data_load_plugin.types import DataloadOptions
+
+from shared_utils.dao.DBDao import DBDao
 
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-    
-    
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def data_load_plugin(options: DataloadOptions):
-    setup_plugin()
     logger = get_run_logger()
+    
     files = options.files
     database_code = options.database_code
     use_cache_db = options.use_cache_db
@@ -30,10 +25,9 @@ def data_load_plugin(options: DataloadOptions):
     tables_to_truncate = [f.table_name for f in files if f.truncate]
     chunksize = options.chunksize if options.chunksize else None
     
-    dbdao_module = importlib.import_module('dao.DBDao')
-    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                               database_code=database_code, 
-                               schema_name=schema)
+    dbdao = DBDao(use_cache_db=use_cache_db,
+                  database_code=database_code, 
+                  schema_name=schema)
 
     engine = dbdao.engine
 

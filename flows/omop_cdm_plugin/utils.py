@@ -1,78 +1,55 @@
-from omop_cdm_plugin.types import *
+from sqlalchemy import select
+from datetime import datetime
 
-# List of tables linked to person table
-NON_PERSON_ENTITIES = {
-    "observation_period": "observation_period_id",
-    "death": "person_id",
-    "visit_occurrence": "visit_occurrence_id",
-    "visit_detail": "visit_detail_id",
-    "condition_occurrence": "condition_occurrence_id",
-    "drug_exposure": "drug_exposure_id",
-    "procedure_occurrence": "procedure_occurrence_id",
-    "device_exposure": "device_exposure_id",
-    "measurement": "measurement_id",
-    "observation": "observation_id",
-    "note": "note_id",
-    "episode": "episode_id",
-    "specimen": "specimen_id"
-}
+from prefect import task, get_run_logger
+
+from flows.omop_cdm_plugin.types import RELEASE_VERSION_MAPPING, CDMVersion
 
 
-def get_cdm_release_date(dbdao, logger) -> str:
-    try:
-        patient_count = dbdao.get_value(table_name="cdm_source", column_name="cdm_release_date")
-    except Exception as e:
-        error_msg = f"Error retrieving patient count"
-        logger.error(f"{error_msg}: {e}")
-        patient_count = error_msg
-    return str(patient_count)
+@task(log_prints=True)
+def insert_cdm_version(cdm_version: str, schema_dao, vocab_schema_dao):  
+    logger = get_run_logger() 
+    
+    # Populate 'cdm_version_concept_id' and 'vocabulary_version' values from vocab
+    # https://ohdsi.github.io/CommonDataModel/cdm54.html#cdm_source
+    
+    cdm_concept_code = "CDM " + RELEASE_VERSION_MAPPING.get(cdm_version)
+    
+    concept_column_names = ["concept_id", "vocabulary_id", "concept_class_id", "concept_code"]
+    vocabulary_column_names = ["vocabulary_version", "vocabulary_id"]
+    
+    concept_columns = vocab_schema_dao.get_sqlalchemy_columns("concept", concept_column_names)
+    vocabulary_columns = vocab_schema_dao.get_sqlalchemy_columns("vocabulary", vocabulary_column_names)
+    
+    get_cdm_version_concept_id_statement = select(concept_columns["concept_id"]) \
+                                            .where(concept_columns["vocabulary_id"] == "CDM") \
+                                            .where(concept_columns["concept_class_id"] == "CDM") \
+                                            .where(concept_columns["concept_code"] == cdm_concept_code)
+                                            
+    get_vocabulary_version_statement = select(vocabulary_columns["vocabulary_version"]) \
+                                            .where(vocabulary_columns["vocabulary_id"] == "None") \
+    
+    logger.info(f"Retrieving 'cdm_version_concept_id' from vocab schema {vocab_schema_dao.schema_name} with cdm_concept_code '{cdm_concept_code}'..")
+    cdm_version_concept_id = vocab_schema_dao.execute_sqlalchemy_statement(get_cdm_version_concept_id_statement,
+                                                                     vocab_schema_dao.get_single_value)
 
-def get_patient_count(dbdao, logger) -> str:
-    try:
-        patient_count = dbdao.get_distinct_count("person", "person_id")
-    except Exception as e:
-        error_msg = f"Error retrieving patient count"
-        logger.error(f"{error_msg}: {e}")
-        patient_count = error_msg
-    return str(patient_count)
-
-
-def get_total_entity_count(entity_count_distribution: dict, logger) -> str:
-    try:
-        total_entity_count = 0
-        for entity, entity_count in entity_count_distribution.items():
-            # value could be str(int) or "error"
-            if entity_count == "error":
-                continue
-            else:
-                total_entity_count += int(entity_count)
-    except Exception as e:
-        error_msg = f"Error retrieving entity count"
-        logger.error(f"{error_msg}: {e}")
-        total_entity_count = error_msg
-    return str(total_entity_count)
+    logger.info(f"Retrieving 'vocabulary_version' from vocab schema {vocab_schema_dao.schema_name} with cdm_concept_code '{cdm_concept_code}'..")
+    vocabulary_version = vocab_schema_dao.execute_sqlalchemy_statement(get_vocabulary_version_statement,
+                                                                 vocab_schema_dao.get_single_value)
 
 
-def get_entity_count_distribution(dbdao, logger) -> EntityCountDistributionType:
-    entity_count_distribution = {}
-    # retrieve count for each entity table
-    for table, unique_id_column in NON_PERSON_ENTITIES.items():
-        try:
-            entity_count = dbdao.get_distinct_count(table, unique_id_column)
-        except Exception as e:
-            logger.error(f"Error retrieving entity count for {table}: {e}")
-            entity_count = "error"
-        entity_count_key = table.replace("_", " ").title() + " Count"
-        if entity_count != "error":
-            entity_count_distribution[entity_count_key] = str(entity_count)
-    return entity_count_distribution
-
-
-def get_cdm_version(dbdao, logger) -> str:
-    try:
-        cdm_version = dbdao.get_value("cdm_source", "cdm_version")
-    except Exception as e:
-        error_msg = f"Error retrieving CDM version"
-        logger.error(f"{error_msg}: {e}")
-        cdm_version = error_msg
-    return str(cdm_version)
+    values_to_insert = {
+        "cdm_source_name": schema_dao.schema_name,
+        "cdm_source_abbreviation": schema_dao.schema_name[0:25],
+        "cdm_holder": "D4L",
+        "source_release_date": datetime.now(),
+        "cdm_release_date": datetime.now(),
+        "cdm_version": cdm_version,
+        "vocabulary_version": vocabulary_version,
+    }
+    if cdm_version == CDMVersion.OMOP54:
+        # v5.3 does not have 'cdm_version_concept_id' column
+        values_to_insert["cdm_version_concept_id"] = cdm_version_concept_id
+    
+    logger.info(f"Inserting CDM Version into 'cdm_source' table..")
+    schema_dao.insert_values_into_table("cdm_source", values_to_insert)

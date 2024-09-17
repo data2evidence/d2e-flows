@@ -1,3 +1,4 @@
+from prefect.variables import Variable
 from prefect import task, flow, get_run_logger
 from prefect.serializers import JSONSerializer
 from prefect.task_runners import SequentialTaskRunner
@@ -8,29 +9,26 @@ from pydicom import dcmread
 from pydicom.dataelem import DataElement
 
 import os
-import sys
 import json
-import importlib
 import pandas as pd
 from pathlib import Path
-from uuid import uuid4, UUID
-from typing import Dict, List
+from uuid import uuid4
 from datetime import datetime
 from collections import defaultdict
 from orthanc_api_client import OrthancApiClient
 
-from dicom_etl_plugin.types import *
-from dicom_etl_plugin.utils import *
+from flows.dicom_etl_plugin.types import *
+from flows.dicom_etl_plugin.utils import *
+
+from shared_utils.dao.DBDao import DBDao
+from shared_utils.types import UserType
+from shared_utils.api.DicomServerAPI import DicomServerAPI
 
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-    
+
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def dicom_etl_plugin(options: DICOMETLOptions):
-    setup_plugin()
+def dicom_etl_plugin(test: str, options: DICOMETLOptions):
     logger = get_run_logger()
 
     flow_action_type = options.flow_action_type
@@ -41,18 +39,18 @@ def dicom_etl_plugin(options: DICOMETLOptions):
     to_truncate = options.to_truncate
     use_cache_db = options.use_cache_db
 
-    admin_user = importlib.import_module('utils.types').PG_TENANT_USERS.ADMIN_USER
-    dbdao_module = importlib.import_module('dao.DBDao')
+    admin_user = UserType.ADMIN_USER
 
-    mi_dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                  database_code=database_code, 
-                                  schema_name=medical_imaging_schema_name)
-    vocab_dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                     database_code=database_code, 
-                                     schema_name=vocab_schema_name)
-    cdm_dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                                   database_code=database_code, 
-                                   schema_name=cdm_schema_name)
+
+    mi_dbdao = DBDao(use_cache_db=use_cache_db,
+                    database_code=database_code, 
+                    schema_name=medical_imaging_schema_name)
+    vocab_dbdao = DBDao(use_cache_db=use_cache_db,
+                        database_code=database_code, 
+                        schema_name=vocab_schema_name)
+    cdm_dbdao = DBDao(use_cache_db=use_cache_db,
+                        database_code=database_code, 
+                        schema_name=cdm_schema_name)
     
     match flow_action_type:
         case FlowActionType.LOAD_VOCAB:
@@ -66,9 +64,9 @@ def dicom_etl_plugin(options: DICOMETLOptions):
             mapping = options.person_to_patient_mapping
             dicom_files_abs_path = options.dicom_files_abs_path
             upload_files = options.upload_files
-            mapping_dbdao = dbdao_module.DBDao(database_code, mapping.schema_name, admin_user)
+            mapping_dbdao = DBDao(database_code, mapping.schema_name, admin_user)
             
-            DicomServerAPI = importlib.import_module('api.DicomServerAPI').DicomServerAPI()
+            DicomServerAPI = DicomServerAPI()
 
             for path in Path(dicom_files_abs_path).rglob('*.dcm'):
                 if path.is_file() and path.suffix == '.dcm':
@@ -235,7 +233,7 @@ def process_data_element(dbdao, logger, data_elem: DataElement, image_occurrence
 
 @task(
     log_prints=True,
-    result_storage=RFS.load(os.getenv("DATAFLOW_MGMT__FLOWS__RESULTS_SB_NAME")),
+    result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
     result_storage_key="dicom_etl_{flow_run.id}.json",
     result_serializer=JSONSerializer(),
     persist_result=True
@@ -243,8 +241,8 @@ def process_data_element(dbdao, logger, data_elem: DataElement, image_occurrence
 def upload_file_to_server(filepath: str, image_occurrence_id: int, 
                           sop_instance_id: str, api):     
     logger = get_run_logger()   
-    dicom_server_url = os.getenv("DICOM_SERVER__API_BASE_URL")
-    
+    service_routes = Variable.get("service_routes").value
+    dicom_server_url = json.loads(service_routes)["dicomServer"]
 
     filename = filepath.name
     logger.info("Connecting to DICOM server..")

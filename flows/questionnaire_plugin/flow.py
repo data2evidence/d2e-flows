@@ -1,6 +1,4 @@
-import sys
 import json
-import importlib
 import pandas as pd
 from uuid import uuid4
 from typing import List
@@ -9,27 +7,24 @@ from datetime import datetime
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from questionnaire_plugin.types import *
+from flows.questionnaire_plugin.types import *
 
+from shared_utils.dao.DBDao import DBDao
+from shared_utils.types import SupportedDatabaseDialects
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-    
     
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def questionnaire_plugin(options: QuestionnaireOptionsType):    
-    setup_plugin()
-        
+def questionnaire_plugin(options: QuestionnaireOptionsType):
+    logger = get_run_logger()
+
     questionnaire_definition = options.questionnaire_definition
     schema_name = options.schema_name
     database_code = options.database_code
     use_cache_db = options.use_cache_db
     
-    dbdao_module = importlib.import_module("dao.DBDao")
-    dbdao = dbdao_module.DBDao(use_cache_db=use_cache_db,
-                               database_code=database_code, 
-                               schema_name=schema_name)
+    dbdao = DBDao(use_cache_db=use_cache_db,
+                  database_code=database_code, 
+                  schema_name=schema_name)
     
     match options.flow_action_type:
         case FlowActionType.CREATE_QUESTIONNAIRE_DEFINITION:
@@ -45,10 +40,10 @@ def create_questionnaire_definition_task(db_connection, questionnaire_definition
     try:
         
         match db_connection.db_dialect:
-            case DatabaseDialects.HANA:
+            case SupportedDatabaseDialects.HANA:
                 questionnaire_table = "GDM.QUESTIONNAIRE"
                 questionnaire_item_table = "GDM.ITEM_QUESTIONNAIRE"
-            case DatabaseDialects.POSTGRES:
+            case SupportedDatabaseDialects.POSTGRES:
                 questionnaire_table = "gdm_questionnaire"
                 questionnaire_item_table = "gdm_item_questionnaire"
 
@@ -94,7 +89,7 @@ def create_questionnaire_item(items: List[IItemType],
         questionnaire_item_values_to_insert = _parse_questionnaire_definition_item(
             item_obj, item_id, questionnaire_id, parent_item_id).dict()
 
-        if dbconnection.db_dialect == DatabaseDialects.HANA:
+        if dbconnection.db_dialect == SupportedDatabaseDialects.HANA:
             # handle different column names for databases
             convert_columns_to_hana(
                 questionnaire_item_values_to_insert, "gdm_questionnaire_id", "GDM.QUESTIONNAIRE_ID")
