@@ -1,5 +1,0 @@
-{
-  "name": "datamart_plugin",
-  "type": "datamart",
-  "entrypoint": "datamart_plugin/flow.py"
-}

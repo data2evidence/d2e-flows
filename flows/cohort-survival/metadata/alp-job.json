@@ -1,6 +1,0 @@
-{
-  "name": "cohort_survival_plugin",
-  "type": "cohort_survival",
-  "entrypoint": "cohort_survival_plugin/flow.py",
-  "tags": []
-}

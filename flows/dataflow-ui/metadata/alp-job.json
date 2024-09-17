@@ -1,7 +1,0 @@
-{
-    "name": "dataflow_ui_plugin",
-    "type": "dataflow_ui",
-    "entrypoint": "dataflow_ui_plugin/flow.py",
-    "tags": [
-    ]
-  }
