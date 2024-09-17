@@ -28,7 +28,7 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
     create_for_cdw_config_validation = options.createForCdwConfigValidation
 
     # Set hardcoded name for duckdb databae file if create_for_cdw_config_validation is TRUE
-    duckdb_database_name = "cdw_config_svc_validation_schema" if create_for_cdw_config_validation else f"{database_code}_{schema_name}"
+    duckdb_database_name = "cdw_config_svc_validation" if create_for_cdw_config_validation else f"{database_code}_{schema_name}"
     
     dbdao = modules.dao_DBDao.DBDao(use_cache_db=use_cache_db,
                                     database_code=database_code,
@@ -45,7 +45,7 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
 
     # If file already exists, delete first before moving to copy step
     remove_existing_file_if_exists(
-        duckdb_database_name)
+        duckdb_database_name, create_for_cdw_config_validation)
 
 
     # TODO: Add switch case after unifiying envConverter postgres dialect value
@@ -53,7 +53,8 @@ def create_duckdb_database_file(options: CreateDuckdbDatabaseFileType, modules: 
 
     # Dont create fulltext search index for cdw config validation duckdb files
     if not create_for_cdw_config_validation:
-        create_duckdb_fts_index(dbdao, duckdb_database_name)
+        create_duckdb_fts_index(dbdao, duckdb_database_name,
+                                create_for_cdw_config_validation)
 
 
 if __name__ == '__main__':

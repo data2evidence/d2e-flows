@@ -19,7 +19,7 @@ def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str 
     """
 
 
-def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str):
+def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     '''
     Create duckdb full text search indexes based on columns specified in DUCKDB_FULLTEXT_SEARCH_CONFIG
     '''
@@ -39,7 +39,8 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str):
             columns=columns
         )
 
-        duckdb_file_path = resolve_duckdb_file_path(duckdb_database_name)
+        duckdb_file_path = resolve_duckdb_file_path(
+            duckdb_database_name, create_for_cdw_config_validation)
         with duckdb.connect(duckdb_file_path) as con:
             # If document_identifier is not in table columns, add a new column fts_document_identifier_id which is a auto-increment integer column to act as the table's unique id column.
             # This is required as duckdb FTS requires a unique conlumn as the document identifier
