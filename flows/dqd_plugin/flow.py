@@ -1,4 +1,3 @@
-import os
 import sys
 import json
 from rpy2 import robjects

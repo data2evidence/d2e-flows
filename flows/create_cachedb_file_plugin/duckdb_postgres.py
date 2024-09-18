@@ -12,9 +12,6 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
 
     # Get credentials for database code
     db_credentials = db_dao.tenant_configs
-    
-    logger.info(f"db_credentials is {db_credentials}")
-    
 
     # copy tables from postgres into duckdb
     for table in table_names:

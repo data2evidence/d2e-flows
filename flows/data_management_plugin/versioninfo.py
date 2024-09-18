@@ -7,13 +7,15 @@ from flows.data_management_plugin.const import OMOP_DATA_MODELS, check_table_cas
 from flows.data_management_plugin.types import (PortalDatasetType, 
                                                 ExtractDatasetSchemaType)
 
-from shared_utils.versioninfo import *
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.liquibase import Liquibase
 from shared_utils.api.PortalServerAPI import PortalServerAPI
 from shared_utils.types import (UserType, 
                                 LiquibaseAction,
                                 EntityCountDistributionType)
+from shared_utils.update_dataset_metadata import (extract_version,
+                                                  NON_PERSON_ENTITIES,
+                                                  get_total_entity_count)
 
 
 def get_version_info_tasks(changelog_filepath_list: Dict,

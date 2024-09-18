@@ -12,7 +12,7 @@ from flows.i2b2_plugin.utils import *
 
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.dao.UserDao import UserDao
-from shared_utils.versioninfo import get_entity_count_str
+from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
 from shared_utils.create_dataset_tasks import create_and_assign_roles_task, drop_schema_hook
 
@@ -225,19 +225,17 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
             portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", error_msg)
             portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", error_msg)
         else:
-            try:
-                # update patient count or error msg
-                patient_count = get_entity_count_str(dbdao=dbdao, 
-                                                     table_name="patient_dimension", 
-                                                     column_name="patient_num",
-                                                     entity_name="patient_count",
-                                                     logger=logger)
-                portal_server_api.update_dataset_attributes_table(dataset_id, "patient_count", patient_count)
-            except Exception as e:
-                logger.error(f"Failed to update attribute 'patient_count' for dataset '{dataset_id}': {e}")
-            else:
-                logger.info(f"Updated attribute 'patient_count' for dataset '{dataset_id}' with value '{patient_count}'")
-
+            # update patient count or error msg
+            update_entity_distinct_count(
+                portal_server_api=portal_server_api,
+                dataset_id=dataset_id,
+                dbdao=dbdao,
+                table_name="patient_dimension",
+                column_name="patient_num",
+                entity_name="patient_count",
+                logger=logger
+                )                
+                
             try:
                 # update release version or error msg
                 release_version = data_model[1:]
@@ -292,3 +290,11 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
                 logger.error(f"Failed to update attribute 'metadata_last_fetch_date' for dataset '{dataset_id}': {e}")
             else:
                 logger.info(f"Updated attribute 'metadata_last_fetch_date' for dataset '{dataset_id}' with value '{metadata_last_fetch_date}'")
+
+    
+            # update last fetched metadata date
+            update_metadata_last_fetched_date(
+                portal_server_api=portal_server_api,
+                dataset_id=dataset_id,
+                logger=logger
+            )

@@ -4,7 +4,7 @@ import re
 from flows.datamart_plugin.const import *
 from flows.datamart_plugin.types import *
 
-from shared_utils.versioninfo import extract_version
+from shared_utils.update_dataset_metadata import extract_version
 
 
 def get_tables_to_copy(source_dbdao, table_filter: list[DatamartCopyTableConfig], logger) -> list[str]:

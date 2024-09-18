@@ -1,4 +1,3 @@
-import os
 from rpy2 import robjects
 from functools import partial
 

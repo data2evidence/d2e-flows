@@ -1,5 +1,3 @@
-
-import json
 import pandas as pd
 from time import time
 from datetime import datetime
@@ -12,7 +10,7 @@ from flows.datamart_plugin.types import *
 from flows.datamart_plugin.const import *
 from flows.datamart_plugin.utils import *
 
-from shared_utils.versioninfo import *
+from shared_utils.update_dataset_metadata import *
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.dao.UserDao import UserDao
 from shared_utils.dao.MinioDao import MinioDao
@@ -20,7 +18,7 @@ from shared_utils.types import SupportedDatabaseDialects
 from shared_utils.api.PortalServerAPI import PortalServerAPI
 
 from shared_utils.create_dataset_tasks import create_schema_task, create_and_assign_roles_task
-from shared_utils.versioninfo import update_entity_value, update_entity_distinct_count
+from shared_utils.update_dataset_metadata import update_entity_value, update_entity_distinct_count
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def datamart_plugin(options: CreateDatamartOptions):
@@ -249,83 +247,65 @@ def get_and_update_attributes(use_cache_db: bool, token: str, dataset: dict):
         else:
             
             # update data model creation date with cdm_release_date or error msg
-            
             update_entity_value(
                 portal_server_api=portal_server_api,
                 dataset_id=dataset_id,
                 dbdao=dbdao,
-                table_name="cdm_source"
+                table_name="cdm_source",
                 column_name="cdm_release_date",
                 entity_name="created_date",
                 logger=logger
             )
             
-            
             # update last updated date with cdm_release_date or error msg
-            update_entity_value(portal_server_api=portal_server_api,
-                                dataset_id=dataset_id,
-                                dbdao=dbdao,
-                                table_name="cdm_source"
-                                column_name="cdm_release_date",
-                                entity_name="updated_date",
-                                logger)
+            update_entity_value(
+                portal_server_api=portal_server_api,
+                dataset_id=dataset_id,
+                dbdao=dbdao,
+                table_name="cdm_source",
+                column_name="cdm_release_date",
+                entity_name="updated_date",
+                logger=logger
+                )
 
             # update patient count or error msg
-            update_entity_distinct_count(portal_server_api=portal_server_api,
-                                         dataset_id=dataset_id,
-                                         dbdao=dbdao,
-                                         table_name="person"
-                                         column_name="person_id",
-                                         entity_name="patient_count",
-                                         logger)
+            update_entity_distinct_count(
+                portal_server_api=portal_server_api,
+                dataset_id=dataset_id,
+                dbdao=dbdao,
+                table_name="person",
+                column_name="person_id",
+                entity_name="patient_count",
+                logger=logger
+                )
             
+            
+            # update entity_count_distribution or error msg
+            entity_count_distribution = update_entity_count_distribution(
+                portal_server_api=portal_server_api,
+                dataset_id=dataset_id,
+                dbdao=dbdao,
+                logger=logger
+            )
 
-
-            try:
-                # update get_entity_count_distribution or error msg
-                entity_count_distribution = get_entity_count_distribution(dbdao, logger)
-                portal_server_api.update_dataset_attributes_table(dataset_id, "entity_count_distribution", json.dumps(entity_count_distribution))
-            except Exception as e:
-                logger.error(f"Failed to update attribute 'entity_count_distribution' for dataset '{dataset_id}': {e}")
-            else:
-                logger.info(f"Updated attribute 'entity_count_distribution' for dataset '{dataset_id}' with value '{json.dumps(entity_count_distribution)}'")
-
-
-            try:
-                # update total_entity_count or error msg
-                total_entity_count = get_total_entity_count(entity_count_distribution, logger)
-                portal_server_api.update_dataset_attributes_table(dataset_id, "entity_count", total_entity_count)
-            except Exception as e:
-                logger.error(f"Failed to update attribute 'entity_count' for dataset '{dataset_id}': {e}")
-            else:
-                logger.info(f"Updated attribute 'entity_count' for dataset '{dataset_id}' with value '{total_entity_count}'")
-
+            # update total_entity_count or error msg
+            update_total_entity_count(
+                portal_server_api=portal_server_api,
+                dataset_id=dataset_id,
+                entity_count_distribution=entity_count_distribution,
+                logger=logger
+            )
 
             # update cdm version or error msg
             cdm_version = update_entity_distinct_count(
                 portal_server_api=portal_server_api,
                 dataset_id=dataset_id,
                 dbdao=dbdao,
-                table_name="cdm_source"
+                table_name="cdm_source",
                 column_name="cdm_version",
                 entity_name="cdm_version",
                 logger=logger
                 )
-
-
-            # try:
-            #     # update cdm version or error msg
-            #     cdm_version = get_entity_value_str(dbdao=dbdao, 
-            #                                        table_name="cdm_source", 
-            #                                        column_name="cdm_version",
-            #                                        entity_name="cdm_version",
-            #                                        logger=logger)   
-            #     portal_server_api.update_dataset_attributes_table(dataset_id, "version", cdm_version)
-            # except Exception as e:
-            #     logger.error(f"Failed to update attribute 'cdm_version' for dataset '{dataset_id}': {e}")
-            # else:
-            #     logger.info(f"Updated attribute 'cdm_version' for dataset '{dataset_id}' with value '{cdm_version}'")
-
 
             try:
                 # update schema version, latest_schema_version or error msg
@@ -339,11 +319,8 @@ def get_and_update_attributes(use_cache_db: bool, token: str, dataset: dict):
                 logger.info(f"Updated attribute 'schema_version', 'latest_schema_version' for dataset '{dataset_id}' with value '{schema_version}'")
 
 
-            try:
-                # update last fetched metadata date
-                metadata_last_fetch_date = datetime.now().strftime('%Y-%m-%d')
-                portal_server_api.update_dataset_attributes_table(dataset_id, "metadata_last_fetch_date", metadata_last_fetch_date)
-            except Exception as e:
-                logger.error(f"Failed to update attribute 'metadata_last_fetch_date' for dataset '{dataset_id}': {e}")
-            else:
-                logger.info(f"Updated attribute 'metadata_last_fetch_date' for dataset '{dataset_id}' with value '{metadata_last_fetch_date}'")
+            update_metadata_last_fetched_date(
+                portal_server_api=portal_server_api,
+                dataset_id=dataset_id,
+                logger=logger
+            )
