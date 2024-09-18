@@ -1,7 +1,6 @@
 import importlib
 import numpy as np
 import pandas as pd
-import dask.dataframe as dd
 
 ro = importlib.import_module('rpy2.robjects')
 
@@ -36,9 +35,6 @@ def convert_py_to_R(python_obj):
     # Convert python object into rpy2 robject
     if python_obj is None:
         return ro.r("NULL")
-    elif isinstance(python_obj, dd.DataFrame):
-        dd_to_pd_df = python_obj.compute()
-        return convert_py_to_R(dd_to_pd_df)
     elif isinstance(python_obj, pd.DataFrame):
         with (ro.default_converter + ro.pandas2ri.converter).context():
             r_df = ro.conversion.get_conversion().py2rpy(python_obj)
@@ -92,28 +88,15 @@ def convert_R_to_py(r_obj, name=""):
             return result
 
 def serialize_to_json(data):
-    if isinstance(data, dd.DataFrame):
-        dd_to_pd_df = data.compute()
-        json_df = dd_to_pd_df.to_json(orient="records")
-        return json_df
-    elif isinstance(data, pd.DataFrame):
+    if isinstance(data, pd.DataFrame):
         json_df = data.to_json(orient="records", default_handler=str)
         return json_df
     elif isinstance(data, dict):
         for key, value in data.items():
-            if isinstance(data[key], dd.DataFrame) or isinstance(data[key], pd.DataFrame):
+            if isinstance(data[key], pd.DataFrame):
                 data[key] = serialize_to_json(value)
         return data
     elif hasattr(data, 'rid') and hasattr(data, 'rclass') and hasattr(data, 'r_repr'):
         return data.r_repr()
     else:
         return data
-
-def get_scheduler_address(graph):
-    scheduler_host = graph["executor_options"]["executor_address"]["host"]
-    scheduler_port = graph["executor_options"]["executor_address"]["port"]
-    ssl = graph["executor_options"]["executor_address"]["ssl"]
-    if ssl:
-        return "https://" + scheduler_host + ":" + scheduler_port
-    else:
-        return "http://" + scheduler_host + ":" + scheduler_port
