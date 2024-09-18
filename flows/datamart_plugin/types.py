@@ -49,20 +49,3 @@ RELEASE_VERSION_MAPPING = {
 class CDMVersion(str, Enum):
     OMOP53 = "5.3"
     OMOP54 = "5.4"
-
-
-class EntityCountDistributionType(BaseModel):
-    OBSERVATION_PERIOD_COUNT: str
-    DEATH_COUNT: str
-    VISIT_OCCURRENCE_COUNT: str
-    VISIT_DETAIL_COUNT: str
-    CONDITION_OCCURRENCE_COUNT: str
-    DRUG_EXPOSURE_COUNT: str
-    PROCEDURE_OCCURRENCE_COUNT: str
-    DEVICE_EXPOSURE_COUNT: str
-    MEASUREMENT_COUNT: str
-    OBSERVATION_COUNT: str
-    NOTE_COUNT: str
-    EPISODE_COUNT: str
-    SPECIMEN_COUNT: str
-    
