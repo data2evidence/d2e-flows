@@ -1,28 +1,16 @@
-import os
-import json
 import requests
 
-from prefect.variables import Variable
-from prefect.blocks.system import Secret
+from shared_utils.api.BaseAPI import BaseAPI
 
 
-class PortalServerAPI:
+class PortalServerAPI(BaseAPI):
     def __init__(self, token):
-        service_routes = Variable.get("service_routes").value
-        
-        if service_routes is None:
-            raise ValueError("'service_routes' prefect variable is undefined")
-        
-        python_verify_ssl = Variable.get("python_verify_ssl").value
-        tls_internal_ca_cert = Secret.load("tls-internal-ca-cert").get()
-        
-        if python_verify_ssl == 'true' and tls_internal_ca_cert is None:
-            raise ValueError("'tls-internal-ca-cert' prefect variable is undefined")
-        
-        self.datasets_url = json.loads(service_routes)["portalServer"] + 'dataset/list?role=systemAdmin'
-        self.dataset_attributes_url = json.loads(service_routes)["portalServer"] + 'dataset/attribute'
+        super().__init__()
+        self.url = self.get_service_route("portalserver_service_route")
+        self.datasets_url = self.url + 'dataset/list?role=systemAdmin'
+        self.dataset_attributes_url = self.url + 'dataset/attribute'
         self.token = token
-        self.verifySsl = False if python_verify_ssl == 'false' else tls_internal_ca_cert
+    
 
     def getOptions(self):
         return {
@@ -34,7 +22,7 @@ class PortalServerAPI:
         result = requests.get(
             self.datasets_url,
             headers=headers,
-            verify=self.verifySsl
+            verify=self.get_verify_value()
         )
         if ((result.status_code >= 400) and (result.status_code < 600)):
             raise Exception(
@@ -48,7 +36,7 @@ class PortalServerAPI:
         result = requests.put(
             self.dataset_attributes_url,
             headers=headers,
-            verify=self.verifySsl,
+            verify=self.get_verify_value(),
             json={"studyId": str(
                 study_id), "attributeId": attribute_id, "value": attribute_value}
         )

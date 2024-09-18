@@ -1,45 +1,20 @@
-import os
 import jwt
-import json
 import requests
 
 from prefect.variables import Variable
 from prefect.blocks.system import Secret
 
-class OpenIdAPI:
+from shared_utils.api.BaseAPI import BaseAPI
+
+
+class OpenIdAPI(BaseAPI):
     def __init__(self):
-        service_routes = Variable.get("service_routes").value
+        super().__init__()
+        self.url = self.get_service_route("idissuerurl_service_route")
+        self.client_id = Secret.load("idp-alp-data-client-id")
+        self.client_secret = Secret.load("idp-alp-data-client-secret")
+        self.scope = Variable.get("idp_scope").value
         
-        if service_routes is None:
-            raise ValueError("'service_routes' prefect variable is undefined")
-
-        logto_alp_data_client_id = Secret.load("logto-alp-data-client-id").get()
-        logto_alp_data_client_secret = Secret.load("logto-alp-data-client-secret").get()
-        idp_scope = Variable.get("idp_scope").value
-
-        if logto_alp_data_client_id is None:
-            raise ValueError("'logto_alp_data_client_id' secret block is undefined")
-
-        if logto_alp_data_client_secret is None:
-            raise ValueError("'logto_alp_data_client_secret' secret block is undefined")
-
-        if idp_scope is None:
-            raise ValueError("'idp_scope' prefect variable is undefined")
-        
-        python_verify_ssl = Variable.get("python_verify_ssl").value
-        tls_internal_ca_cert = Secret.load("tls-internal-ca-cert").get()
-        
-        if python_verify_ssl == 'true' and tls_internal_ca_cert is None:
-            raise ValueError("'tls-internal-ca-cert' prefect variable is undefined")
-
-        # Parse SERVICE_ROUTES and get idIssuerUrl
-        self.url = json.loads(service_routes)["idIssuerUrl"]
-        self.clientId = logto_alp_data_client_id
-        self.clientSecret = logto_alp_data_client_secret
-        self.scope = idp_scope
-        self.verifySsl = False if python_verify_ssl == 'false' else tls_internal_ca_cert
-
-
     def getOptions(self):
         return {
             "Content-Type": "application/json",
@@ -53,14 +28,14 @@ class OpenIdAPI:
     def getClientCredentialToken(self) -> str:
         params = {
             'grant_type': "client_credentials",
-            'client_id': self.clientId,
-            'client_secret': self.clientSecret,
+            'client_id': self.client_id.get(),
+            'client_secret': self.client_secret.get(),
         }
 
         result = requests.post(
             f"{self.url}/token",
             headers=self.getOptions(),
-            verify=self.verifySsl,
+            verify=self.get_verify_value(),
             json=params
         )
 

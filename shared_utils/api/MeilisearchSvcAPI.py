@@ -1,29 +1,17 @@
-import os
-import json
+
 import requests
 from typing import Union
 from shared_utils.api.OpenIdAPI import OpenIdAPI
 
-from prefect.variables import Variable
-from prefect.blocks.system import Secret
+from shared_utils.api.BaseAPI import BaseAPI
 
-class MeilisearchSvcAPI:
+
+class MeilisearchSvcAPI(BaseAPI):
     def __init__(self):
-        service_routes = Variable.get("service_routes").value
-        
-        if service_routes is None:
-            raise ValueError("'service_routes' prefect variable is undefined")
-        
-        python_verify_ssl = Variable.get("python_verify_ssl").value
-        tls_internal_ca_cert = Secret.load("tls-internal-ca-cert").get()
-        
-        if python_verify_ssl == 'true' and tls_internal_ca_cert is None:
-            raise ValueError("'tls-internal-ca-cert' prefect variable is undefined")
-        
-        self.url = json.loads(service_routes)["meilisearch"]
+        super().__init__()
+        self.url = self.get_service_route("meilisearch_service_route")        
         self.openIdAPI = OpenIdAPI()
         self.token = None
-        self.verifySsl = False if python_verify_ssl == 'false' else tls_internal_ca_cert
 
     def getOptions(self):
         # Get new client credential token if it is empty or has expired
@@ -42,7 +30,7 @@ class MeilisearchSvcAPI:
         result = requests.post(
             url,
             headers=headers,
-            verify=self.verifySsl,
+            verify=self.get_verify_value(),
             json={"uid": index_name, "primaryKey": primary_key}
         )
         if ((result.status_code >= 400) and (result.status_code < 600)):
@@ -58,7 +46,7 @@ class MeilisearchSvcAPI:
         result = requests.patch(
             url,
             headers=headers,
-            verify=self.verifySsl,
+            verify=self.get_verify_value(),
             json=settings
         )
         if ((result.status_code >= 400) and (result.status_code < 600)):
@@ -74,7 +62,7 @@ class MeilisearchSvcAPI:
         result = requests.put(
             url,
             headers=headers,
-            verify=self.verifySsl,
+            verify=self.get_verify_value(),
             json=documents
         )
         if ((result.status_code >= 400) and (result.status_code < 600)):
@@ -90,7 +78,7 @@ class MeilisearchSvcAPI:
         result = requests.put(
             url,
             headers=headers,
-            verify=self.verifySsl,
+            verify=self.get_verify_value(),
             json=documents
         )
         if ((result.status_code >= 400) and (result.status_code < 600)):

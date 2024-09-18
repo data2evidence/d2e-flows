@@ -1,28 +1,13 @@
-import os
-import json
 import requests
 
-from prefect.variables import Variable
-from prefect.blocks.system import Secret
+from shared_utils.api.BaseAPI import BaseAPI
 
 
-class TerminologySvcAPI:
+class TerminologySvcAPI(BaseAPI):
     def __init__(self, token):
-        service_routes = Variable.get("service_routes").value
-        
-        if service_routes is None:
-            raise ValueError("'service_routes' prefect variable is undefined")
-        
-        python_verify_ssl = Variable.get("python_verify_ssl").value
-        tls_internal_ca_cert = Secret.load("tls-internal-ca-cert").get()
-        
-        if python_verify_ssl == 'true' and tls_internal_ca_cert is None:
-            raise ValueError("'tls-internal-ca-cert' prefect variable is undefined")
-        
-        self.url = json.loads(service_routes)["terminology"]
+        super().__init__()
+        self.url = self.get_service_route("terminology_service_route")
         self.token = token
-        self.verifySsl = False if python_verify_ssl == 'false' else tls_internal_ca_cert
-
 
     def getOptions(self):
         return {
@@ -35,7 +20,7 @@ class TerminologySvcAPI:
         result = requests.get(
             url,
             headers=headers,
-            verify=self.verifySsl
+            verify=self.get_verify_value()
         )
         if ((result.status_code >= 400) and (result.status_code < 600)):
             raise Exception(
