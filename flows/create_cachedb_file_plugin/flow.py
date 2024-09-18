@@ -1,9 +1,9 @@
 from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from flows.create_cachedb_file_plugin.utils import *
 from flows.create_cachedb_file_plugin.duckdb_fts import create_duckdb_fts_index
 from flows.create_cachedb_file_plugin.config import CreateDuckdbDatabaseFileType
+from flows.create_cachedb_file_plugin.utils import remove_existing_file_if_exists
 from flows.create_cachedb_file_plugin.duckdb_postgres import copy_postgres_to_duckdb
 
 from shared_utils.dao.DBDao import DBDao
