@@ -152,15 +152,14 @@ class DBUtils:
 
     def __extract_database_credentials(self, schema_name: str = None) -> dict:
         secret_block = Secret.load("database-credentials").get()
-        database_credentials_secret = json.loads(secret_block)
+        database_credentials_list = json.loads(secret_block)
         
- 
-        if database_credentials_secret == []:
+        if database_credentials_list == []:
             raise ValueError(
                 f"'DATABASE_CREDENTIALS' environment variable is empty!")
         else:
             _db = next(filter(lambda x: x["values"]
-                              ["code"] == self.database_code and "alp-dataflow-gen" in x["tags"], database_credentials_secret), None)
+                              ["code"] == self.database_code and "alp-dataflow-gen" in x["tags"], database_credentials_list), None)
             if not _db:
                 raise ValueError(
                     f"Database code '{self.database_code}' not found in database credentials")
@@ -173,7 +172,7 @@ class DBUtils:
                     database_credentials["adminPassword"] = database_credentials["readPassword"] = "qwerty"
                     database_credentials["host"] = Variable.get("cachedb_host").value
                     database_credentials["port"]  = Variable.get("cachedb_port").value
-
+        
         return database_credentials
 
 
@@ -213,20 +212,3 @@ class DBUtils:
 def create_base_connection_string(dialect_driver: str, user: str, password: str,
                                   host: str, port: int, database_name: str) -> str:
     return f"{dialect_driver}://{user}:{password}@{host}:{port}/{database_name}"
-
-
-def GetConfigDBConnection():
-    # Single pre-configured postgres database
-    dialect_driver = "postgresql+psycopg2"
-    db = os.getenv("PG__DB_NAME")
-    user = os.getenv("PG__WRITE_USER")
-    pw = os.getenv("PG__WRITE_PASSWORD")
-    host = os.getenv("PG__HOST")
-    port = os.getenv("PG__PORT")
-    conn_string = create_base_connection_string(
-        dialect_driver, user, pw, host, port, db)
-    engine = create_engine(conn_string)
-    return engine
-
-
-
