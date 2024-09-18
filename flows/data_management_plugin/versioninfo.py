@@ -14,7 +14,7 @@ from shared_utils.types import (UserType,
                                 LiquibaseAction,
                                 EntityCountDistributionType)
 from shared_utils.update_dataset_metadata import (extract_version,
-                                                  NON_PERSON_ENTITIES,
+                                                  OMOP_NON_PERSON_ENTITIES,
                                                   get_total_entity_count)
 
 
@@ -273,7 +273,7 @@ def get_patient_count(dao_obj: DBDao, is_lower_case: bool) -> str:
 def get_entity_count_distribution(dao_obj: DBDao, is_lower_case: bool) -> EntityCountDistributionType:
     entity_count_distribution = {}
     # retrieve count for each entity table
-    for table, unique_id_column in NON_PERSON_ENTITIES.items():
+    for table, unique_id_column in OMOP_NON_PERSON_ENTITIES.items():
         try:
             if is_lower_case:
                 entity_count = dao_obj.get_distinct_count(
