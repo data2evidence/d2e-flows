@@ -14,3 +14,4 @@ pandas==2.2.2
 numpy==2.0.0
 orthanc-api-client==0.15.3
 pydicom==2.4.4
+torch==1.13.1

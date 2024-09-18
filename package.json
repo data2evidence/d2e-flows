@@ -1,14 +1,14 @@
 {
   "name": "@alp-os/d2e-plugins",
-  "version": "1.0.0",
+  "version": "0.0.99",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "docker build . -t trex-flow"
+    "build": "docker build . -t ph/flow --platform=linux/amd64"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alp-os/d2e-plugins.git"
+    "url": "https://github.com/alp-os/internal.git"
   },
   "author": "",
   "license": "ISC",
