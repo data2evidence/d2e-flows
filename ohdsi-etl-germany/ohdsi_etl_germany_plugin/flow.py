@@ -10,7 +10,7 @@ def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
     sys.path.append('/app/pysrc')
 
-@flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True, task_runner=SequentialTaskRunner)
 def ohdsi_etl_germany_plugin(options: OHDSIEtlGermanyOptionsType):
     logger = get_run_logger()
     logger.info('Running OHDSI ETL Germany OMOP to FHIR transformation')
