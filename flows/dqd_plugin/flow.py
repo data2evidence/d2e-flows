@@ -22,7 +22,7 @@ def setup_plugin():
     if (r_libs_user_directory):
         ShellOperation(
             commands=[
-                f"Rscript -e \"install.packages('./dqd_plugin/DataQualityDashboard-2.6.0', lib='{r_libs_user_directory}', repos = NULL, type='source')\""
+                f"Rscript -e \"install.packages('./flows/dqd_plugin/DataQualityDashboard-2.6.0', lib='{r_libs_user_directory}', repos = NULL, type='source')\""
             ]).run()
     else:
         raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
