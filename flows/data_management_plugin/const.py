@@ -33,6 +33,13 @@ def check_table_case(dao_obj: DBDao) -> bool:
         return True
     elif 'PERSON' in table_names:
         return False
+    
+    
+def convert_case(entity, is_lower_case):
+    if is_lower_case:
+        return entity.lower()
+    else:
+        return entity.upper()
 
 
 CHANGESET_AVAILABLE_REGEX = compile(r"db/migrations/\S+")

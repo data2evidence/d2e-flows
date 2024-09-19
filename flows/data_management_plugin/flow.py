@@ -97,7 +97,8 @@ def get_version_info_flow(options: GetVersionInfoType, logger):
             changelog_filepath_list=options.changelog_filepath_list,
             plugin_classpath=get_plugin_classpath(options.flow_name),
             token=options.token,
-            dataset_list=options.datasets
+            dataset_list=options.datasets,
+            use_cache_db=options.use_cache_db,
         )
     except Exception as e:
         logger.error(e)

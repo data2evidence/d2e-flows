@@ -133,11 +133,9 @@ def update_datamodel(flow_action_type: str,
 
     logger = get_run_logger()
     
-    dbdao = DBDao(use_cache_db=False, database_code=database_code, schema_name=schema_name)
-    tenant_configs = dbdao.tenant_configs
+    schema_dao = DBDao(use_cache_db=False, database_code=database_code, schema_name=schema_name)
+    tenant_configs = schema_dao.tenant_configs
 
-
-    schema_dao = DBDao(database_code, schema_name, UserType.ADMIN_USER)
     
     match flow_action_type:
         case LiquibaseAction.UPDATE:

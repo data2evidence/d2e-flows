@@ -33,22 +33,3 @@ async def setup_apache_ant(tag_name: str):
             f'ln -sfn /opt/ant/bin/ant /usr/bin/ant',
             'ant -version'
         ]).run()
-    
-
-def get_metadata_date(dbdao, column_name: str) -> str:
-    try:
-        metadata_date = str(dbdao.get_value('dataset_metadata', column_name)).split(" ")[0]
-    except Exception as e:
-        error_msg = f"Error retrieving created {column_name}"
-        print(f"{error_msg}: {e}")
-        metadata_date = error_msg
-    return metadata_date
-        
-def get_metadata_version(dbdao, column_name: str) -> str:
-    try:
-        metadata_version = dbdao.get_value('dataset_metadata', column_name)
-    except Exception as e:
-        error_msg = f"Error retrieving created {column_name}"
-        print(f"{error_msg}: {e}")
-        metadata_version = error_msg
-    return metadata_version

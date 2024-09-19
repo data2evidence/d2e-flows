@@ -235,7 +235,7 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
             )
 
             # update cdm version or error msg
-            cdm_version = update_entity_distinct_count(
+            cdm_version = update_entity_value(
                 portal_server_api=portal_server_api,
                 dataset_id=dataset_id,
                 dbdao=dbdao,
@@ -250,7 +250,7 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
                 schema_version = RELEASE_VERSION_MAPPING.get(cdm_version)
                 portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", schema_version)
             except Exception as e:
-                logger.error(f"Failed to update attribute 'schema_version' for dataset '{dataset_id}': {e}")
+                logger.error(f"Failed to update attribute 'schema_version' for dataset '{dataset_id}' with value '{schema_version}': {e}")
             else:
                 logger.info(f"Updated attribute 'schema_version' for dataset '{dataset_id}' with value '{schema_version}'")
 
@@ -261,7 +261,7 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
                 latest_schema_version = RELEASE_VERSION_MAPPING.get("5.4")
                 portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", latest_schema_version)
             except Exception as e:
-                logger.error(f"Failed to update attribute 'latest_schema_version' for dataset '{dataset_id}': {e}")
+                logger.error(f"Failed to update attribute 'latest_schema_version' for dataset '{dataset_id}' with value '{latest_schema_version}': {e}")
             else:
                 logger.info(f"Updated attribute 'latest_schema_version' for dataset '{dataset_id}' with value '{latest_schema_version}'")
 

@@ -29,7 +29,7 @@ def update_metadata_last_fetched_date(portal_server_api, dataset_id: str, logger
         metadata_last_fetch_date = datetime.now().strftime('%Y-%m-%d')
         portal_server_api.update_dataset_attributes_table(dataset_id, "metadata_last_fetch_date", metadata_last_fetch_date)
     except Exception as e:
-        logger.error(f"Failed to update attribute 'metadata_last_fetch_date' for dataset '{dataset_id}': {e}")
+        logger.error(f"Failed to update attribute 'metadata_last_fetch_date' for dataset '{dataset_id}' with value '{metadata_last_fetch_date}': {e}")
     else:
         logger.info(f"Updated attribute 'metadata_last_fetch_date' for dataset '{dataset_id}' with value '{metadata_last_fetch_date}'")
 
@@ -39,12 +39,14 @@ def get_entity_value_str(dbdao: DBDao, table_name: str,
                          logger) -> str:
     try:
         entity_value = dbdao.get_value(table_name, column_name)
+        # get date if entity_value is of type datetime
+        if isinstance(entity_value, datetime):
+            entity_value = str(entity_value).split(" ")[0]
     except Exception as e:
         error_msg = f"Error retrieving '{entity_name}'"
         logger.error(f"{error_msg}: {e}")
         entity_value = error_msg
     return str(entity_value)
-
 
 def update_entity_value(portal_server_api,
                         dataset_id: str,
@@ -57,10 +59,10 @@ def update_entity_value(portal_server_api,
         entity_value = get_entity_value_str(dbdao, table_name, column_name, entity_name, logger)
         portal_server_api.update_dataset_attributes_table(dataset_id, entity_name, entity_value)
     except Exception as e:
-        logger.error(f"Failed to update attribute '{entity_name}', 'updated_date' for dataset id '{dataset_id}' with value '{entity_value}' : {e}")
+        logger.error(f"Failed to update attribute '{entity_name}' for dataset id '{dataset_id}' with value '{entity_value}' : {e}")
     else:
         logger.info(f"Updated attribute '{entity_name} for dataset id '{dataset_id}' with value '{entity_value}'")
-        return entity_value
+    return entity_value
 
 
 def get_entity_count_str(dbdao: DBDao, table_name: str, 
@@ -86,10 +88,10 @@ def update_entity_distinct_count(portal_server_api,
         entity_distinct_count: str = get_entity_count_str(dbdao, table_name, column_name, entity_name, logger)
         portal_server_api.update_dataset_attributes_table(dataset_id, entity_name, entity_distinct_count)
     except Exception as e:
-        logger.error(f"Failed to update attribute '{entity_name}', 'updated_date' for dataset id '{dataset_id}' with value '{entity_distinct_count}' : {e}")
+        logger.error(f"Failed to update attribute '{entity_name}' for dataset id '{dataset_id}' with value '{entity_distinct_count}' : {e}")
     else:
         logger.info(f"Updated attribute '{entity_name} for dataset id '{dataset_id}' with value '{entity_distinct_count}'")
-        return entity_distinct_count
+    return entity_distinct_count
 
 
 def update_total_entity_count(portal_server_api,
@@ -98,12 +100,12 @@ def update_total_entity_count(portal_server_api,
                               logger) -> str:
     try:
         total_entity_count = get_total_entity_count(entity_count_distribution, logger)
-        portal_server_api.update_dataset_attributes_table(dataset_id, "entity_count", total_entity_count)
+        portal_server_api.update_dataset_attributes_table(dataset_id, "total_entity_count", total_entity_count)
     except Exception as e:
-        logger.error(f"Failed to update attribute 'entity_count' for dataset '{dataset_id}': {e}")
+        logger.error(f"Failed to update attribute 'total_entity_count' for dataset '{dataset_id}' with value '{total_entity_count}': {e}")
     else:
-        logger.info(f"Updated attribute 'entity_count' for dataset '{dataset_id}' with value '{total_entity_count}'")
-        return total_entity_count
+        logger.info(f"Updated attribute 'total_entity_count' for dataset '{dataset_id}' with value '{total_entity_count}'")
+    return total_entity_count
 
 
 def get_total_entity_count(entity_count_distribution: dict, logger) -> str:
@@ -130,10 +132,10 @@ def update_entity_count_distribution(portal_server_api,
         entity_count_distribution = get_entity_count_distribution(dbdao, logger)
         portal_server_api.update_dataset_attributes_table(dataset_id, 'entity_count_distribution', json.dumps(entity_count_distribution))
     except Exception as e:
-        logger.error(f"Failed to update attribute 'entity_count_distribution' for dataset '{dataset_id}': {e}")
+        logger.error(f"Failed to update attribute 'entity_count_distribution' for dataset '{dataset_id}' with value '{json.dumps(entity_count_distribution)}': {e}")
     else:
         logger.info(f"Updated attribute 'entity_count_distribution' for dataset '{dataset_id}' with value '{json.dumps(entity_count_distribution)}'")
-        return entity_count_distribution
+    return entity_count_distribution
 
 
 def get_entity_count_distribution(dbdao, logger) -> EntityCountDistributionType:

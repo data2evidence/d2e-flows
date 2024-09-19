@@ -188,7 +188,7 @@ def copy_schema(datamart_action: str,
 def upload_df_as_parquet(target_schema: str, table_name: str, df: pd.DataFrame, logger):
     alp_system_id = Variable.get("alp_system_id").value
     if not alp_system_id:
-        raise KeyError("ENV:ALP__SYSTEM_ID is empty")
+        raise ValueError("'alp_system_id' prefect variable is undefined")
 
     bucket_name = f"parquetsnapshots-{alp_system_id}"
     file_name = f"{target_schema}-{table_name}-{int(time()*1000)}.parquet"
@@ -297,7 +297,7 @@ def get_and_update_attributes(use_cache_db: bool, token: str, dataset: dict):
             )
 
             # update cdm version or error msg
-            cdm_version = update_entity_distinct_count(
+            cdm_version = update_entity_value(
                 portal_server_api=portal_server_api,
                 dataset_id=dataset_id,
                 dbdao=dbdao,
@@ -314,7 +314,7 @@ def get_and_update_attributes(use_cache_db: bool, token: str, dataset: dict):
                 portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", schema_version)
                 portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", latest_schema_version)
             except Exception as e:
-                logger.error(f"Failed to update attribute 'schema_version', 'latest_schema_version' for dataset '{dataset_id}': {e}")
+                logger.error(f"Failed to update attribute 'schema_version', 'latest_schema_version' for dataset '{dataset_id}' with value '{schema_version}': {e}")
             else:
                 logger.info(f"Updated attribute 'schema_version', 'latest_schema_version' for dataset '{dataset_id}' with value '{schema_version}'")
 
