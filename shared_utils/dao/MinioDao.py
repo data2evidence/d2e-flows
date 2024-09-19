@@ -15,20 +15,20 @@ class MinioDao():
         minio_region = Variable.get("minio_region").value
         minio_ssl = True if Variable.get("minio_ssl").value == "true" else False
         
-        minio_secret_key = Secret.load("minio-secret-key").get()
+        minio_secret_key = Secret.load("minio-secret-key")
 
         self.minio_region = minio_region
         self.client = Minio(
             f"{minio_endpoint}:{minio_port}",
             access_key=minio_access_key,
-            secret_key=minio_secret_key,
+            secret_key=minio_secret_key.get(),
             region=minio_region,
             secure=minio_ssl
         )
 
     def put_dataframe_as_parquet(self, bucket_name: str, file_name: str, df: pd.DataFrame):
         # Convert dataframe to parquet and buffer
-        bytes_data = df.to_parquet(file_name, engine='pyarrow')
+        bytes_data = df.to_parquet()
         buffer = BytesIO(bytes_data)
 
         if not self.client.bucket_exists(bucket_name):
