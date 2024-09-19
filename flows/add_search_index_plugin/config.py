@@ -1,5 +1,5 @@
-from pydantic import BaseModel
 from typing import Dict
+from pydantic import BaseModel
 
 CHUNK_SIZE = 50000
 

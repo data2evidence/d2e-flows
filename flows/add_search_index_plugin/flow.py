@@ -1,20 +1,16 @@
 import re
-import sys
-import importlib
 from itertools import islice
 from datetime import date, datetime
 
-from prefect import flow, task, get_run_logger
+from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from add_search_index_plugin.config import MeilisearchAddIndexType
+from flows.add_search_index_plugin.config import MeilisearchAddIndexType
+
+from shared_utils.dao.VocabDao import VocabDao
+from shared_utils.api.MeilisearchSvcAPI import MeilisearchSvcAPI
 
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-    
-    
     
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def add_search_index_plugin(options: MeilisearchAddIndexType):
@@ -25,13 +21,6 @@ def add_search_index_plugin(options: MeilisearchAddIndexType):
     use_cache_db = options.use_cache_db
     CHUNK_SIZE = options.chunk_size
     MEILISEARCH_INDEX_CONFIG = options.meilisearch_index_config
-    
-
-    setup_plugin()
-    # Dynamically import helper functions
-    meilisearch_svc_api_module = importlib.import_module('api.MeilisearchSvcAPI')
-    vocabdao_module = importlib.import_module('dao.VocabDao')
-    
 
     # Check if options.vocabSchemaName is valid
     if not re.match(r"^\w+$", vocab_schema_name):
@@ -49,11 +38,12 @@ def add_search_index_plugin(options: MeilisearchAddIndexType):
 
     index_name = f"{database_code}_{vocab_schema_name}_{table_name}"
     # Initialize helper classes
-    meilisearch_svc_api = meilisearch_svc_api_module.MeilisearchSvcAPI()
-    vocab_dao = vocabdao_module.VocabDao(use_cache_db=use_cache_db,
-                                         database_code=database_code, 
-                                         schema_name=vocab_schema_name)
-    # logger.info(f"Getting stream connection")
+    meilisearch_svc_api = MeilisearchSvcAPI()
+    vocab_dao = VocabDao(use_cache_db=use_cache_db,
+                         database_code=database_code, 
+                         schema_name=vocab_schema_name)
+    
+    logger.info(f"Getting stream connection")
     conn = vocab_dao.get_stream_connection(yield_per=CHUNK_SIZE)
     
     try:

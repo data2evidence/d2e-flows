@@ -1,18 +1,18 @@
-
 import re
-import sys
-import importlib
+import torch
 from datetime import date, datetime
 from transformers import AutoTokenizer, AutoModel
 
-from prefect import flow, task, get_run_logger
+from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from add_search_index_with_embeddings_plugin.config import MeilisearchAddIndexWithEmbeddingsType
+from flows.add_search_index_with_embeddings_plugin.config import MeilisearchAddIndexWithEmbeddingsType
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
+from shared_utils.dao.VocabDao import VocabDao
+from shared_utils.api.MeilisearchSvcAPI import MeilisearchSvcAPI
+from shared_utils.api.TerminologySvcAPI import TerminologySvcAPI
+
+
     
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbeddingsType):
@@ -24,12 +24,6 @@ def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbe
     use_cache_db = options.use_cache_db
     CHUNK_SIZE = options.chunk_size
     MEILISEARCH_INDEX_CONFIG = options.meilisearch_index_config
-    
-    setup_plugin()  # To dynamically import helper functions from dataflow-gen
-    meilisearch_svc_api_module = importlib.import_module('api.MeilisearchSvcAPI')
-    terminology_svc_api_module = importlib.import_module('api.TerminologySvcAPI')
-    vocabdao_module = importlib.import_module('dao.VocabDao')
-
 
     # Check if vocab_schema_name is valid
     if not re.match(r"^\w+$", vocab_schema_name):
@@ -45,18 +39,19 @@ def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbe
         raise ValueError(errorMessage)
 
     # Initialize helper classes
-    meilisearch_svc_api = meilisearch_svc_api_module.MeilisearchSvcAPI()
-    terminology_svc_api = terminology_svc_api_module.TerminologySvcAPI(token)
+    meilisearch_svc_api = MeilisearchSvcAPI()
+    terminology_svc_api = TerminologySvcAPI(token)
 
     config = terminology_svc_api.get_hybridSearchConfig()
     
     hybrid_search_name = f"{config['source'].replace('/', '')}_{config['model'].replace('/', '')}";
     index_name = f"{database_code}_{vocab_schema_name}_{table_name}_{hybrid_search_name}"
     
-    vocab_dao = vocabdao_module.VocabDao(use_cache_db=use_cache_db,
-                                         database_code=database_code, 
-                                         schema_name=vocab_schema_name)
-    # logger.info(f"Getting stream connection")
+    vocab_dao = VocabDao(use_cache_db=use_cache_db,
+                         database_code=database_code, 
+                         schema_name=vocab_schema_name)
+    
+    logger.info(f"Getting stream connection")
     conn = vocab_dao.get_stream_connection(yield_per=CHUNK_SIZE)
     try:
         meilisearch_primary_key = MEILISEARCH_INDEX_CONFIG[table_name.lower()]["meilisearch_primary_key"]
@@ -130,9 +125,7 @@ def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbe
         
         
 def calculate_embeddings(rows:list[list], config, logger):
-    # Sentences we want sentence embeddings for
-    torch_module = importlib.import_module("torch")
-    
+    # Sentences we want sentence embeddings for    
     for row in rows:
         sentence = " ".join(str(r) for r in row);
         row.append(sentence)
@@ -143,7 +136,7 @@ def calculate_embeddings(rows:list[list], config, logger):
         
         embeddings = output[0] # First element of model_output contains all token embeddings
         mask = mask.unsqueeze(-1).expand(embeddings.size()).float()
-        return torch_module.sum(embeddings * mask, 1) / torch_module.clamp(mask.sum(1), min=1e-9)
+        return torch.sum(embeddings * mask, 1) / torch.clamp(mask.sum(1), min=1e-9)
 
     # Load model from HuggingFace Hub
     tokenizer = AutoTokenizer.from_pretrained(config['model'])
@@ -152,7 +145,7 @@ def calculate_embeddings(rows:list[list], config, logger):
     for row in rows:
         inputs = tokenizer(row[len(row)-1], padding=True, truncation=True, return_tensors='pt')
         # Compute token embeddings
-        with torch_module.no_grad():
+        with torch.no_grad():
             output = model(**inputs)
 
         # Perform pooling. In this case, mean pooling.
