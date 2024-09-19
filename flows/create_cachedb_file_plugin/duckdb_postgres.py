@@ -1,5 +1,4 @@
 import duckdb
-
 from prefect import get_run_logger
 
 from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path

@@ -3,8 +3,8 @@ from prefect.task_runners import SequentialTaskRunner
 
 from flows.create_cachedb_file_plugin.duckdb_fts import create_duckdb_fts_index
 from flows.create_cachedb_file_plugin.config import CreateDuckdbDatabaseFileType
-from flows.create_cachedb_file_plugin.utils import remove_existing_file_if_exists
 from flows.create_cachedb_file_plugin.duckdb_postgres import copy_postgres_to_duckdb
+from flows.create_cachedb_file_plugin.utils import remove_existing_file_if_exists, check_supported_duckdb_dialects
 
 from shared_utils.dao.DBDao import DBDao
 
@@ -26,6 +26,9 @@ def create_cachedb_file_plugin(options: CreateDuckdbDatabaseFileType):
     dbdao = DBDao(use_cache_db=use_cache_db,
                   database_code=database_code,
                   schema_name=schema_name)
+    
+    # Check if dialect is supported by duckdb
+    check_supported_duckdb_dialects(dbdao.db_dialect, logger)
 
     remove_existing_file_if_exists(duckdb_database_name, create_for_cdw_config_validation, logger)
 

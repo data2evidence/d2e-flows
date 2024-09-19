@@ -1,6 +1,8 @@
 import os
 from prefect.variables import Variable
 
+from shared_utils.types import SupportedDatabaseDialects
+
 def resolve_duckdb_file_path(duckdb_database_name: str, create_for_cdw_config_validation: bool):
     '''
     Gets duckdb data folder based on create_for_cdw_config_validation flag
@@ -18,3 +20,13 @@ def remove_existing_file_if_exists(duckdb_database_name: str, create_for_cdw_con
     if os.path.isfile(duckdb_file_path):
         logger.info(f"Removing existing duckdb file at {duckdb_file_path}")
         os.remove(duckdb_file_path)
+
+# Todo: implement check for plugin supported dialects
+def check_supported_duckdb_dialects(dialect, logger):
+    SUPPORTED_DUCKDB_DIALECTS = [
+        SupportedDatabaseDialects.POSTGRES.value
+    ]
+    if dialect not in SUPPORTED_DUCKDB_DIALECTS:
+        error_message = f"""Input dialect: {dialect} is not supported, supported dialects are: {SUPPORTED_DUCKDB_DIALECTS}"""
+        logger.error(error_message)
+        raise ValueError(error_message)
