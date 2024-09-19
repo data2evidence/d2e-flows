@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-class OMOPToFHIROptionsType(BaseModel):
+class FHIRToOMOPOptionsType(BaseModel):
     batchChunksize: str
     fhirGatewayJdbcCurl: str
     fhirGatewayUsername: str

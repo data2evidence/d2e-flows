@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='omop_to_fhir_plugin',
+    name='fhir_to_omop_plugin',
     version='0.1.0',
     packages=find_packages(),
     install_requires=["prefect-shell==0.2.2", "prefect==2.19.9", "s3fs==2023.1.0", 

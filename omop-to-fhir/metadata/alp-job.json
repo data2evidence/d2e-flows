@@ -1,7 +1,0 @@
-{
-    "name": "omop_to_fhir_plugin",
-    "type": "omop_to_fhir",
-    "entrypoint": "omop_to_fhir_plugin/flow.py",
-    "tags": [
-    ]
-  }

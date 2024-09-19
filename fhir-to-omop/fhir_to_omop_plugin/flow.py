@@ -3,7 +3,7 @@ from prefect_shell.commands import ShellOperation, shell_run_command
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from omop_to_fhir_plugin.types import OMOPToFHIROptionsType
+from fhir_to_omop_plugin.types import FHIRToOMOPOptionsType
 
 
 def setup_plugin():
@@ -11,9 +11,9 @@ def setup_plugin():
     sys.path.append('/app/pysrc')
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def omop_to_fhir_plugin(options: OMOPToFHIROptionsType):
+def fhir_to_omop_plugin(options: FHIRToOMOPOptionsType):
     logger = get_run_logger()
-    logger.info('Running OMOP to FHIR transformation')
+    logger.info('Running FHIR to OMOP transformation')
     
     setup_plugin()  
     

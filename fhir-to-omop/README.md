@@ -1,4 +1,4 @@
-# omop-to-fhir
+# fhir-to-omop
 
 ## Sample json as input to trigger the plugin 
 ```
