@@ -29,7 +29,7 @@ def fhir_to_omop_plugin(options: FHIRToOMOPOptionsType):
     data_begin_date = options.dataBeginDate
     data_end_date = options.dataEndDate
     shell_run_command(
-        command = "cd /app/omoptofhir && java org.springframework.boot.loader.JarLauncher",
+        command = "cd /app/fhirtoomop && java org.springframework.boot.loader.JarLauncher",
         env={"JAEGER_SERVICE_NAME": "fhir-to-omop",
             "OPENTRACING_JAEGER_ENABLED": "false",
             "BATCH_CHUNKSIZE": ""+batch_chunksize+"",
