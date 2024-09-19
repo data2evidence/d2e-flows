@@ -1446,6 +1446,105 @@
               }
             }
           }
+        },
+        {
+          "name": "add_search_index_plugin",
+          "type": "questionnaire",
+          "entrypoint": "flows.add_search_index_plugin.flow.add_search_index_plugin",
+          "tags": [
+            "questionnaire"
+          ],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+              "options": {
+                "$ref": "#/definitions/MeilisearchAddIndexType",
+                "position": 0,
+                "title": "options"
+              }
+            },
+            "required": [
+              "options"
+            ],
+            "definitions": {
+              "MeilisearchAddIndexType": {
+                "properties": {
+                  "databaseCode": {
+                    "title": "Databasecode",
+                    "type": "string"
+                  },
+                  "vocabSchemaName": {
+                    "title": "Vocabschemaname",
+                    "type": "string"
+                  },
+                  "tableName": {
+                    "title": "Tablename",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "databaseCode",
+                  "vocabSchemaName",
+                  "tableName"
+                ],
+                "title": "MeilisearchAddIndexType",
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
+          "name": "add_search_index_with_embeddings_plugin",
+          "type": "questionnaire",
+          "entrypoint": "flows.add_search_index_with_embeddings_plugin.flow.add_search_index_with_embeddings_plugin",
+          "tags": [
+            "questionnaire"
+          ],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+              "options": {
+                "$ref": "#/definitions/MeilisearchAddIndexWithEmbeddingsType",
+                "position": 0,
+                "title": "options"
+              }
+            },
+            "required": [
+              "options"
+            ],
+            "definitions": {
+              "MeilisearchAddIndexWithEmbeddingsType": {
+                "properties": {
+                  "token": {
+                    "title": "Token",
+                    "type": "string"
+                  },
+                  "databaseCode": {
+                    "title": "Databasecode",
+                    "type": "string"
+                  },
+                  "vocabSchemaName": {
+                    "title": "Vocabschemaname",
+                    "type": "string"
+                  },
+                  "tableName": {
+                    "title": "Tablename",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token",
+                  "databaseCode",
+                  "vocabSchemaName",
+                  "tableName"
+                ],
+                "title": "MeilisearchAddIndexWithEmbeddingsType",
+                "type": "object"
+              }
+            }
+          }
         }
       ]
     }
