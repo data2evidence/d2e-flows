@@ -1,7 +1,0 @@
-{
-    "name": "ohdsi_etl_germany_plugin",
-    "type": "ohdsi_etl_germany",
-    "entrypoint": "ohdsi_etl_germany_plugin/flow.py",
-    "tags": [
-    ]
-  }

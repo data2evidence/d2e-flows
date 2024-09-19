@@ -3,7 +3,7 @@ from prefect_shell.commands import ShellOperation, shell_run_command
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from ohdsi_etl_germany_plugin.types import OHDSIEtlGermanyOptionsType
+from omop_to_fhir_plugin.types import OMOPToFHIROptionsType
 
 
 def setup_plugin():
@@ -11,9 +11,9 @@ def setup_plugin():
     sys.path.append('/app/pysrc')
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def ohdsi_etl_germany_plugin(options: OHDSIEtlGermanyOptionsType):
+def omop_to_fhir_plugin(options: OMOPToFHIROptionsType):
     logger = get_run_logger()
-    logger.info('Running OHDSI ETL Germany OMOP to FHIR transformation')
+    logger.info('Running OMOP to FHIR transformation')
     
     setup_plugin()  
     

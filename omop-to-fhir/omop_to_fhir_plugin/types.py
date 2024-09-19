@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-class OHDSIEtlGermanyOptionsType(BaseModel):
+class OMOPToFHIROptionsType(BaseModel):
     batchChunksize: str
     fhirGatewayJdbcCurl: str
     fhirGatewayUsername: str
@@ -12,7 +12,3 @@ class OHDSIEtlGermanyOptionsType(BaseModel):
     omopCDMSchema: str
     dataBeginDate: str
     dataEndDate: str
-    
-    @property
-    def use_cache_db(self) -> str:
-        return False

@@ -1,4 +1,4 @@
-# ohdsi-etl-germany
+# omop-to-fhir
 
 ## Sample json as input to trigger the plugin 
 ```
