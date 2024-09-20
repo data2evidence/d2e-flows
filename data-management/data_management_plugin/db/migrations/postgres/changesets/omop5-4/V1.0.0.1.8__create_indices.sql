@@ -8,6 +8,133 @@
 /************************
 Standardized clinical data
 ************************/
+
+-- Create indexes
+
+DROP INDEX IF EXISTS idx_person_id;
+DROP INDEX IF EXISTS idx_gender;
+DROP INDEX IF EXISTS idx_observation_period_id_1;
+
+DROP INDEX IF EXISTS idx_visit_person_id_1;
+
+DROP INDEX IF EXISTS idx_visit_concept_id_1;
+DROP INDEX IF EXISTS idx_visit_det_person_id_1;
+
+DROP INDEX IF EXISTS idx_visit_det_concept_id_1;
+DROP INDEX IF EXISTS idx_visit_det_occ_id;
+DROP INDEX IF EXISTS idx_condition_person_id_1;
+
+DROP INDEX IF EXISTS idx_condition_concept_id_1;
+DROP INDEX IF EXISTS idx_condition_visit_id_1;
+DROP INDEX IF EXISTS idx_drug_person_id_1;
+
+DROP INDEX IF EXISTS idx_drug_concept_id_1;
+DROP INDEX IF EXISTS idx_drug_visit_id_1;
+DROP INDEX IF EXISTS idx_procedure_person_id_1;
+
+DROP INDEX IF EXISTS idx_procedure_concept_id_1;
+DROP INDEX IF EXISTS idx_procedure_visit_id_1;
+DROP INDEX IF EXISTS idx_device_person_id_1;
+
+DROP INDEX IF EXISTS idx_device_concept_id_1;
+DROP INDEX IF EXISTS idx_device_visit_id_1;
+DROP INDEX IF EXISTS idx_measurement_person_id_1;
+
+DROP INDEX IF EXISTS idx_measurement_concept_id_1;
+DROP INDEX IF EXISTS idx_measurement_visit_id_1;
+DROP INDEX IF EXISTS idx_observation_person_id_1;
+
+DROP INDEX IF EXISTS idx_observation_concept_id_1;
+DROP INDEX IF EXISTS idx_observation_visit_id_1;
+DROP INDEX IF EXISTS idx_death_person_id_1;
+
+DROP INDEX IF EXISTS idx_note_person_id_1;
+
+DROP INDEX IF EXISTS idx_note_concept_id_1;
+DROP INDEX IF EXISTS idx_note_visit_id_1;
+DROP INDEX IF EXISTS idx_note_nlp_note_id_1;
+
+DROP INDEX IF EXISTS idx_note_nlp_concept_id_1;
+DROP INDEX IF EXISTS idx_specimen_person_id_1;
+
+DROP INDEX IF EXISTS idx_specimen_concept_id_1;
+DROP INDEX IF EXISTS idx_fact_relationship_id1;
+DROP INDEX IF EXISTS idx_fact_relationship_id2;
+DROP INDEX IF EXISTS idx_fact_relationship_id3;
+
+/************************
+Standardized health system data
+************************/
+DROP INDEX IF EXISTS idx_location_id_1;
+
+DROP INDEX IF EXISTS idx_care_site_id_1;
+
+DROP INDEX IF EXISTS idx_provider_id_1;
+
+/************************
+Standardized health economics
+************************/
+DROP INDEX IF EXISTS idx_period_person_id_1;
+
+DROP INDEX IF EXISTS idx_cost_event_id;
+/************************
+Standardized derived elements
+************************/
+DROP INDEX IF EXISTS idx_drug_era_person_id_1;
+
+DROP INDEX IF EXISTS idx_drug_era_concept_id_1;
+DROP INDEX IF EXISTS idx_dose_era_person_id_1;
+
+DROP INDEX IF EXISTS idx_dose_era_concept_id_1;
+DROP INDEX IF EXISTS idx_condition_era_person_id_1;
+
+DROP INDEX IF EXISTS idx_condition_era_concept_id_1;
+/**************************
+Standardized meta-data
+***************************/
+DROP INDEX IF EXISTS idx_metadata_concept_id_1;
+
+/**************************
+Standardized vocabularies
+***************************/
+DROP INDEX IF EXISTS idx_concept_concept_id;
+
+DROP INDEX IF EXISTS idx_concept_code;
+DROP INDEX IF EXISTS idx_concept_vocabluary_id;
+DROP INDEX IF EXISTS idx_concept_domain_id;
+DROP INDEX IF EXISTS idx_concept_class_id;
+DROP INDEX IF EXISTS idx_vocabulary_vocabulary_id;
+
+DROP INDEX IF EXISTS idx_domain_domain_id;
+
+DROP INDEX IF EXISTS idx_concept_class_class_id;
+
+DROP INDEX IF EXISTS idx_concept_relationship_id_1;
+
+DROP INDEX IF EXISTS idx_concept_relationship_id_2;
+DROP INDEX IF EXISTS idx_concept_relationship_id_3;
+DROP INDEX IF EXISTS idx_relationship_rel_id;
+
+DROP INDEX IF EXISTS idx_concept_synonym_id;
+
+DROP INDEX IF EXISTS idx_concept_ancestor_id_1;
+
+DROP INDEX IF EXISTS idx_concept_ancestor_id_2;
+DROP INDEX IF EXISTS idx_source_to_concept_map_3;
+
+DROP INDEX IF EXISTS idx_source_to_concept_map_1;
+DROP INDEX IF EXISTS idx_source_to_concept_map_2;
+DROP INDEX IF EXISTS idx_source_to_concept_map_c;
+DROP INDEX IF EXISTS idx_drug_strength_id_1;
+
+DROP INDEX IF EXISTS idx_drug_strength_id_2;
+
+
+-- Create indexes
+
+/************************
+Standardized clinical data
+************************/
 CREATE INDEX IF NOT EXISTS idx_person_id  ON person  (person_id ASC);
 CLUSTER person  USING idx_person_id ;
 CREATE INDEX IF NOT EXISTS idx_gender ON person (gender_concept_id ASC);
@@ -125,9 +252,3 @@ CREATE INDEX IF NOT EXISTS idx_source_to_concept_map_c ON source_to_concept_map 
 CREATE INDEX IF NOT EXISTS idx_drug_strength_id_1  ON drug_strength  (drug_concept_id ASC);
 CLUSTER drug_strength  USING idx_drug_strength_id_1 ;
 CREATE INDEX IF NOT EXISTS idx_drug_strength_id_2 ON drug_strength (ingredient_concept_id ASC);
---Additional v6.0 indices
---CREATE CLUSTERED INDEX idx_survey_person_id_1 ON survey_conduct (person_id ASC);
---CREATE CLUSTERED INDEX idx_episode_person_id_1 ON episode (person_id ASC);
---CREATE INDEX IF NOT EXISTS idx_episode_concept_id_1 ON episode (episode_concept_id ASC);
---CREATE CLUSTERED INDEX idx_episode_event_id_1 ON episode_event (episode_id ASC);
---CREATE INDEX IF NOT EXISTS idx_ee_field_concept_id_1 ON episode_event (event_field_concept_id ASC);
