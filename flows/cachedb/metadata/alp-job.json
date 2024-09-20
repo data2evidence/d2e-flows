@@ -1,6 +1,0 @@
-{
-  "name": "create_cachedb_file_plugin",
-  "type": "create_cachedb_file",
-  "entrypoint": "create_cachedb_file_plugin/flow.py",
-  "tags": ["create_cachedb_file"]
-}
