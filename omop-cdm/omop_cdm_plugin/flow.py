@@ -53,7 +53,7 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
         setup_plugin(release_version) # To dynamically import helper functions from dataflow-gen
         types_module = importlib.import_module('utils.types')
         admin_user = types_module.UserType.ADMIN_USER
-
+        
         # import helper function to create schema
         dbdao_module = importlib.import_module('dao.DBDao')
         omop_cdm_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
