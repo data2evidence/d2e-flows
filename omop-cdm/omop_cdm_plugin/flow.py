@@ -52,7 +52,8 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
     try:
         setup_plugin(release_version) # To dynamically import helper functions from dataflow-gen
         types_module = importlib.import_module('utils.types')
-
+        admin_user = types_module.UserType.ADMIN_USER
+        
         # import helper function to create schema
         dbdao_module = importlib.import_module('dao.DBDao')
         omop_cdm_dao = dbdao_module.DBDao(use_cache_db=use_cache_db,
@@ -73,7 +74,7 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
             on_failure=[partial(drop_schema_hook,
                                 **dict(schema_dao=omop_cdm_dao))]
         )
-        create_cdm_tables_wo(omop_cdm_dao, cdm_version, logger)
+        create_cdm_tables_wo(omop_cdm_dao, cdm_version, admin_user, logger)
         
         # Grant permissions
         create_and_assign_roles_wo = create_and_assign_roles.with_options(
@@ -121,12 +122,12 @@ def create_schema(dbdao, logger):
 
 
 @task(log_prints=True)
-def create_cdm_tables(dbdao, cdm_version: str, logger):
+def create_cdm_tables(dbdao, cdm_version: str, user, logger):
     # currently only supports pg dialect
     r_libs_user_directory = os.getenv("R_LIBS_USER")
     robjects = importlib.import_module('rpy2.robjects')
     
-    set_connection_string = dbdao.get_database_connector_connection_string(schema_name=dbdao.schema_name)
+    set_connection_string = dbdao.get_database_connector_connection_string(user_type=user)
     
     logger.info(f"Running CommonDataModel version '{cdm_version}' on schema '{dbdao.schema_name}' in database '{dbdao.database_code}'")
     with robjects.conversion.localconverter(robjects.default_converter):
