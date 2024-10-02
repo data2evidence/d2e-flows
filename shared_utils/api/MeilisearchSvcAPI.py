@@ -9,7 +9,7 @@ from shared_utils.api.BaseAPI import BaseAPI
 class MeilisearchSvcAPI(BaseAPI):
     def __init__(self):
         super().__init__()
-        self.url = self.get_service_route("meilisearch_service_route")        
+        self.url = self.get_service_route("meilisearch")        
         self.openIdAPI = OpenIdAPI()
         self.token = None
 
