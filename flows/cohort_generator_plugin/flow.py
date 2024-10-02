@@ -1,10 +1,10 @@
 import json
 from rpy2 import robjects
 
+from prefect import flow, task
 from prefect.variables import Variable
 from prefect_shell import ShellOperation
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect.logging import get_run_logger
 
 from flows.cohort_generator_plugin.types import CohortGeneratorOptionsType
 
@@ -12,9 +12,9 @@ from shared_utils.types import UserType
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.api.AnalyticsSvcAPI import AnalyticsSvcAPI
 
-
+@task
 def setup_plugin():
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -26,7 +26,7 @@ def setup_plugin():
 
 
 
-@flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True, persist_result=True)
 def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     logger = get_run_logger()
     logger.info('Running Cohort Generator')
@@ -90,7 +90,7 @@ def create_cohort(dbdao, admin_user, schema_name: str, cohort_definition_id: int
         user_type=admin_user
     )
    
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
     
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''

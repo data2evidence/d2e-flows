@@ -2,12 +2,12 @@ import sys
 import json
 from rpy2 import robjects
 
+from prefect import flow, task
 from prefect.variables import Variable
 from prefect_shell import ShellOperation
 from prefect.context import FlowRunContext
+from prefect.logging import get_run_logger
 from prefect.serializers import JSONSerializer
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
 
 from flows.dqd_plugin.types import DqdOptionsType, DQD_THREAD_COUNT
@@ -15,10 +15,10 @@ from flows.dqd_plugin.types import DqdOptionsType, DQD_THREAD_COUNT
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.types import UserType
 
-
+@task
 def setup_plugin():
     # Install dqd R package from plugin
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
     if (r_libs_user_directory):
         ShellOperation(
             commands=[
@@ -28,9 +28,10 @@ def setup_plugin():
         raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
+@flow(log_prints=True, timeout_seconds=3600)
 def dqd_plugin(options: DqdOptionsType):
-    setup_plugin()
+    setup_plugin.submit().wait()
+    
     schema_name = options.schemaName
     database_code = options.databaseCode
     cdm_version_number = options.cdmVersionNumber
@@ -77,7 +78,7 @@ def dqd_plugin(options: DqdOptionsType):
                 cohort_table_name,
                 use_cache_db)
     
-@task(result_storage=RFS.load(Variable.get("flows_results_sb_name").value), 
+@task(result_storage=RFS.load(Variable.get("flows_results_sb_name")), 
       result_storage_key="{flow_run.id}_dqd.json",
       result_serializer=JSONSerializer(),
       persist_result=True)
@@ -97,7 +98,7 @@ def execute_dqd(
     logger = get_run_logger()
 
     threads = DQD_THREAD_COUNT
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
     
     read_user = UserType.READ_USER
     

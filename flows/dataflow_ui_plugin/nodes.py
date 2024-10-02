@@ -690,7 +690,7 @@ class CohortGeneratorSpecNode(Node):
         with robjects.default_converter.context():
             try: 
                 rSource = robjects.r['source']
-                rSource(Variable.get("cohort_generator_module_settings_url").value)
+                rSource(Variable.get("cohort_generator_module_settings_url"))
                 rCreateCohortGeneratorModuleSpecifications = robjects.globalenv['createCohortGeneratorModuleSpecifications']
                 rCohortGeneratorModuleSpecifications = rCreateCohortGeneratorModuleSpecifications(convert_py_to_R(self.incremental), convert_py_to_R(self.generate_stats))
                 return Result(False,  rCohortGeneratorModuleSpecifications, self, task_run_context)
@@ -720,7 +720,7 @@ class CohortDiagnosticsModuleSpecNode(Node):
         with robjects.default_converter.context():
             try:
                 rSource = robjects.r['source']
-                rSource(Variable.get("cohort_diagnostics_module_settings_url").value)
+                rSource(Variable.get("cohort_diagnostics_module_settings_url"))
                 rCreateCohortDiagnosticsModuleSpecifications = robjects.globalenv["createCohortDiagnosticsModuleSpecifications"]
                 rCohortDiagnosticsSpec = rCreateCohortDiagnosticsModuleSpecifications(
                     runInclusionStatistics = convert_py_to_R(self.runInclusionStatistics),

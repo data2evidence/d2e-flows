@@ -1,7 +1,8 @@
 import os
 from functools import partial
 
-from prefect import task, get_run_logger
+from prefect import task
+from prefect.logging import get_run_logger
 from prefect.logging.loggers import task_run_logger
 from prefect.server.schemas.states import StateType
 

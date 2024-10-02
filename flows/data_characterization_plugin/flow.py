@@ -1,12 +1,12 @@
 from rpy2 import robjects
 from functools import partial
 
+from prefect import flow, task
 from prefect.variables import Variable
 from prefect_shell import ShellOperation
 from prefect.context import FlowRunContext
+from prefect.logging import get_run_logger
 from prefect.serializers import JSONSerializer
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
 
 from flows.data_characterization_plugin.hooks import *
@@ -17,10 +17,10 @@ from shared_utils.dao.UserDao import UserDao
 from shared_utils.create_dataset_tasks import *
 from shared_utils.types import UserType, SupportedDatabaseDialects, LiquibaseAction
 
-
+@task
 def setup_plugin():
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -33,12 +33,11 @@ def setup_plugin():
 
 @flow(log_prints=True, 
       persist_result=True,
-      task_runner=SequentialTaskRunner,
       timeout_seconds=3600
       )
 def data_characterization_plugin(options: DCOptionsType):
     logger = get_run_logger()
-    setup_plugin()
+    setup_plugin.submit().wait()
 
     schema_name = options.schemaName
     database_code = options.databaseCode
@@ -90,7 +89,7 @@ def data_characterization_plugin(options: DCOptionsType):
     )
 
     if dc_schema:
-        r_libs_user_directory = Variable.get("r_libs_user").value
+        r_libs_user_directory = Variable.get("r_libs_user")
         
         set_admin_connection_string = results_schema_dao.get_database_connector_connection_string(
             user_type=admin_user,
@@ -102,7 +101,7 @@ def data_characterization_plugin(options: DCOptionsType):
             release_date=release_date
         )       
 
-        dc_status = execute_data_characterization(schema_name=schema_name,
+        dc_status = execute_data_characterization.submit(schema_name=schema_name,
                                                   cdm_version_number=cdm_version_number,
                                                   vocab_schema_name=vocab_schema_name,
                                                   results_schema_dao=results_schema_dao,
@@ -110,19 +109,20 @@ def data_characterization_plugin(options: DCOptionsType):
                                                   output_folder=output_folder,
                                                   r_libs_user_directory=r_libs_user_directory,
                                                   set_connection_string=set_admin_connection_string,
-                                                  flow_run_id=flow_run_id)
+                                                  flow_run_id=flow_run_id
+                                                  ).wait()
 
         if dc_status:
             msg = dc_status.get("error_message")
             raise Exception(f"An error occurred while executing data characterization: {msg}")
 
         execute_export_to_ares(schema_name=schema_name, 
-                               vocab_schema_name=vocab_schema_name,
-                               results_schema_dao=results_schema_dao,
-                               output_folder=output_folder,
-                               r_libs_user_directory=r_libs_user_directory,
-                               set_connection_string=set_read_connection_string,
-                               flow_run_id=flow_run_id)
+                            vocab_schema_name=vocab_schema_name,
+                            results_schema_dao=results_schema_dao,
+                            output_folder=output_folder,
+                            r_libs_user_directory=r_libs_user_directory,
+                            set_connection_string=set_read_connection_string,
+                            flow_run_id=flow_run_id)
 
 
 def create_data_characterization_schema(vocab_schema_name: str,
@@ -137,13 +137,13 @@ def create_data_characterization_schema(vocab_schema_name: str,
         tenant_configs = results_schema_dao.tenant_configs
         
         # create results schema
-        create_schema_task(results_schema_dao)
+        create_schema_task.submit(results_schema_dao).wait()
         
         # create result tables with liquibase
         create_tables_wo = run_liquibase_update_task.with_options(
             on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
         
-        create_tables_wo(action=LiquibaseAction.UPDATE,
+        create_tables_wo.submit(action=LiquibaseAction.UPDATE,
                          data_model=CHARACTERIZATION_DATA_MODEL,
                          dialect=dialect,
                          changelog_file=changelog_file,
@@ -151,7 +151,7 @@ def create_data_characterization_schema(vocab_schema_name: str,
                          vocab_schema=vocab_schema_name,
                          tenant_configs=tenant_configs,
                          plugin_classpath=plugin_classpath,
-                         )
+                         ).wait()
 
         # task
         enable_audit_policies_wo = enable_and_create_audit_policies_task.with_options(
@@ -175,7 +175,7 @@ def create_data_characterization_schema(vocab_schema_name: str,
 
 
 @task(log_prints=True,
-      result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
+      result_storage=RFS.load(Variable.get("flows_results_sb_name")),
       result_storage_key="{flow_run.id}_persist_data_characterization.json",
       result_serializer=JSONSerializer(),
       persist_result=True)
@@ -231,11 +231,11 @@ def execute_data_characterization(schema_name: str,
         
         
     
-@task(result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
+@task(result_storage=RFS.load(Variable.get("flows_results_sb_name")),
       result_storage_key="{flow_run.id}_export_to_ares.json",
       result_serializer=JSONSerializer(),
       persist_result=True)
-async def execute_export_to_ares(schema_name: str,
+def execute_export_to_ares(schema_name: str,
                                  vocab_schema_name: str,
                                  results_schema_dao,
                                  output_folder: str,

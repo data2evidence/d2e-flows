@@ -3,9 +3,10 @@ from functools import partial
 from datetime import datetime
 from sqlalchemy import String, TIMESTAMP
 
+from prefect import flow, task
 from prefect_shell import ShellOperation
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect.logging import get_run_logger
+from prefect.task_runners import ThreadPoolTaskRunner
 
 from flows.i2b2_plugin.types import *
 from flows.i2b2_plugin.utils import *
@@ -18,7 +19,7 @@ from shared_utils.create_dataset_tasks import create_and_assign_roles_task, drop
 
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
+@flow(log_prints=True, timeout_seconds=3600)
 def i2b2_plugin(options: i2b2PluginType):
     match options.flow_action_type:
         case FlowActionType.CREATE_DATA_MODEL:
@@ -47,15 +48,14 @@ def create_i2b2_dataset(options: i2b2PluginType):
         
         tenant_configs = dbdao.tenant_configs
         
-        
-        setup_plugin(tag_name)
-        create_i2b2_schema(dbdao)
-        overwrite_db_properties(tag_name, tenant_configs, schema_name)
+        create_i2b2_schema.submit(dbdao).wait()
+        setup_plugin.submit(tag_name).wait()
+        overwrite_db_properties.submit(tag_name, tenant_configs, schema_name).wait()
 
         version = get_version_from_tag(tag_name)
 
-        create_crc_tables(version)
-        create_crc_stored_procedures(version)
+        create_crc_tables.submit(version).wait()
+        create_crc_stored_procedures.submit(version).wait()
         
         # task to create i2b2 metadata table
         create_metadata_table(dbdao, tag_name, data_model[1:])
@@ -72,7 +72,7 @@ def create_i2b2_dataset(options: i2b2PluginType):
         
         # task to load demo data based on flag
         if options.load_demo_data:
-            load_demo_data(dbdao)
+            load_demo_data.submit(dbdao).wait()
 
     except Exception as e:
         logger.error(e)
