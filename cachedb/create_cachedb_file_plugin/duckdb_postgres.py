@@ -3,6 +3,17 @@ from prefect import get_run_logger
 from create_cachedb_file_plugin.util import resolve_duckdb_file_path
 
 
+def create_table_indices(duckdb_file_path: str, duckdb_database_name: str, logger):
+    with duckdb.connect(duckdb_file_path) as con:
+        # Read the indices file
+        with open('./create_cachedb_file_plugin/duckdb_indices.sql', 'r') as file:
+            # Read SQL Script from file
+            create_indices_script = file.read()
+            logger.info(f"Creating indices for duckdb at {duckdb_database_name}..")
+            con.execute(f"""SET session search_path = '{duckdb_database_name}'""")
+            con.execute(create_indices_script)
+            logger.info(f"All indices successfully created")
+
 def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     logger = get_run_logger()
 
@@ -12,14 +23,14 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
 
     # Get credentials for database code
     db_credentials = db_dao.tenant_configs
+    
+    duckdb_file_path = resolve_duckdb_file_path(duckdb_database_name, create_for_cdw_config_validation)
 
     # copy tables from postgres into duckdb
     for table in table_names:
         try:
             logger.info(f"Copying table: {table} from postgres into duckdb...")
-
-            duckdb_file_path = resolve_duckdb_file_path(
-                duckdb_database_name, create_for_cdw_config_validation)
+            
             with duckdb.connect(duckdb_file_path) as con:
 
                 # If create_for_cdw_config_validation is True, add a LIMIT 0 to select statement so that only an empty table is created
@@ -34,5 +45,12 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
             logger.error(f"Table:{table} loading failed with error: {err}f")
             raise (err)
     logger.info("Postgres tables succesfully copied into duckdb database file")
+    
+    try:
+        create_table_indices(duckdb_file_path, duckdb_database_name, logger)
+    except Exception as err:
+        logger.error(f"Failed to create indexes: {err}")
+        raise (err)
+    
     logger.info(
         f"""Duckdb database file: {duckdb_database_name} successfully created.""")
