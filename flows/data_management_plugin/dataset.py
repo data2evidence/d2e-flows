@@ -74,8 +74,7 @@ def create_schema_tasks(dialect: str,
                                 **dict(schema_dao=schema_dao))])
 
         # create schema if not exists
-        create_db_schema_wo.submit(schema_dao).wait()
-
+        create_db_schema_wo(schema_dao)
         if count == 0 or count is None:
             action = LiquibaseAction.UPDATE
         elif count > 0:

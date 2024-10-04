@@ -30,7 +30,7 @@ def setup_plugin():
 
 @flow(log_prints=True, timeout_seconds=3600)
 def dqd_plugin(options: DqdOptionsType):
-    setup_plugin.submit().wait()
+    setup_plugin()
     
     schema_name = options.schemaName
     database_code = options.databaseCode

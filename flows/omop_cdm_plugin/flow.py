@@ -48,7 +48,7 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
     release_version =  options.release_version
 
     try:
-        setup_plugin.submit(release_version).wait()
+        setup_plugin(release_version)
         
         omop_cdm_dao = DBDao(use_cache_db=use_cache_db,
                              database_code=database_code, 
@@ -59,7 +59,7 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
                           database_code=database_code, 
                           schema_name=schema_name)
         
-        create_schema_task.submit(omop_cdm_dao).wait()
+        create_schema_task(omop_cdm_dao)
 
         # Run CommonDataModel package to create tables 
         # With drop schema hook on failure

@@ -37,7 +37,7 @@ def setup_plugin():
       )
 def data_characterization_plugin(options: DCOptionsType):
     logger = get_run_logger()
-    setup_plugin.submit().wait()
+    setup_plugin()
 
     schema_name = options.schemaName
     database_code = options.databaseCode
@@ -101,7 +101,7 @@ def data_characterization_plugin(options: DCOptionsType):
             release_date=release_date
         )       
 
-        dc_status = execute_data_characterization.submit(schema_name=schema_name,
+        dc_status = execute_data_characterization(schema_name=schema_name,
                                                   cdm_version_number=cdm_version_number,
                                                   vocab_schema_name=vocab_schema_name,
                                                   results_schema_dao=results_schema_dao,
@@ -110,7 +110,7 @@ def data_characterization_plugin(options: DCOptionsType):
                                                   r_libs_user_directory=r_libs_user_directory,
                                                   set_connection_string=set_admin_connection_string,
                                                   flow_run_id=flow_run_id
-                                                  ).wait()
+                                                  )
 
         if dc_status:
             msg = dc_status.get("error_message")
@@ -137,13 +137,13 @@ def create_data_characterization_schema(vocab_schema_name: str,
         tenant_configs = results_schema_dao.tenant_configs
         
         # create results schema
-        create_schema_task.submit(results_schema_dao).wait()
+        create_schema_task(results_schema_dao)
         
         # create result tables with liquibase
         create_tables_wo = run_liquibase_update_task.with_options(
             on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
         
-        create_tables_wo.submit(action=LiquibaseAction.UPDATE,
+        create_tables_wo(action=LiquibaseAction.UPDATE,
                          data_model=CHARACTERIZATION_DATA_MODEL,
                          dialect=dialect,
                          changelog_file=changelog_file,
@@ -151,7 +151,7 @@ def create_data_characterization_schema(vocab_schema_name: str,
                          vocab_schema=vocab_schema_name,
                          tenant_configs=tenant_configs,
                          plugin_classpath=plugin_classpath,
-                         ).wait()
+                         )
 
         # task
         enable_audit_policies_wo = enable_and_create_audit_policies_task.with_options(

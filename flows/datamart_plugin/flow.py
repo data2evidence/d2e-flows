@@ -62,7 +62,7 @@ def create_datamart(options: CreateDatamartOptions):
     try:
         
         if datamart_action == DatamartFlowAction.CREATE_SNAPSHOT:
-            create_schema_task.submit(target_dbdao).wait()
+            create_schema_task(target_dbdao)
     
         
         _, failed_tables = copy_schema(datamart_action,

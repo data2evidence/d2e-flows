@@ -36,7 +36,7 @@ def setup_plugin():
 
 @flow(log_prints=True, persist_result=True)
 def cohort_survival_plugin(options: CohortSurvivalOptionsType):
-    setup_plugin.submit().wait()
+    setup_plugin()
     
     logger = get_run_logger()
     logger.info("Running Cohort Survival")
