@@ -15,7 +15,8 @@ def get_plugin_classpath(flow_name: str) -> str:
     return f'{os.getcwd()}/flows/{flow_name}/'
 
 
-@task(log_prints=True)
+@task(log_prints=True,
+      task_run_name="create_schema_task-{dbdao.schema_name}")
 def create_schema_task(dbdao: DBDao):
     schema_exists = dbdao.check_schema_exists()
     if schema_exists == False:
@@ -26,7 +27,8 @@ def create_schema_task(dbdao: DBDao):
         raise Exception(error_msg)
 
 
-@task(log_prints=True)
+@task(log_prints=True,
+      task_run_name="create_and_assign_roles_task-{userdao.schema_name}")
 def run_liquibase_update_task(**kwargs):
     try:
         liquibase = Liquibase(**kwargs)
