@@ -145,31 +145,7 @@ def execute_nodes_flow(graph, sorted_nodes, test):
                 "sql_query_node",
                 "r_node",
                 "data_mapping_node",
-                "subflow", 
-                "time_at_risk_node",
-                "cohort_generator_node",
-                "cohort_diagnostic_node",
-                "characterization_node", 
-                "negative_control_outcome_cohort_node",
-                "target_comparator_outcomes_node",
-                "cohort_method_analysis_node",
-                "default_covariate_settings_node",
-                "study_population_settings_node",
-                "cohort_incidence_target_cohorts_node",
-                "cohort_incidence_node",
-                "cohort_definition_set_node",
-                "outcomes_node",
-                "cohort_method_node",
-                "era_covariate_settings_node",
-                "seasonality_covariate_settings_node",
-                "calendar_time_covariate_settings_node",
-                "study_population_settings_node",
-                "nco_cohort_set_node",
-                "self_controlled_case_series_analysis_node",
-                "self_controlled_case_series_node",
-                "patient_level_prediction_node",
-                "exposure_node",
-                "strategus_node"
+                "subflow"
             ]:
                 get_run_logger().error(f"gen.py: execute_nodes: {node['type']} Node Type not known")
             else: 
@@ -215,10 +191,7 @@ def execute_node_task(nodename, node_type, node, input, test):
         result = _node.test(task_run_context)
     else:
         match node_type:
-            case ('db_reader_node' | 'csv_node' | 'cohort_diagnostic_node' | 'calendar_time_covariate_settings_node' |
-                'cohort_generator_node' | 'time_at_risk_node' | 'default_covariate_settings_node' | 
-                'study_population_settings_node' | 'cohort_incidence_target_cohorts_node' | 'cohort_definition_set_node' | 
-                'era_covariate_settings_node' | 'seasonality_covariate_settings_node' | 'nco_cohort_set_node'):
+            case ('db_reader_node' | 'csv_node'):
                 result = _node.task(task_run_context)
             case _:
                 result = _node.task(input, task_run_context)
