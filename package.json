@@ -1545,6 +1545,34 @@
               }
             }
           }
+        },
+        {
+          "name": "phenotype_plugin",
+          "type": "phenotype",
+          "entrypoint": "flows.phenotype_plugin.flow.phenotype_plugin",
+          "tags": [
+            "phenotype"
+          ],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {"options": {"title": "options", "position": 0, "allOf": [{"$ref": "#/definitions/PhenotypeOptionsType"}]}},
+            "required": ["options"],
+            "definitions": {
+                "PhenotypeOptionsType": {
+                    "title": "PhenotypeOptionsType",
+                    "type": "object",
+                    "properties": {
+                        "databaseCode": {"title": "Databasecode", "type": "string"},
+                        "cdmschemaName": {"title": "Cdmschemaname", "type": "string"},
+                        "cohortschemaName": {"title": "Cohortschemaname", "type": "string"},
+                        "cohorttableName": {"title": "Cohorttablename", "type": "string"},
+                        "cohortsId": {"title": "Cohortsid", "type": "array", "items": {}}
+                    },
+                    "required": ["databaseCode", "cdmschemaName", "cohortschemaName", "cohorttableName", "cohortsId"]
+                }
+            }
+          }
         }
       ]
     }

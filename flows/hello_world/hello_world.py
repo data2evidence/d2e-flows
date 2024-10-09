@@ -1,3 +1,5 @@
+   # an HTTP client library and dependency of Prefect
+from prefect import flow, task
 from rpy2 import robjects
 
 from prefect.variables import Variable
@@ -5,64 +7,34 @@ from prefect_shell import ShellOperation
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from flows.phenotype_plugin.types import PhenotypeOptionsType
 
-from shared_utils.types import UserType
-from shared_utils.dao.DBDao import DBDao
-from shared_utils.api.AnalyticsSvcAPI import AnalyticsSvcAPI
+@task(retries=2)
+def get_repo_info(repo_owner: str, repo_name: str):
+    """Get info about a repo - will retry twice after failing"""
+    url = f"https://api.github.com/repos/{repo_owner}/{repo_name}"
+    api_response = httpx.get(url)
+    api_response.raise_for_status()
+    repo_info = api_response.json()
+    return repo_info
 
+@task
+def get_contributors(repo_info: dict):
+    """Get contributors for a repo"""
+    contributors_url = repo_info["contributors_url"]
+    response = httpx.get(contributors_url)
+    response.raise_for_status()
+    contributors = response.json()
+    return contributors
 
-def setup_plugin():
-    r_libs_user_directory = Variable.get("r_libs_user").value
-    # force=TRUE for fresh install everytime flow is run
-    if (r_libs_user_directory):
-        ShellOperation(
-            commands=[
-                f"Rscript -e \"remotes::install_github('OHDSI/CohortGenerator@0.11.1',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_github('OHDSI/PhenotypeLibrary@3.32.0',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_github('OHDSI/DatabaseConnector@6.3.2',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"install.packages('glue')\""
-            ]).run()
-    else:
-        raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
-
-
-@flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
-def phenotype_plugin(options: PhenotypeOptionsType):
-    logger = get_run_logger()
-    logger.info('Running Phenotype')
-        
-    database_code = options.databaseCode
-    cdmschema_name = options.cdmschemaName
-    cohortschema_name = options.cohortschemaName
-    cohorttable_name = options.cohorttableName
-    cohorts_id = options.cohortsId
-    # description = options.description
-    # owner = options.owner
-    # token = options.token
-    use_cache_db = options.use_cache_db
-    user = UserType.ADMIN_USER
-
-    dbdao = DBDao(use_cache_db=use_cache_db,
-                  database_code=database_code, 
-                  schema_name=cdmschema_name)
-    # analytics_svc_api = AnalyticsSvcAPI(token)
-    set_db_driver_env_string = dbdao.set_db_driver_env()
-    set_connection_string = dbdao.get_database_connector_connection_string(
-        user_type=user
-    )
-   
-   
-    r_libs_user_directory = Variable.get("r_libs_user").value
-
-
+@flow(log_prints=True)
+def log_repo_info(repo_owner: str = "PrefectHQ", repo_name: str = "prefect"):
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''
                    
-.libPaths(c('{r_libs_user_directory}',.libPaths()))
-                library('CohortGenerator', lib.loc = '{r_libs_user_directory}')
-                {set_db_driver_env_string}
-                {set_connection_string}
+library(DatabaseConnector)
+library(CohortGenerator)
+library(PhenotypeLibrary)
+library(glue)
 
 create_cohort_definitionsets <- function(cohorts_ID) {{
     # For multiple cohorts
@@ -124,26 +96,26 @@ create_cohorts <- function(connection, cdmschema, cohortschema, cohort_table_nam
     return(list(cohortsGenerated=cohortsGenerated, cohortCounts=cohortCounts))
 }}
 
-# # Connect to Postgres database using hostname
-# connectionDetails <- createConnectionDetails(
-#     dbms = "postgresql",
-#     server = "127.0.0.1/alpdev_pg", # This will be the local end of the SSH tunnel
-#     user = "postgres",
-#     password = "Toor1234",
-#     port = 41191, # Local port for the SSH tunnel, if postgres docker is running, the 41190 port will be occupied, then change to 41191
-#     pathToDriver = "~/Documents/D4L/202409_Phenotype/jdbcDrivers/"
-# )
-# connection <- connect(connectionDetails)
-# cdmschema <- "cdm_5pct_9a0f90a32250497d9483c981ef1e1e70"
-# cohortschema <- "cdm_5pct_zhimin"
-# cohort_table_name <- "cohorts_test4_phenotype"
-# cohorts_ID <- as.integer(c(25,3,4))
+# Connect to Postgres database using hostname
+connectionDetails <- createConnectionDetails(
+    dbms = "postgresql",
+    server = "127.0.0.1/alpdev_pg", # This will be the local end of the SSH tunnel
+    user = "postgres",
+    password = "Toor1234",
+    port = 41191, # Local port for the SSH tunnel, if postgres docker is running, the 41190 port will be occupied, then change to 41191
+    pathToDriver = "~/Documents/D4L/202409_Phenotype/jdbcDrivers/"
+)
+connection <- connect(connectionDetails)
+cdmschema <- "cdm_5pct_9a0f90a32250497d9483c981ef1e1e70"
+cohortschema <- "cdm_5pct_zhimin"
+cohort_table_name <- "cohorts_trextest1_phenotype"
+cohorts_ID <- as.integer(c(25,3,4))
 
 
-cdmschema <- {cdmschema_name}
-cohortschema <- {cohortschema_name}
-cohort_table_name <- {cohorttable_name}
-cohorts_ID <- {cohorts_id}
+# cdmschema <- {{cdmschema_name}}
+# cohortschema <- {{cohortschema_name}}
+# cohort_table_name <- {{cohorttable_name}}
+# cohorts_ID <- {{cohorts_id}}
 cohortDefinitionSets <- create_cohort_definitionsets(cohorts_ID)
 cohorts <- create_cohorts(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets)
 cohorts_details_table <- getPhenotypeLog(cohortIds = cohorts$cohortsGenerated$cohortId)
@@ -199,10 +171,4 @@ DatabaseConnector::insertTable(
         ''')
 
 if __name__ == "__main__":
-    options = {"databaseCode":"alpdev_pg",
-               "cdmschemaName":"cdm_5pct_9a0f90a32250497d9483c981ef1e1e70",
-               "cohortschemaName": "cdm_5pct_zhimin",
-               "cohorttableName": "cohorts_trextest2_phenotype",
-               "cohortsId": "default"
-               }
-    phenotype_plugin.serve(name="phenotype_plugin")
+    log_repo_info()
