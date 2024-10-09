@@ -1,11 +1,11 @@
 import traceback
 from functools import partial
 
-from prefect import flow, task, get_run_logger
+from prefect import flow, task
+from prefect.logging import get_run_logger
 from prefect.context import TaskRunContext, FlowRunContext
 from prefect.filesystems import RemoteFileSystem as RFS
 from prefect.serializers import JSONSerializer
-from prefect.task_runners import SequentialTaskRunner
 from prefect.variables import Variable
 
 from flows.strategus_plugin.hooks import generate_nodes_flow_hook, execute_nodes_flow_hook, node_task_execution_hook
@@ -13,7 +13,7 @@ from flows.strategus_plugin.flowutils import get_node_list, get_incoming_edges
 from flows.strategus_plugin.nodes import generate_nodes_flow
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def strategus_plugin(json_graph, options):
     logger = get_run_logger()
 
@@ -108,7 +108,7 @@ def execute_nodes_flow(graph, sorted_nodes, test):
 
 
 @task(task_run_name="execute-nodes-taskrun-{nodename}",
-      result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
+      result_storage=RFS.load(Variable.get("flows_results_sb_name")),
       result_storage_key="{flow_run.id}_{parameters[nodename]}.json",
       result_serializer=JSONSerializer(object_encoder="strategus_plugin.nodes.serialize_result_to_json"), log_prints=True,
       persist_result=True)
