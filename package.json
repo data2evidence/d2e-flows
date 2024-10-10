@@ -1563,14 +1563,27 @@
                     "title": "PhenotypeOptionsType",
                     "type": "object",
                     "properties": {
-                        "databaseCode": {"title": "Databasecode", "type": "string"},
-                        "cdmschemaName": {"title": "Cdmschemaname", "type": "string"},
-                        "cohortschemaName": {"title": "Cohortschemaname", "type": "string"},
-                        "cohorttableName": {"title": "Cohorttablename", "type": "string"},
-                        "cohortsId": {"title": "Cohortsid", "type": "array", "items": {}}
+                        "description": {"title": "Description", "type": "string"},
+                        "owner": {"title": "Owner", "type": "string"}
                     },
-                    "required": ["databaseCode", "cdmschemaName", "cohortschemaName", "cohorttableName", "cohortsId"]
+                    "required": ["description", "owner"]
                 }
+            }
+          }
+        },
+        {          
+          "name": "hello_world_plugin",
+          "type": "phenotype",
+          "entrypoint": "flows.hello_world_plugin.flow.hello_world_plugin",
+          "tags": [
+            "phenotype"
+          ],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+                "repo_owner": {"title": "repo_owner", "default": "PrefectHQ", "position": 0, "type": "string"},
+                "repo_name": {"title": "repo_name", "default": "prefect", "position": 1, "type": "string"}
             }
           }
         }

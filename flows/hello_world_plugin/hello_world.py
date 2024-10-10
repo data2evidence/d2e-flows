@@ -1,4 +1,3 @@
-   # an HTTP client library and dependency of Prefect
 from prefect import flow, task
 from rpy2 import robjects
 
@@ -7,27 +6,18 @@ from prefect_shell import ShellOperation
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-
-@task(retries=2)
-def get_repo_info(repo_owner: str, repo_name: str):
-    """Get info about a repo - will retry twice after failing"""
-    url = f"https://api.github.com/repos/{repo_owner}/{repo_name}"
-    api_response = httpx.get(url)
-    api_response.raise_for_status()
-    repo_info = api_response.json()
-    return repo_info
-
-@task
-def get_contributors(repo_info: dict):
-    """Get contributors for a repo"""
-    contributors_url = repo_info["contributors_url"]
-    response = httpx.get(contributors_url)
-    response.raise_for_status()
-    contributors = response.json()
-    return contributors
-
 @flow(log_prints=True)
-def log_repo_info(repo_owner: str = "PrefectHQ", repo_name: str = "prefect"):
+def log_repo_info():
+        
+    cdmschema_name = "cdm_5pct_9a0f90a32250497d9483c981ef1e1e70"
+    cohortschema_name = "cdm_5pct_zhimin"
+    cohorttable_name = "cohorts_test4_phenotype"
+    cohorts_id = '25,3,4'
+    cohorts_id_str = f'as.integer(c({cohorts_id}))'
+    # robjects.globalenv['cohorts_id'] = cohorts_id
+    print("cohorts_id", cohorts_id_str)
+
+    print('start lallalal')
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''
                    
@@ -106,17 +96,21 @@ connectionDetails <- createConnectionDetails(
     pathToDriver = "~/Documents/D4L/202409_Phenotype/jdbcDrivers/"
 )
 connection <- connect(connectionDetails)
-cdmschema <- "cdm_5pct_9a0f90a32250497d9483c981ef1e1e70"
-cohortschema <- "cdm_5pct_zhimin"
-cohort_table_name <- "cohorts_trextest1_phenotype"
-cohorts_ID <- as.integer(c(25,3,4))
+                   
+# cdmschema <- "cdm_5pct_9a0f90a32250497d9483c981ef1e1e70"
+# cohortschema <- "cdm_5pct_zhimin"
+# cohort_table_name <- "cohorts_trextest1_phenotype"
+                   
+cdmschema <- '{cdmschema_name}'
+cohortschema <- '{cohortschema_name}'
+cohort_table_name <- '{cohorttable_name}'
+cohorts_id <- {cohorts_id_str}
+print('r_cohorts_id')
+print(cohorts_id)
+print('class')
+print(class(cohorts_id))
 
-
-# cdmschema <- {{cdmschema_name}}
-# cohortschema <- {{cohortschema_name}}
-# cohort_table_name <- {{cohorttable_name}}
-# cohorts_ID <- {{cohorts_id}}
-cohortDefinitionSets <- create_cohort_definitionsets(cohorts_ID)
+cohortDefinitionSets <- create_cohort_definitionsets(cohorts_id)
 cohorts <- create_cohorts(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets)
 cohorts_details_table <- getPhenotypeLog(cohortIds = cohorts$cohortsGenerated$cohortId)
 
@@ -128,11 +122,11 @@ cohort_sql <- glue("SELECT subject_id, cohort_definition_id FROM {{cohortschema}
 cohort_data <- renderTranslateQuerySql(connection = connection, sql = cohort_sql)
 
 # Initialize the table
-cohorts_ID <- as.integer(c(25,3,4, 0))
+cohorts_id <- as.integer(c(cohorts_id,0))
 result_matrix <- matrix(0, 
                         nrow = nrow(person_id), 
-                        ncol = length(cohorts_ID),
-                        dimnames = list(person_id$PERSON_ID, paste0("CohortID_", cohorts_ID)))
+                        ncol = length(cohorts_id),
+                        dimnames = list(person_id$PERSON_ID, paste0("CohortID_", cohorts_id)))
 result_df <- data.frame(result_matrix, check.names = FALSE)
 
 # Assign the subject to each cohort
@@ -159,7 +153,7 @@ DatabaseConnector::insertTable(
     tempTable = FALSE
 )
 # master table
-master_table <- data.frame(getPhenotypeLog(cohorts_ID))
+master_table <- data.frame(getPhenotypeLog(cohorts_id))
 DatabaseConnector::insertTable(
     connection = connection,
     databaseSchema = cohortschema,
@@ -169,6 +163,8 @@ DatabaseConnector::insertTable(
     tempTable = FALSE
 )
         ''')
+
+    print('end lallalal')
 
 if __name__ == "__main__":
     log_repo_info()

@@ -1,4 +1,3 @@
-from prefect import flow
 from pydantic import BaseModel
 
 class PhenotypeOptionsType(BaseModel):
@@ -14,10 +13,3 @@ class PhenotypeOptionsType(BaseModel):
     @property
     def use_cache_db(self) -> str:
         return False
-    
-@flow
-def my_flow(options:PhenotypeOptionsType):
-    print("hello world")
-
-if __name__ == "__main__":
-    my_flow.serve(name="first_deployment")
