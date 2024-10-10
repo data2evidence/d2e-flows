@@ -103,7 +103,7 @@ def setup_plugin(tag_name: str, dbdao: DBDao, logger):
         logger.info(f"Downloading source code..")
         download_source_code(tag_name)
         unzip_source_code(tag_name)
-        #setup_apache_ant(tag_name) # use version of apache ant in i2b2 source code
+        # setup_apache_ant(tag_name) # Used to setup apache ant during flow run
         
         new_install_dir = f"{path_to_ant(tag_name)}/NewInstall/Crcdata"
         path = os.path.join(os.getcwd(), new_install_dir)

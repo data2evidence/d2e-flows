@@ -29,17 +29,17 @@ def unzip_source_code(tag_name: str):
         ],
         stream_output=True).run()
 
-
-def setup_apache_ant(tag_name: str):
-    cwd = os.getcwd()
-    ant_bin_dir = os.path.join(cwd, f"{path_to_ant(tag_name)}/apache-ant")
+# Used to setup apache ant during flow run
+# def setup_apache_ant(tag_name: str):
+#     cwd = os.getcwd()
+#     ant_bin_dir = os.path.join(cwd, f"{path_to_ant(tag_name)}/apache-ant")
     
-    # Set ant_home environment variable
-    os.environ["ANT_HOME"] = ant_bin_dir
+#     # Set ant_home environment variable
+#     os.environ["ANT_HOME"] = ant_bin_dir
     
-    ShellOperation(
-        commands=[         
-            f'ln -sfn {ant_bin_dir} /opt/ant',
-            f'ln -sfn /opt/ant/bin/ant /usr/bin/ant',
-            'ant -version'
-        ]).run()
+#     ShellOperation(
+#         commands=[         
+#             f'ln -sfn {ant_bin_dir} /opt/ant',
+#             f'ln -sfn /opt/ant/bin/ant /usr/bin/ant',
+#             'ant -version'
+#         ]).run()
