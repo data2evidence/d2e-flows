@@ -14,12 +14,12 @@ from shared_utils.types import *
 from shared_utils.DBUtils import DBUtils
 
 class DBDao(DBUtils):
-    def __init__(self, use_cache_db: bool, database_code: str, schema_name: str):        
+    def __init__(self, use_cache_db: bool, database_code: str, schema_name: str, connectToDuckdb: bool = False):        
         super().__init__(use_cache_db=use_cache_db, database_code=database_code)
         self.schema_name = schema_name
 
         if self.use_cache_db:
-            self.engine = self.create_database_engine(schema_name=self.schema_name)
+            self.engine = self.create_database_engine(schema_name=self.schema_name, connectToDuckdb = connectToDuckdb)
             self.tenant_configs = self.get_tenant_configs(schema_name=self.schema_name)
         else:
             self.engine = self.create_database_engine(user_type=UserType.ADMIN_USER)
@@ -277,6 +277,19 @@ class DBDao(DBUtils):
             res = connection.execute(sqlalchemy_statement)
             connection.commit()
             return callback(res)
+        
+    def execute_fetch_query(self, sqlText, callback: Callable) -> Any | None:
+        with self.engine.connect() as connection:
+            query = sql.text(sqlText)
+            res = connection.execute(query).fetchall()
+            return callback(res)
+    
+    def execute_query(self, sqlText, callback: Callable) -> Any | None:
+        with self.engine.connect() as connection:
+            query = sql.text(sqlText)
+            connection.execute(query)
+            connection.commit()
+            return callback()
 
     def get_single_value(self, result) -> Any:  # Todo: Replace other dbdao function
         if result.rowcount == 0:
