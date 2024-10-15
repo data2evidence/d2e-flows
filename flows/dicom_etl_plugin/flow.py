@@ -1,7 +1,7 @@
+from prefect import task, flow
 from prefect.variables import Variable
-from prefect import task, flow, get_run_logger
+from prefect.logging import get_run_logger
 from prefect.serializers import JSONSerializer
-from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
 from prefect.context import TaskRunContext, FlowRunContext
 
@@ -27,7 +27,7 @@ from shared_utils.api.DicomServerAPI import DicomServerAPI
 
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def dicom_etl_plugin(test: str, options: DICOMETLOptions):
     logger = get_run_logger()
 
@@ -233,7 +233,7 @@ def process_data_element(dbdao, logger, data_elem: DataElement, image_occurrence
 
 @task(
     log_prints=True,
-    result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
+    result_storage=RFS.load(Variable.get("flows_results_sb_name")),
     result_storage_key="dicom_etl_{flow_run.id}.json",
     result_serializer=JSONSerializer(),
     persist_result=True
@@ -241,8 +241,8 @@ def process_data_element(dbdao, logger, data_elem: DataElement, image_occurrence
 def upload_file_to_server(filepath: str, image_occurrence_id: int, 
                           sop_instance_id: str, api):     
     logger = get_run_logger()   
-    service_routes = Variable.get("service_routes").value
-    dicom_server_url = json.loads(service_routes)["dicomServer"]
+    service_routes = Variable.get("service_routes")
+    dicom_server_url = service_routes.get("dicomServer")
 
     filename = filepath.name
     logger.info("Connecting to DICOM server..")

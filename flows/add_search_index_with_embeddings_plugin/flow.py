@@ -3,8 +3,8 @@ import torch
 from datetime import date, datetime
 from transformers import AutoTokenizer, AutoModel
 
-from prefect import flow, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect import flow
+from prefect.logging import get_run_logger
 
 from flows.add_search_index_with_embeddings_plugin.config import MeilisearchAddIndexWithEmbeddingsType
 
@@ -14,7 +14,7 @@ from shared_utils.api.TerminologySvcAPI import TerminologySvcAPI
 
 
     
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbeddingsType):
     logger = get_run_logger()
     database_code = options.databaseCode

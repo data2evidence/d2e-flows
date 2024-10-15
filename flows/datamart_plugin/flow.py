@@ -2,9 +2,9 @@ import pandas as pd
 from time import time
 from datetime import datetime
 
+from prefect import flow, task
 from prefect.variables import Variable
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect.logging import get_run_logger
 
 from flows.datamart_plugin.types import *
 from flows.datamart_plugin.const import *
@@ -20,7 +20,7 @@ from shared_utils.api.PortalServerAPI import PortalServerAPI
 from shared_utils.create_dataset_tasks import create_schema_task, create_and_assign_roles_task
 from shared_utils.update_dataset_metadata import update_entity_value, update_entity_distinct_count
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def datamart_plugin(options: CreateDatamartOptions):
     match options.flow_action_type:
         case DatamartFlowAction.CREATE_SNAPSHOT | DatamartFlowAction.CREATE_PARQUET_SNAPSHOT:
@@ -62,11 +62,6 @@ def create_datamart(options: CreateDatamartOptions):
     try:
         
         if datamart_action == DatamartFlowAction.CREATE_SNAPSHOT:
-            # create target schema prefect task
-            # target_schema_exists = target_dbdao.check_schema_exists()
-            # if target_schema_exists:
-            #     raise ValueError(f"Datamart schema '{target_dbdao.schema_name}' already exists in database '{target_dbdao.database_code}'!")
-            # target_dbdao.create_schema()
             create_schema_task(target_dbdao)
     
         
@@ -186,7 +181,7 @@ def copy_schema(datamart_action: str,
 
 
 def upload_df_as_parquet(target_schema: str, table_name: str, df: pd.DataFrame, logger):
-    alp_system_id = Variable.get("alp_system_id").value
+    alp_system_id = Variable.get("alp_system_id")
     if not alp_system_id:
         raise ValueError("'alp_system_id' prefect variable is undefined")
 

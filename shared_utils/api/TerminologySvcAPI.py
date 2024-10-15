@@ -6,7 +6,7 @@ from shared_utils.api.BaseAPI import BaseAPI
 class TerminologySvcAPI(BaseAPI):
     def __init__(self, token):
         super().__init__()
-        self.url = self.get_service_route("terminology_service_route")
+        self.url = self.get_service_route("terminology")
         self.token = token
 
     def getOptions(self):

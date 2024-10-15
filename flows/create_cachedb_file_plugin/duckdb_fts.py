@@ -1,7 +1,7 @@
 import duckdb
 from typing import Union
 
-from prefect import get_run_logger
+from prefect.logging import get_run_logger
 
 from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path
 from flows.create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG
