@@ -6,7 +6,7 @@ from shared_utils.api.BaseAPI import BaseAPI
 class PortalServerAPI(BaseAPI):
     def __init__(self, token):
         super().__init__()
-        self.url = self.get_service_route("portalserver_service_route")
+        self.url = self.get_service_route("portalServer")
         self.datasets_url = self.url + 'dataset/list?role=systemAdmin'
         self.dataset_attributes_url = self.url + 'dataset/attribute'
         self.token = token

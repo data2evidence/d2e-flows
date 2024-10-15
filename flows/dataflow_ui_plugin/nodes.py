@@ -471,6 +471,7 @@ def generate_node_task(nodename, node, nodetype):
             logging.error(tb.StackSummary())
     return nodeobj
 
+
 def get_results_by_class_type(results: Dict[str, Result], nodeType: Node):
     return [results[o].data for o in results if not results[o].error and isinstance(results[o].node, nodeType)]
 

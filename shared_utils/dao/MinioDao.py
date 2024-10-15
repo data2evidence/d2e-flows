@@ -9,11 +9,11 @@ from prefect.blocks.system import Secret
 
 class MinioDao():
     def __init__(self):
-        minio_endpoint = Variable.get("minio_endpoint").value
-        minio_port = Variable.get("minio_port").value
-        minio_access_key = Variable.get("minio_access_key").value
-        minio_region = Variable.get("minio_region").value
-        minio_ssl = True if Variable.get("minio_ssl").value == "true" else False
+        minio_endpoint = Variable.get("minio_endpoint")
+        minio_port = Variable.get("minio_port")
+        minio_access_key = Variable.get("minio_access_key")
+        minio_region = Variable.get("minio_region")
+        minio_ssl = True if Variable.get("minio_ssl") == "true" else False
         
         minio_secret_key = Secret.load("minio-secret-key")
 

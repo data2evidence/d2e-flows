@@ -1,7 +1,8 @@
 from sqlalchemy import select
 from datetime import datetime
 
-from prefect import task, get_run_logger
+from prefect import task
+from prefect.logging import get_run_logger
 
 from flows.omop_cdm_plugin.types import RELEASE_VERSION_MAPPING, CDMVersion
 

@@ -1,20 +1,20 @@
 import json
 from rpy2 import robjects
 
+from prefect import flow, task
 from prefect.variables import Variable
 from prefect_shell import ShellOperation
-from prefect import flow, task, get_run_logger
+from prefect.logging import get_run_logger
 from prefect.serializers import JSONSerializer
-from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
 
 from flows.cohort_survival_plugin.types import CohortSurvivalOptionsType
 
 from shared_utils.dao.DBDao import DBDao
 
-
+@task
 def setup_plugin():
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
     if r_libs_user_directory:
         ShellOperation(
             commands=[
@@ -34,7 +34,7 @@ def setup_plugin():
         raise ValueError("Prefect variable: 'r_libs_user' is empty.")
 
 
-@flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner) #
+@flow(log_prints=True, persist_result=True)
 def cohort_survival_plugin(options: CohortSurvivalOptionsType):
     setup_plugin()
     
@@ -59,7 +59,7 @@ def cohort_survival_plugin(options: CohortSurvivalOptionsType):
     )
     
 @task(
-    result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
+    result_storage=RFS.load(Variable.get("flows_results_sb_name")),
     result_storage_key="{flow_run.id}_km.json",
     result_serializer=JSONSerializer(),
     persist_result=True,
@@ -70,7 +70,7 @@ def generate_cohort_survival_data(
     outcome_cohort_definition_id: int,
 ):
     filename = f"{dbdao.database_code}_{dbdao.schema_name}"
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
 
     # Get credentials for database code
     db_credentials = dbdao.tenant_configs

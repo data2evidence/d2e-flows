@@ -5,7 +5,7 @@ from shared_utils.api.BaseAPI import BaseAPI
 class DicomServerAPI(BaseAPI):
     def __init__(self):
         super().__init__()
-        self.url = self.get_service_route("dicomserver_service_route")
+        self.url = self.get_service_route("dicomServer")
 
     def get_uploaded_file_name(self, instance_id: str) -> str:
         url = f"{self.url}instances/{instance_id}"

@@ -49,9 +49,9 @@ class Liquibase:
         admin_user = self.tenant_configs.get("adminUser")
         admin_password = self.tenant_configs.get("adminPassword")
 
-        liquibase_path = Variable.get("liquibase_path").value if Variable.get("liquibase_path") else "/app/liquibase/liquibase"
-        hana_driver_class_path = Variable.get("hana_driver_class_path").value if Variable.get("hana_driver_class_path") else  "/app/inst/drivers/ngdbc-latest.jar"
-        postgres_driver_class_path = Variable.get("postgres_driver_class_path").value if Variable.get("postgres_driver_class_path") else "/app/inst/drivers/postgresql-42.3.1.jar"
+        liquibase_path = Variable.get("liquibase_path") if Variable.get("liquibase_path") else "/app/liquibase/liquibase"
+        hana_driver_class_path = Variable.get("hana_driver_class_path") if Variable.get("hana_driver_class_path") else  "/app/inst/drivers/ngdbc-latest.jar"
+        postgres_driver_class_path = Variable.get("postgres_driver_class_path") if Variable.get("postgres_driver_class_path") else "/app/inst/drivers/postgresql-42.3.1.jar"
 
         match self.dialect:
             case SupportedDatabaseDialects.HANA:
@@ -74,7 +74,7 @@ class Liquibase:
             f"--username={admin_user}",
             f"--password={admin_password}",
             f"--driver={driver}",
-            f"--logLevel={Variable.get('lb_log_level').value if Variable.get('lb_log_level') else 'INFO'}",
+            f"--logLevel={Variable.get('lb_log_level') if Variable.get('lb_log_level') else 'INFO'}",
             f"--defaultSchemaName={self.schema_name}",
             f"--liquibaseSchemaName={self.schema_name}"
         ]

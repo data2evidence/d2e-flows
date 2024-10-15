@@ -4,15 +4,15 @@ import pandas as pd
 from io import StringIO
 import sqlalchemy as sql
 
-from prefect import flow, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect import flow
+from prefect.logging import get_run_logger
 
 from flows.data_load_plugin.types import DataloadOptions
 
 from shared_utils.dao.DBDao import DBDao
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def data_load_plugin(options: DataloadOptions):
     logger = get_run_logger()
     
