@@ -1,159 +1,155 @@
 from typing import Callable
 from shared_utils.dao.DBDao import DBDao
+import sqlalchemy as sql
 from prefect import get_run_logger
 logger = get_run_logger()
 
 class fhirUtils():
-    def __init__(self, database_code: str, schema_name: str):
-        self.dbdao = DBDao(use_cache_db=True,
-                      database_code=database_code, 
-                      schema_name=schema_name,
-                      connectToDuckdb=True)
-
     def _getFhirDataModelForObject(self, listOfObjectColumns, isArray):
-        return f"struct({listOfObjectColumns.join(', ')}){'[]' if isArray else ''}"
+        return f"struct({', '.join(listOfObjectColumns)}){'[]' if isArray else ''}"
 
     def _getPropertyForTable(self, duckdbDataTypes, dataStructure, property, propertyType = None):
         if propertyType:
             return f"\"{property}\" {propertyType}"
-        elif duckdbDataTypes[dataStructure[property]] != None:
+        elif dataStructure[property] in duckdbDataTypes:
             return f"\"{property}\" {duckdbDataTypes[dataStructure[property]]}"
-        elif duckdbDataTypes[dataStructure[property]] == None and dataStructure[property] == "json":
+        elif dataStructure[property] == "json":
             return f"\"{property}\" {dataStructure[property]}"
         else:
             raise f"{property} has undefined property type"
 
     def _getFhirDataModel(self, duckdbDataTypes, dataStructure, property):
-        if type(dataStructure[property]) != "object":
+        if (type(dataStructure[property]) == str or type(dataStructure[property]) == bool or type(dataStructure[property]) == int):
             return self._getPropertyForTable(duckdbDataTypes, dataStructure, property)
-        elif type(dataStructure[property]) == "object":
+        else:
             listOfTableColumns = []
             isArray = False
             #Nested extension objects are set as {}
-            if dataStructure[property].keys().length == 0:
+            if type(dataStructure[property]) == dict and len(dataStructure[property].keys()) == 0:
                 return self._getPropertyForTable(duckdbDataTypes, dataStructure, property, duckdbDataTypes['string'])
             else:
                 currentProperty = dataStructure[property]
-                if currentProperty.length != None and dataStructure[property].length > 0:
+                # Is array?
+                if type(dataStructure[property]) == list:
                     isArray = True
-                    currentProperty =  dataStructure[property][0]
+                    currentProperty = dataStructure[property][0]
                 #For properties with array of strings
-                if dataStructure[property].length > 0 and duckdbDataTypes[currentProperty] != None:
+                if type(dataStructure[property]) == list and (type(currentProperty) == str or type(currentProperty) == bool or type(currentProperty) == int):
                     return self._getPropertyForTable(duckdbDataTypes, dataStructure, property, duckdbDataTypes[currentProperty])+'[]'
                 else:
                     for childProperty in currentProperty:
-                        listOfTableColumns.push(self._getFhirDataModel(duckdbDataTypes, currentProperty, childProperty))
+                        listOfTableColumns.append(self._getFhirDataModel(duckdbDataTypes, currentProperty, childProperty))
                     return self._getPropertyForTable(duckdbDataTypes, dataStructure, property, self._getFhirDataModelForObject(listOfTableColumns, isArray))
 
     def _getDuckdbColumnString(self, duckdbDataTypes, dataStructure, concatColumns:bool):
         listOfTableColumns = []
         for property in dataStructure:
-            if property.indexOf('_') == -1:
-                listOfTableColumns.push(self._getFhirDataModel(duckdbDataTypes, dataStructure, property))
-        return listOfTableColumns.join(', ') if concatColumns else listOfTableColumns
+            if property.find('_') == -1:
+                listOfTableColumns.append(self._getFhirDataModel(duckdbDataTypes, dataStructure, property))
+        return ', '.join(listOfTableColumns) if concatColumns else listOfTableColumns
 
     def _getNestedProperty(self, jsonschema, propertyPath, propertyDetails, heirarchy):
-        if propertyDetails["$ref"] != None:
+        if '$ref' in propertyDetails:
             if propertyPath != None:
-                subProperties = jsonschema.definitions[propertyPath]
-                if subProperties.properties != None:
-                    subProperties.parsedProperties = {}
-                    for subProperty in subProperties.properties:
-                        if subProperty.substring(0, 1) != "_":
-                            subPropertyDetails = subProperties.properties[subProperty]
+                subProperties = jsonschema['definitions'][0][propertyPath]
+                if 'properties' in subProperties:
+                    subProperties['parsedProperties'] = dict()
+                    for subProperty in subProperties['properties']:
+                        if subProperty[0:1] != "_":
+                            subPropertyDetails = subProperties['properties'][subProperty]
                             subPropertyPath =  self._getPropertyPath(subPropertyDetails)
                             if self._isCustomType(subPropertyPath):
-                                subProperties.parsedProperties[subProperty] = ['string']
+                                subProperties['parsedProperties'][subProperty] = ['string']
                             elif subPropertyPath == 'Meta' or subPropertyPath == 'Extension':
-                                subProperties.parsedProperties[subProperty] = 'json'
+                                subProperties['parsedProperties'][subProperty] = 'json'
                             else:
                                 #Check if the property is already covered previously
-                                if heirarchy.indexOf(subPropertyPath) > -1:
-                                    subProperties.parsedProperties[subProperty] = {}
+                                if subPropertyPath != None and heirarchy.find(subPropertyPath) > -1:
+                                    subProperties['parsedProperties'][subProperty] = dict()
                                 else:
-                                    newHeirarchy = heirarchy + "/" + subPropertyPath
-                                    subProperties.parsedProperties[subProperty] = self._getNestedProperty(jsonschema, subPropertyPath, subPropertyDetails, newHeirarchy)
-                    return subProperties.parsedProperties
+                                    newHeirarchy = heirarchy + ("/" + subPropertyPath if subPropertyPath != None else "")
+                                    subProperties['parsedProperties'][subProperty] = self._getNestedProperty(jsonschema, subPropertyPath, subPropertyDetails, newHeirarchy)
+                    return subProperties['parsedProperties']
                 else:
-                    return "string" if subProperties.type == None else subProperties.type
-        elif propertyDetails.type == "array": 
-            if propertyDetails.items.enum != None:
+                    return subProperties['type'] if 'type' in subProperties else "string"
+        elif 'type' in propertyDetails and  propertyDetails['type'] == 'array': 
+            if 'enum' in propertyDetails['items']:
                 return ['string']
             elif propertyPath != None:
-                subProperties = jsonschema.definitions[propertyPath]
-                if subProperties.properties != None:
-                    subProperties.parsedProperties = {}
-                    for subProperty in subProperties.properties:
-                        if subProperty.substring(0, 1) != "_":
-                            subPropertyDetails = subProperties.properties[subProperty]
+                subProperties = jsonschema['definitions'][0][propertyPath]
+                if 'properties' in subProperties:
+                    subProperties['parsedProperties'] = dict()
+                    for subProperty in subProperties['properties']:
+                        if subProperty[0:1] != "_":
+                            subPropertyDetails = subProperties['properties'][subProperty]
                             subPropertyPath =  self._getPropertyPath(subPropertyDetails)
                             if self._isCustomType(subPropertyPath):
-                                subProperties.parsedProperties[subProperty] = ['string']
+                                subProperties['parsedProperties'][subProperty] = ['string']
                             elif subPropertyPath == 'Meta' or subPropertyPath == 'Extension':
-                                subProperties.parsedProperties[subProperty] = 'json'
+                                subProperties['parsedProperties'][subProperty] = 'json'
                             else:
                                 #Check if the property is already covered previously
-                                if heirarchy.indexOf(subPropertyPath) > -1:
-                                    subProperties.parsedProperties[subProperty] = {}
+                                if subPropertyPath != None and heirarchy.find(subPropertyPath) > -1:
+                                    subProperties['parsedProperties'][subProperty] = dict()
                                 else:
-                                    newHeirarchy = heirarchy + "/" + subPropertyPath
-                                    subProperties.parsedProperties[subProperty] = self._getNestedProperty(jsonschema, subPropertyPath, subPropertyDetails, newHeirarchy)
-                    return [subProperties.parsedProperties]
+                                    newHeirarchy = heirarchy + ("/" + subPropertyPath if subPropertyPath != None else "")
+                                    subProperties['parsedProperties'][subProperty] = self._getNestedProperty(jsonschema, subPropertyPath, subPropertyDetails, newHeirarchy)
+                    return [subProperties['parsedProperties']]
                 else:
-                    return ["string"] if subProperties.type == None else [subProperties.type]
-        elif propertyDetails.enum != None:
+                    return [subProperties['type']] if 'type' in subProperties else ["string"]
+        elif 'enum' in propertyDetails:
             return "string"
-        elif propertyDetails.const != None:
+        elif 'const' in propertyDetails:
             return "string"
-        elif propertyDetails.type == None:
+        elif 'type' in propertyDetails == None:
             return 'string'
         else:
-            return propertyDetails.type
+            return propertyDetails['type']
 
     def _isCustomType(self, properyPath):
         if properyPath == 'ResourceList' or properyPath == 'Resource' or properyPath == 'ProjectSetting' or properyPath == 'ProjectSite' or properyPath == 'ProjectLink' or properyPath == 'ProjectMembershipAccess' or properyPath == 'AccessPolicyResource' or properyPath == 'AccessPolicyIpAccessRule' or properyPath == 'UserConfigurationMenu' or properyPath == 'UserConfigurationSearch'or properyPath == 'UserConfigurationOption' or properyPath == 'BulkDataExportOutput' or properyPath == 'BulkDataExportDeleted' or properyPath == 'BulkDataExportError' or properyPath == 'AgentSetting' or properyPath == 'AgentChannel' or properyPath == 'ViewDefinitionConstant' or properyPath == 'ViewDefinitionSelect' or properyPath == 'ViewDefinitionWhere':
             return True
 
     def _getPropertyPath(self, fhirDefinitionProperties):
-        if fhirDefinitionProperties["$ref"] != None:
-            return fhirDefinitionProperties["$ref"].substring(fhirDefinitionProperties["$ref"].lastIndexOf("/") + 1, fhirDefinitionProperties["$ref"].length)
-        elif fhirDefinitionProperties.items != None and fhirDefinitionProperties.items["$ref"] != None:
-            return fhirDefinitionProperties.items["$ref"].substring(fhirDefinitionProperties.items["$ref"].lastIndexOf("/") + 1, fhirDefinitionProperties.items["$ref"].length)
+        if '$ref' in fhirDefinitionProperties:
+            return fhirDefinitionProperties['$ref'][fhirDefinitionProperties['$ref'].rindex('/') + 1: len(fhirDefinitionProperties['$ref'])]
+        elif 'items' in fhirDefinitionProperties and '$ref' in fhirDefinitionProperties['items']:
+            return fhirDefinitionProperties['items']['$ref'][fhirDefinitionProperties['items']['$ref'].rindex('/') + 1: len(fhirDefinitionProperties['items']['$ref'])]
         else:
             return None
 
     def _isResource(self, schema, resourceDefinition: any):
-        return schema.discriminator.mapping[resourceDefinition] != None
+        return schema['discriminator'][0]['mapping'][resourceDefinition] != None
 
     def _getFhirTableStructure(self, jsonSchema, fhirDefinitionName):
         try:
-            fhirDefinition = jsonSchema.definitions[fhirDefinitionName]
-            fhirDefinition.parsedProperties = {}
+            fhirDefinition = jsonSchema['definitions'][0][fhirDefinitionName]
+            fhirDefinition['parsedProperties'] = dict()
             if self._isResource(jsonSchema, fhirDefinitionName):
-                if fhirDefinition.properties != None:
-                    for property in fhirDefinition.properties:
-                        properyPath = self._getPropertyPath(fhirDefinition.properties[property])
+                if 'properties' in fhirDefinition:
+                    for property in fhirDefinition['properties']:
+                        properyPath = self._getPropertyPath(fhirDefinition['properties'][property])
                         if self._isCustomType(properyPath):
-                            fhirDefinition.parsedProperties[property] = ['string']
+                            fhirDefinition['parsedProperties'][property] = ['string']
                         elif properyPath == 'Meta' or properyPath == 'Extension':
-                            fhirDefinition.parsedProperties[property] = 'json'
+                            fhirDefinition['parsedProperties'][property] = 'json'
                         else:
-                            fhirDefinition.parsedProperties[property] = self._getNestedProperty(jsonSchema, properyPath, fhirDefinition.properties[property], properyPath)
-                    return fhirDefinition.parsedProperties
+                            fhirDefinition['parsedProperties'][property] = self._getNestedProperty(jsonSchema, properyPath, fhirDefinition['properties'][property], properyPath)
+                    return fhirDefinition['parsedProperties']
                 else:
                     return f"The input FHIR resource {fhirDefinition} has no properties defined"
             else:
                 return f"The input resource {fhirDefinition} is not a FHIR resource"
         except Exception as err:
-            logger.error(err)
-            logger.error(f"Error while creating duckdb table for resource : {fhirDefinitionName}")
+            print(err)
+            print(f"Error while creating duckdb table for resource : {fhirDefinitionName}")
             raise err
 
     def _getFhirDataTypes(self, jsonSchema):
         dataTypes = {}
-        for definition in jsonSchema.definitions:
-            if jsonSchema.definitions[definition].type != None:
-                dataTypes[jsonSchema.definitions[definition].type] = jsonSchema.definitions[definition].type
+        for definition in jsonSchema['definitions'][0]:
+            if "type" in jsonSchema['definitions'][0][definition]:
+                dataTypes[jsonSchema['definitions'][0][definition]['type']] = jsonSchema['definitions'][0][definition]['type']
         return dataTypes
 
     def _convertFhirDataTypesToDuckdb(self, jsonSchema):
@@ -170,28 +166,48 @@ class fhirUtils():
                     dataTypes[fhirDataType] = "json"
         return dataTypes
 
-    def _createFhirTable(self, dbdao: DBDao, fhirDefinition, fhirTableDefinition, callback: Callable):
-        try:
-            dbdao.execute_query(f"create or replace table {fhirDefinition}Fhir ({fhirTableDefinition})", lambda res: callback(res, fhirDefinition))
-        except Exception as err:
-            logger.info(f"Error creating table {fhirDefinition}")
-            raise err
+    def _createFhirTable(self, fhirDefinition, fhirTableDefinition, dbdao: DBDao):
+        engine = dbdao.engine
+        with engine.connect() as connection:
+            trans = connection.begin()
+            try:
+                create_fhir_datamodel_table = sql.text(f"create or replace table {fhirDefinition}Fhir ({fhirTableDefinition})")
+                connection.execute(create_fhir_datamodel_table)
+                trans.commit()
+            except Exception as e:
+                trans.rollback()
+                logger.error(f"Failed to create table: {fhirDefinition}: {e}")
+                raise e
     
-    def _parseFhirSchemaJsonFile(self, fhirSchema):
-        fhirResources = fhirSchema[0].discriminator.mapping
-        duckdbDataTypes = self.convertFhirDataTypesToDuckdb(fhirSchema[0])
+    def _parseFhirSchemaJsonFile(self, fhirSchema, dbdao: DBDao):
+        fhirResources = fhirSchema['discriminator'][0]['mapping']
+        duckdbDataTypes = self._convertFhirDataTypesToDuckdb(fhirSchema)
         for resource in fhirResources:
-            parsedFhirDefinitions = self._getFhirTableStructure(fhirSchema[0], resource)
+            parsedFhirDefinitions = self._getFhirTableStructure(fhirSchema, resource)
             duckdbTableStructure = self._getDuckdbColumnString(duckdbDataTypes, parsedFhirDefinitions, True)
-            self._createFhirTable(self.dbdao, resource, duckdbTableStructure, lambda res,fhirResource: logger.info(f"Fhir table created for resource {fhirResource}"))
+            self._createFhirTable(resource, duckdbTableStructure, dbdao)
+            print(f'Successfully created table: {resource}')
         return True
 
-    def readJsonFileAndCreateDuckdbTables(self):
+    def readJsonFileAndCreateDuckdbTables(self, database_code: str, schema_name: str):
         logger = get_run_logger()
-        schemaPath = ''
+        schemaPath = '/app/flows/create_fhir_datamodel_plugin/fhir.schema.json'
         try:
-            logger.info('Read fhir.schema.json file to get fhir definitions')
-            self.dbdao.execute_fetch_query(f"select * from read_json('{schemaPath}')", self._parseFhirSchemaJsonFile)
+            dbdao = DBDao(use_cache_db=True,
+                      database_code=database_code, 
+                      schema_name=schema_name,
+                      connectToDuckdb=True)
+            engine = dbdao.engine
+            with engine.connect() as connection:
+                try:
+                    logger.info('Read fhir.schema.json file to get fhir definitions')
+                    get_schema_json = sql.text(f"select * from '{schemaPath}'")
+                    fhir_schema = connection.execute(get_schema_json).fetchall()
+                    logger.info(fhir_schema)
+                except Exception as e:
+                    logger.error(f"Failed to get fhir schema json file': {e}")
+                    raise e
+            self._parseFhirSchemaJsonFile(fhir_schema, dbdao=dbdao)
             logger.info('FHIR DataModel created successfuly!')
             return True
         except Exception as err:

@@ -28,7 +28,6 @@ class DBDao(DBUtils):
         self.metadata = sql.MetaData(schema_name)  # sql.MetaData()
         self.inspector = sql.inspect(self.engine)
 
-
     def check_schema_exists(self) -> bool:
         return self.inspector.has_schema(self.schema_name)
 
@@ -94,7 +93,6 @@ class DBDao(DBUtils):
             res = connection.execute(update_stmt)
             connection.commit()
 
-
     def update_data_ingestion_date(self):
         with self.engine.connect() as connection:
             table = sql.Table("dataset_metadata".casefold(), self.metadata,
@@ -138,8 +136,6 @@ class DBDao(DBUtils):
                 sql.desc(dateexecuted_col)).limit(1)
             updated_date = connection.execute(select_stmt).scalar()
             return updated_date
-
-
 
     def create_schema(self):
         with self.engine.connect() as connection:
@@ -231,7 +227,6 @@ class DBDao(DBUtils):
         
         return select_statement
 
-
     # DML
     # Todo: To support bulk insert, Currently only suports single row inserts
     def insert_values_into_table(self, table_name: str, column_value_mapping: list[dict]):
@@ -262,8 +257,6 @@ class DBDao(DBUtils):
                 f"Successfully executed stored prcoedure {sp_name}")
             return res
 
-
-
     def get_sqlalchemy_columns(self, table_name: str, column_names: list[str]) -> dict[str, Column]:
         '''
         Returns a dictionary mapping column names to sqlalchemy Column objects
@@ -278,19 +271,6 @@ class DBDao(DBUtils):
             connection.commit()
             return callback(res)
         
-    def execute_fetch_query(self, sqlText, callback: Callable) -> Any | None:
-        with self.engine.connect() as connection:
-            query = sql.text(sqlText)
-            res = connection.execute(query).fetchall()
-            return callback(res)
-    
-    def execute_query(self, sqlText, callback: Callable) -> Any | None:
-        with self.engine.connect() as connection:
-            query = sql.text(sqlText)
-            connection.execute(query)
-            connection.commit()
-            return callback()
-
     def get_single_value(self, result) -> Any:  # Todo: Replace other dbdao function
         if result.rowcount == 0:
             raise Exception("No value returned")
