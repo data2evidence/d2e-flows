@@ -1,7 +1,8 @@
 import json
 from datetime import datetime
 from typing import List, Dict
-from prefect import task, get_run_logger
+from prefect import task
+from prefect.logging import get_run_logger
 
 from flows.data_management_plugin.const import OMOP_DATA_MODELS, check_table_case, convert_case
 from flows.data_management_plugin.types import (PortalDatasetType, 

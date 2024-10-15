@@ -3,9 +3,9 @@ from functools import partial
 from datetime import datetime
 from sqlalchemy import String, TIMESTAMP
 
+from prefect import flow, task
 from prefect_shell import ShellOperation
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect.logging import get_run_logger
 
 from flows.i2b2_plugin.types import *
 from flows.i2b2_plugin.utils import *
@@ -14,72 +14,68 @@ from shared_utils.dao.DBDao import DBDao
 from shared_utils.dao.UserDao import UserDao
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
-from shared_utils.create_dataset_tasks import create_and_assign_roles_task, drop_schema_hook
+from shared_utils.create_dataset_tasks import (create_schema_task, 
+                                               create_and_assign_roles_task, 
+                                               drop_schema_hook)
 
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner, timeout_seconds=3600)
+@flow(log_prints=True)
 def i2b2_plugin(options: i2b2PluginType):
     match options.flow_action_type:
         case FlowActionType.CREATE_DATA_MODEL:
-            create_i2b2_dataset(options)
+            create_i2b2_dataset_flow(options)
         case FlowActionType.GET_VERSION_INFO:
-            update_dataset_metadata(options)
+            update_dataset_metadata_flow(options)
 
 
-def create_i2b2_dataset(options: i2b2PluginType):
-    logger = get_run_logger()
-
+def create_i2b2_dataset_flow(options: i2b2PluginType):
     database_code = options.database_code
     schema_name = options.schema_name
-    tag_name = options.tag_name
-    data_model = options.data_model
     use_cache_db = options.use_cache_db
 
-    try:
-        dbdao = DBDao(use_cache_db=use_cache_db,
+    dbdao = DBDao(use_cache_db=use_cache_db,
+                  database_code=database_code, 
+                  schema_name=schema_name)
+    
+    userdao = UserDao(use_cache_db=use_cache_db,
                       database_code=database_code, 
                       schema_name=schema_name)
-        
-        userdao = UserDao(use_cache_db=use_cache_db,
-                          database_code=database_code, 
-                          schema_name=schema_name)
-        
-        tenant_configs = dbdao.tenant_configs
-        
-        
-        setup_plugin(tag_name)
-        create_i2b2_schema(dbdao)
-        overwrite_db_properties(tag_name, tenant_configs, schema_name)
 
-        version = get_version_from_tag(tag_name)
-
-        create_crc_tables(version)
-        create_crc_stored_procedures(version)
-        
-        # task to create i2b2 metadata table
-        create_metadata_table(dbdao, tag_name, data_model[1:])
-        
-        # prefect task to grant read privilege to tenant read user
-        create_and_assign_roles_wo = create_and_assign_roles_task.with_options(
-            on_failure=[partial(drop_schema_hook,
-                                **dict(schema_dao=dbdao))]
-        )        
-        
-        create_and_assign_roles_wo(
-            userdao=userdao
-        )
-        
-        # task to load demo data based on flag
-        if options.load_demo_data:
-            load_demo_data(dbdao)
-
-    except Exception as e:
-        logger.error(e)
-        raise(e)
+    # Create schema if there is no existing schema first
+    create_schema_task(dbdao)
+    
+    # Parent task with hook to drop schema on failure
+    setup_and_create_datamodel_wo = setup_and_create_datamodel.with_options(
+        on_failure=[partial(
+            drop_schema_hook, **dict(schema_dao=dbdao)
+        )]
+    )
+    setup_and_create_datamodel_wo(tag_name=options.tag_name,
+                                  data_model=options.data_model,
+                                  dbdao=dbdao,
+                                  userdao=userdao,
+                                  load_demo_data=options.load_demo_data
+                                  )
 
 
-def update_dataset_metadata(options: i2b2PluginType):
+@task(log_prints=True, timeout_seconds=1800)
+def setup_and_create_datamodel(tag_name: str,
+                               data_model: str, 
+                               dbdao: DBDao,
+                               userdao: UserDao, 
+                               load_demo_data):
+    logger = get_run_logger()
+    setup_plugin(tag_name, dbdao, logger)
+    version = get_version_from_tag(tag_name)
+    create_crc_tables_and_procedures(version, dbdao, logger)
+    create_metadata_table(dbdao, tag_name, data_model[1:], logger)
+    create_and_assign_roles_task(userdao)
+    if load_demo_data:
+        load_demo_i2b2_data(dbdao, logger)
+
+
+def update_dataset_metadata_flow(options: i2b2PluginType):
     logger = get_run_logger()
     dataset_list = options.datasets
     token = options.token
@@ -93,8 +89,10 @@ def update_dataset_metadata(options: i2b2PluginType):
 
 
 @task(log_prints=True)
-async def setup_plugin(tag_name: str):
-    logger = get_run_logger()
+def setup_plugin(tag_name: str, dbdao: DBDao, logger):
+    '''
+    Download i2b2 source code and overwrite db.properties file
+    '''
     repo_dir = "flows/i2b2_plugin/i2b2_data"
     path = os.path.join(os.getcwd(), repo_dir)
     
@@ -102,27 +100,20 @@ async def setup_plugin(tag_name: str):
     os.chdir(f"{path}")
     
     try:
-        await download_source_code(tag_name)
-        await unzip_source_code(tag_name)
-        #await setup_apache_ant(tag_name) # use version of apache ant in i2b2 source code
-    except Exception as e:
-        logger.error(e)
-        raise(e)
-
-
-@task(log_prints=True)
-def overwrite_db_properties(tag_name: str, tenant_configs: dict, schema_name: str):
-    logger = get_run_logger()
-    try:
+        logger.info(f"Downloading source code..")
+        download_source_code(tag_name)
+        unzip_source_code(tag_name)
+        # setup_apache_ant(tag_name) # Used to setup apache ant during flow run
+        
         new_install_dir = f"{path_to_ant(tag_name)}/NewInstall/Crcdata"
         path = os.path.join(os.getcwd(), new_install_dir)
         os.chdir(f"{path}")
         
-        database_name = tenant_configs["databaseName"]
-        pg_user = tenant_configs["adminUser"]
-        pg_password = tenant_configs["adminPassword"]
-        host = tenant_configs["host"]
-        port = tenant_configs["port"]
+        database_name = dbdao.tenant_configs["databaseName"]
+        pg_user = dbdao.tenant_configs["adminUser"]
+        pg_password = dbdao.tenant_configs["adminPassword"]
+        host = dbdao.tenant_configs["host"]
+        port = dbdao.tenant_configs["port"]
         
         with open('db.properties', 'w') as file:
             file.write(f'''
@@ -130,33 +121,26 @@ def overwrite_db_properties(tag_name: str, tenant_configs: dict, schema_name: st
                     db.username={pg_user}
                     db.password={pg_password}
                     db.driver=org.postgresql.Driver
-                    db.url=jdbc:postgresql://{host}:{port}/{database_name}?currentSchema={schema_name}
+                    db.url=jdbc:postgresql://{host}:{port}/{database_name}?currentSchema={dbdao.schema_name}
                     db.project=demo
                        ''')
-    
     except Exception as e:
         logger.error(e)
         raise(e)
 
 
 @task(log_prints=True)
-def create_i2b2_schema(dbdao):
-    schema_exists = dbdao.check_schema_exists()
-    if schema_exists == False:
-        dbdao.create_schema()
-    else:
-        raise Exception(f"Schema {dbdao.schema_name} already exists in database {dbdao.database_code}")
-
-@task(log_prints=True)
-def create_crc_tables(version: str):
+def create_crc_tables_and_procedures(version: str, dbdao: DBDao, logger):
+    '''
+    Runs apache ant commands to create i2b2 tables and stored procedures
+    '''
     ShellOperation(
         commands=[
             f"ant -f data_build.xml create_crcdata_tables_release_{version}"
         ]).run()
-
-
-@task(log_prints=True)
-def create_crc_stored_procedures(version: str):
+    
+    check_table_creation(dbdao)
+    
     ShellOperation(
         commands=[
             f"ant -f data_build.xml create_procedures_release_{version}"
@@ -164,13 +148,19 @@ def create_crc_stored_procedures(version: str):
 
 
 @task(log_prints=True)
-def load_demo_data(dbdao):
-    ingest_data()
+def load_demo_i2b2_data(dbdao: DBDao, logger):
+    logger.info("Loading demo i2b2 data..")
+    ShellOperation(
+        commands = [
+            "ant -f data_build.xml db_demodata_load_data"
+        ]
+    ).run()
+    logger.info("Successfully loaded demo i2b2 data!")
     dbdao.update_data_ingestion_date()
 
 
 @task(log_prints=True)
-def create_metadata_table(dbdao, tag_name: str, version: str):
+def create_metadata_table(dbdao: DBDao, tag_name: str, version: str, logger):
     columns_to_create = {
             "schema_name": String,
             "created_date": TIMESTAMP,
@@ -189,15 +179,6 @@ def create_metadata_table(dbdao, tag_name: str, version: str):
     }
     dbdao.insert_values_into_table('dataset_metadata', values_to_insert)
         
-
-def ingest_data():
-    ShellOperation(
-        commands = [
-            "ant -f data_build.xml db_demodata_load_data"
-        ]
-    ).run()
-    
-
 
 @task(log_prints=True)
 def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):

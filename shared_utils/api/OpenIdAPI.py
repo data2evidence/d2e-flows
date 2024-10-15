@@ -10,10 +10,10 @@ from shared_utils.api.BaseAPI import BaseAPI
 class OpenIdAPI(BaseAPI):
     def __init__(self):
         super().__init__()
-        self.url = self.get_service_route("idissuerurl_service_route")
+        self.url = self.get_service_route("idIssuerUrl")
         self.client_id = Secret.load("idp-alp-data-client-id")
         self.client_secret = Secret.load("idp-alp-data-client-secret")
-        self.scope = Variable.get("idp_scope").value
+        self.scope = Variable.get("idp_scope")
         
     def getOptions(self):
         return {

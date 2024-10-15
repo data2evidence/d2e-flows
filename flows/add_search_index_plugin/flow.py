@@ -2,8 +2,8 @@ import re
 from itertools import islice
 from datetime import date, datetime
 
-from prefect import flow, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect import flow
+from prefect.logging import get_run_logger
 
 from flows.add_search_index_plugin.config import MeilisearchAddIndexType
 
@@ -12,7 +12,7 @@ from shared_utils.api.MeilisearchSvcAPI import MeilisearchSvcAPI
 
 
     
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def add_search_index_plugin(options: MeilisearchAddIndexType):
     logger = get_run_logger()
     database_code = options.databaseCode

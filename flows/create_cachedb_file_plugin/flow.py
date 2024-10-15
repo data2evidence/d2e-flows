@@ -1,5 +1,5 @@
-from prefect import flow, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect import flow
+from prefect.logging import get_run_logger
 
 from flows.create_cachedb_file_plugin.duckdb_fts import create_duckdb_fts_index
 from flows.create_cachedb_file_plugin.config import CreateDuckdbDatabaseFileType
@@ -9,7 +9,7 @@ from flows.create_cachedb_file_plugin.utils import remove_existing_file_if_exist
 from shared_utils.dao.DBDao import DBDao
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def create_cachedb_file_plugin(options: CreateDuckdbDatabaseFileType):
 
     logger = get_run_logger()

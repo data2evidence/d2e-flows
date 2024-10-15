@@ -1,7 +1,8 @@
 import os
 from functools import partial
 
-from prefect import task, get_run_logger
+from prefect import task
+from prefect.logging import get_run_logger
 from prefect.logging.loggers import task_run_logger
 from prefect.server.schemas.states import StateType
 
@@ -19,7 +20,7 @@ def get_plugin_classpath(flow_name: str) -> str:
       task_run_name="create_schema_task-{dbdao.schema_name}")
 def create_schema_task(dbdao: DBDao):
     schema_exists = dbdao.check_schema_exists()
-    if schema_exists == False:
+    if schema_exists is False:
         dbdao.create_schema()
     else:
         error_msg = f"Schema '{dbdao.schema_name}' already exists in database '{dbdao.database_code}'"
@@ -110,4 +111,4 @@ def drop_schema_hook(task, task_run, state, schema_dao: DBDao):
             f"Failed to drop schema {schema_dao.database_code}.{schema_dao.schema_name}")
     else:
         logger.info(
-            f"Successfully drop schema '{schema_dao.database_code}.{schema_dao.schema_name}'")
+            f"Successfully dropped schema '{schema_dao.database_code}.{schema_dao.schema_name}'")

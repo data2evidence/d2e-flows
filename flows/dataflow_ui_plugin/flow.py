@@ -4,10 +4,10 @@ from functools import partial
 from collections import OrderedDict
 from prefect_dask import DaskTaskRunner
 
+from prefect import flow, task
 from prefect.variables import Variable
-from prefect import flow, task, get_run_logger
+from prefect.logging import get_run_logger
 from prefect.serializers import JSONSerializer
-from prefect.task_runners import SequentialTaskRunner
 from prefect.filesystems import RemoteFileSystem as RFS
 from prefect.context import TaskRunContext, FlowRunContext
 
@@ -16,7 +16,7 @@ from flows.dataflow_ui_plugin.flowutils import *
 from flows.dataflow_ui_plugin.nodes import generate_nodes_flow
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def dataflow_ui_plugin(json_graph, options):
     logger = get_run_logger()
 
@@ -145,31 +145,7 @@ def execute_nodes_flow(graph, sorted_nodes, test):
                 "sql_query_node",
                 "r_node",
                 "data_mapping_node",
-                "subflow", 
-                "time_at_risk_node",
-                "cohort_generator_node",
-                "cohort_diagnostic_node",
-                "characterization_node", 
-                "negative_control_outcome_cohort_node",
-                "target_comparator_outcomes_node",
-                "cohort_method_analysis_node",
-                "default_covariate_settings_node",
-                "study_population_settings_node",
-                "cohort_incidence_target_cohorts_node",
-                "cohort_incidence_node",
-                "cohort_definition_set_node",
-                "outcomes_node",
-                "cohort_method_node",
-                "era_covariate_settings_node",
-                "seasonality_covariate_settings_node",
-                "calendar_time_covariate_settings_node",
-                "study_population_settings_node",
-                "nco_cohort_set_node",
-                "self_controlled_case_series_analysis_node",
-                "self_controlled_case_series_node",
-                "patient_level_prediction_node",
-                "exposure_node",
-                "strategus_node"
+                "subflow"
             ]:
                 get_run_logger().error(f"gen.py: execute_nodes: {node['type']} Node Type not known")
             else: 
@@ -201,12 +177,12 @@ def execute_nodes_flow(graph, sorted_nodes, test):
 
 
 @task(task_run_name="execute-nodes-taskrun-{nodename}",
-      result_storage=RFS.load(Variable.get("flows_results_sb_name").value),
+      result_storage=RFS.load(Variable.get("flows_results_sb_name")),
       result_storage_key="{flow_run.id}_{parameters[nodename]}.json",
-      result_serializer=JSONSerializer(object_encoder="dataflow_ui_plugin.nodes.serialize_result_to_json"), log_prints=True,
+      result_serializer=JSONSerializer(object_encoder="flows.dataflow_ui_plugin.nodes.serialize_result_to_json"), log_prints=True,
       persist_result=True)
 def execute_node_task(nodename, node_type, node, input, test):
-    # Get task run context
+    # Get task run context    
     task_run_context = TaskRunContext.get().task_run.dict()
 
     _node = node
@@ -215,10 +191,7 @@ def execute_node_task(nodename, node_type, node, input, test):
         result = _node.test(task_run_context)
     else:
         match node_type:
-            case ('db_reader_node' | 'csv_node' | 'cohort_diagnostic_node' | 'calendar_time_covariate_settings_node' |
-                'cohort_generator_node' | 'time_at_risk_node' | 'default_covariate_settings_node' | 
-                'study_population_settings_node' | 'cohort_incidence_target_cohorts_node' | 'cohort_definition_set_node' | 
-                'era_covariate_settings_node' | 'seasonality_covariate_settings_node' | 'nco_cohort_set_node'):
+            case ('db_reader_node' | 'csv_node'):
                 result = _node.task(task_run_context)
             case _:
                 result = _node.task(input, task_run_context)

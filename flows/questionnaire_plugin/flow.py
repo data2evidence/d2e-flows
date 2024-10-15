@@ -4,8 +4,8 @@ from uuid import uuid4
 from typing import List
 from datetime import datetime
 
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect import flow, task
+from prefect.logging import get_run_logger
 
 from flows.questionnaire_plugin.types import *
 
@@ -13,7 +13,7 @@ from shared_utils.dao.DBDao import DBDao
 from shared_utils.types import SupportedDatabaseDialects
 
     
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def questionnaire_plugin(options: QuestionnaireOptionsType):
     logger = get_run_logger()
 
