@@ -28,7 +28,6 @@ rpy2_logger.setLevel(logging.DEBUG)
 #                 f"Rscript -e \"remotes::install_github('OHDSI/CohortGenerator@v0.11.1',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\"",
 #                 f"Rscript -e \"remotes::install_github('OHDSI/PhenotypeLibrary@v3.32.0',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\"",
 #                 f"Rscript -e \"remotes::install_github('OHDSI/DatabaseConnector@v6.3.2',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\"",
-#                 f"Rscript -e \"install.packages('glue')\""
 #             ]).run()
 #     else:
 #         raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
@@ -65,9 +64,9 @@ def phenotype_plugin(options: PhenotypeOptionsType):
     # print('setup_done')
 
     database_code = 'alpdev_pg'
-    cdmschema_name = "cdm_5pct_9a0f90a32250497d9483c981ef1e1e70"
-    cohortschema_name = "cdm_5pct_zhimin"
-    cohorttable_name = "cohorts_test4_phenotype"
+    cdmschema_name = "cdmdefault"
+    cohortschema_name = "cdmdefault"
+    cohorttable_name = "cohorts_1016_phenotype"
     cohorts_id = '25,3,4'
     cohorts_id_str = f'as.integer(c({cohorts_id}))'
 
@@ -88,9 +87,9 @@ def phenotype_plugin(options: PhenotypeOptionsType):
     logger.info(f'{set_connection_string}')
     logger.info(f'{r_libs_user_directory}')
 
-    print("Starting sleep...")
-    time.sleep(6000)
-    print("Finished sleeping after 20 seconds.")
+    # print("Starting sleep...")
+    # time.sleep(6000)
+    # print("Finished sleeping after 20 seconds.")
 
 
     with robjects.conversion.localconverter(robjects.default_converter):
@@ -149,12 +148,13 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                                                                     cohortDatabaseSchema = cohortschema,
                                                                     cohortTable = cohortTableNames$cohortTable)
                 
+                    print(cohortCounts)
                     print('end cohort coutns')
                     # save cohortgenerator result
                     DatabaseConnector::insertTable(
                         connection = connection,
                         databaseSchema = cohortschema,
-                        tableName = glue("{{cohort_table_name}}_cohortgenerated"),
+                        tableName = paste0({{cohort_table_name}}, "_cohortgenerated"),
                         data = cohortsGenerated,
                         createTable = TRUE,
                         tempTable = FALSE
@@ -195,10 +195,10 @@ def phenotype_plugin(options: PhenotypeOptionsType):
 
                 print('end cohort generator')
                 # extract patient id
-                person_sql <- glue("SELECT person_id FROM {{cdmschema}}.person")
+                person_sql <- paste0("SELECT person_id FROM ", {{cdmschema}} ,".person")
                 person_id <- renderTranslateQuerySql(connection = connection, sql = person_sql)
 
-                cohort_sql <- glue("SELECT subject_id, cohort_definition_id FROM {{cohortschema}}.{{cohort_table_name}}")
+                cohort_sql <- paste0("SELECT subject_id, cohort_definition_id FROM ", {{cohortschema}}, ".", {{cohort_table_name}})
                 cohort_data <- renderTranslateQuerySql(connection = connection, sql = cohort_sql)
 
                 # Initialize the table
@@ -227,7 +227,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 DatabaseConnector::insertTable(
                     connection = connection,
                     databaseSchema = cohortschema,
-                    tableName = glue("{{cohort_table_name}}_result_all"),
+                    tableName = paste0({{cohort_table_name}}, "_result_all"),
                     data = result_df,
                     createTable = TRUE,
                     tempTable = FALSE
@@ -237,7 +237,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 DatabaseConnector::insertTable(
                     connection = connection,
                     databaseSchema = cohortschema,
-                    tableName = glue("{{cohort_table_name}}_result_master"),
+                    tableName = paste0({{cohort_table_name}}, "_result_master"),
                     data = master_table,
                     createTable = TRUE,
                     tempTable = FALSE
