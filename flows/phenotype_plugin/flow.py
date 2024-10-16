@@ -54,20 +54,20 @@ def phenotype_plugin(options: PhenotypeOptionsType):
     logger = get_run_logger()
     logger.info('Running Phenotype')
         
-    # database_code = options.databaseCode
-    # cdmschema_name = options.cdmschemaName
-    # cohortschema_name = options.cohortschemaName
-    # cohorttable_name = options.cohorttableName
-    # cohorts_id = options.cohortsId
+    database_code = options.databaseCode
+    cdmschema_name = options.cdmschemaName
+    cohortschema_name = options.cohortschemaName
+    cohorttable_name = options.cohorttableName
+    cohorts_id = options.cohortsId
 
     # setup_plugin()
     # print('setup_done')
 
-    database_code = 'alpdev_pg'
-    cdmschema_name = "cdmdefault"
-    cohortschema_name = "cdmdefault"
-    cohorttable_name = "cohorts_1016_phenotype"
-    cohorts_id = '25,3,4'
+    # database_code = 'alpdev_pg'
+    # cdmschema_name = "cdmdefault"
+    # cohortschema_name = "cdmdefault"
+    # cohorttable_name = "cohorts_1016_phenotype"
+    # cohorts_id = '25,3,4'
     cohorts_id_str = f'as.integer(c({cohorts_id}))'
 
    
