@@ -1581,9 +1581,15 @@
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": {
-                "repo_owner": {"title": "repo_owner", "default": "PrefectHQ", "position": 0, "type": "string"},
-                "repo_name": {"title": "repo_name", "default": "prefect", "position": 1, "type": "string"}
+            "properties": {"options": {"title": "options", "position": 0, "allOf": [{"$ref": "#/definitions/PhenotypeOptionsType"}]}},
+            "required": ["options"],
+            "definitions": {
+                "PhenotypeOptionsType": {
+                    "title": "PhenotypeOptionsType",
+                    "type": "object",
+                    "properties": {"description": {"title": "Description", "type": "string"}, "owner": {"title": "Owner", "type": "string"}},
+                    "required": ["description", "owner"]
+                }
             }
           }
         }

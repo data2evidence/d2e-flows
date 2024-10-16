@@ -1,6 +1,8 @@
 from rpy2 import robjects
 from functools import partial
 from datetime import datetime
+import time
+
 
 from prefect.variables import Variable
 from prefect_shell import ShellOperation
@@ -20,6 +22,7 @@ from shared_utils.api.PortalServerAPI import PortalServerAPI
 
 def setup_plugin(release_version):
     r_libs_user_directory = Variable.get("r_libs_user").value
+    print(release_version)
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -49,6 +52,9 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
 
     try:
         setup_plugin(release_version)
+        print("Starting sleep...")
+        time.sleep(6000)
+        print("Finished sleeping after 20 seconds.")
         
         omop_cdm_dao = DBDao(use_cache_db=use_cache_db,
                              database_code=database_code, 

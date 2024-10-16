@@ -5,7 +5,7 @@ from prefect_shell import ShellOperation
 from prefect import flow, task, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
-from flows.phenotype_plugin.types_new import PhenotypeOptionsType
+from flows.phenotype_plugin.types import PhenotypeOptionsType
 
 from shared_utils.types import UserType
 from shared_utils.dao.DBDao import DBDao
@@ -62,10 +62,10 @@ def phenotype_plugin(options: PhenotypeOptionsType):
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''
                    
-library(DatabaseConnector)
-library(CohortGenerator)
-library(PhenotypeLibrary)
-library(glue)
+.libPaths(c('{r_libs_user_directory}',.libPaths()))
+library('CohortGenerator', lib.loc = '{r_libs_user_directory}')
+{set_db_driver_env_string}
+{set_connection_string}
 
 create_cohort_definitionsets <- function(cohorts_ID) {{
     # For multiple cohorts
@@ -201,14 +201,11 @@ DatabaseConnector::insertTable(
 )
         ''')
 
-if __name__ == "__main__":
-    options = {
-        # "databaseCode":"alpdev_pg",
-        # "cdmschemaName":"cdm_5pct_9a0f90a32250497d9483c981ef1e1e70",
-        # "cohortschemaName": "cdm_5pct_zhimin",
-        # "cohorttableName": "cohorts_trextest2_phenotype",
-        # "cohortsId": "default",
-        "description": 'test',  
-        "owner": "testowner"
-               }
-    phenotype_plugin(options=options)
+# if __name__ == "__main__":
+#     options = {"databaseCode":"alpdev_pg",
+#                "cdmschemaName":"cdm_5pct_9a0f90a32250497d9483c981ef1e1e70",
+#                "cohortschemaName": "cdm_5pct_zhimin",
+#                "cohorttableName": "cohorts_trextest2_phenotype",
+#                "cohortsId": "default"
+#                }
+#     phenotype_plugin.serve(name="phenotype_plugin")

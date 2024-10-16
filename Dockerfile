@@ -31,6 +31,7 @@ RUN chown -R docker:docker /app/synpuf1k
 # Create folder to store R packages installed during runtime for plugins which require custom R packages
 RUN mkdir -p /home/docker/plugins/R/site-library
 RUN chown -R docker:docker /home/docker/plugins/R/site-library
+COPY --chown=docker:docker ./.Renviron /home/docker/.Renviron
 
 # Add Apache Ant for i2b2 data model creation
 ENV ANT_VERSION=1.9.6
@@ -52,6 +53,10 @@ RUN chown -R docker:alp ./cdw-config
 
 COPY --chown=docker:docker --chmod=711 ./requirements.txt .
 RUN pip install -r requirements.txt
+
+# # ZHIMIN for development
+# COPY --chown=docker:docker --chmod=711 ./requirements-dev.txt .
+# RUN pip install -r requirements-dev.txt
 
 COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
 COPY --chown=docker:docker --chmod=711 ./flows flows
