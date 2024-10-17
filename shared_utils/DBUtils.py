@@ -169,7 +169,7 @@ class DBUtils:
                     dialect = database_credentials.get('dialect')
                     if connectToDuckdb:
                         dialect = 'duckdb'
-                    database_credentials["databaseName"] = f"B|{dialect}|{database_credentials.get('databaseName')}|{schema_name}"
+                    database_credentials["databaseName"] = f"B|{dialect}|{database_credentials.get('databaseName')}|{schema_name}|cdmvocab"
                     database_credentials["adminUser"] = database_credentials["readUser"] = "Bearer " + OpenIdAPI().getClientCredentialToken()
                     database_credentials["adminPassword"] = database_credentials["readPassword"] = "qwerty"
                     database_credentials["host"] = Variable.get("cachedb_host")
