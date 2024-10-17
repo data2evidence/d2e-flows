@@ -56,11 +56,10 @@ def phenotype_plugin(options: PhenotypeOptionsType):
     cohorttable_name = options.cohorttableName
     cohorts_id = options.cohortsId
     
-     
     if cohorts_id == 'default':
-        set_cohorts_id_str = "cohorts_id <- 'default'"
+        cohorts_id_str = cohorts_id
     elif validate_integer_string(cohorts_id):
-        set_cohorts_id_str = f'cohorts_id <- as.integer(c({cohorts_id}))'
+        cohorts_id_str = f'as.integer(c({cohorts_id}))'
    
     use_cache_db = options.use_cache_db
     user = UserType.ADMIN_USER
@@ -88,7 +87,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 create_cohort_definitionsets <- function(cohorts_ID) {{
                     # For multiple cohorts
                     if (is.character(cohorts_ID) && cohorts_ID == 'default') {{
-                        cohorts <- getPhenotypeLog()  # showHidden=FALSE
+                        cohorts <- getPhenotypeLog()
                         cohortDefinitionSets <- getPlCohortDefinitionSet(cohorts$cohortId[1:nrow(cohorts)])
                         # To solve the 921.json problem
                         cohortDefinitionSets <- cohortDefinitionSets[cohortDefinitionSets$cohortId!=921,]
@@ -101,7 +100,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                     }}
                     return(cohortDefinitionSets)
                 }}
-
+                                
                 create_cohorts <- function(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets) {{
                     # Create the cohort tables to hold the cohort generation results
                     cohortTableNames <- getCohortTableNames(cohortTable = cohort_table_name)
@@ -133,7 +132,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                         createTable = TRUE,
                         tempTable = FALSE
                     )
-                    print(paste0("Complete saving cohort table to ", {{cohortschema}}))
+
                     return(list(cohortsGenerated=cohortsGenerated, cohortCounts=cohortCounts))
                 }}
 
@@ -153,13 +152,11 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                     result_df <- data.frame(result_matrix, check.names = FALSE)
 
                     # Assign integer 1 to subjects those belong to certain cohorts
-                    if (nrow(cohort_data) > 0) {{
-                        for (i in 1:nrow(cohort_data)) {{
-                            subject <- cohort_data$SUBJECT_ID[i]
-                            cohort <- paste0("CohortID_", cohort_data$COHORT_DEFINITION_ID[i])
-                            result_df[subject, cohort] <- 1
-                            }}
-                    }}
+                    for (i in 1:nrow(cohort_data)) {{
+                        subject <- cohort_data$SUBJECT_ID[i]
+                        cohort <- paste0("CohortID_", cohort_data$COHORT_DEFINITION_ID[i])
+                        result_df[subject, cohort] <- 1
+                        }}
 
                     # Add PERSON_ID as the first column
                     result_df <- cbind(PERSON_ID = rownames(result_df), result_df)
@@ -176,8 +173,8 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                         createTable = TRUE,
                         tempTable = FALSE
                     )
-                    # Save master table, showHidden=TRUE, display each required cohort in master table
-                    master_table <- data.frame(getPhenotypeLog(cohorts_id, showHidden=TRUE)) 
+                    # Save master table
+                    master_table <- data.frame(getPhenotypeLog(cohorts_id))
                     DatabaseConnector::insertTable(
                         connection = connection,
                         databaseSchema = cohortschema,
@@ -186,7 +183,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                         createTable = TRUE,
                         tempTable = FALSE
                     )
-                    print(paste0("Complete saving result table to ", {{cdmschema}}))
+                    print(f'Complete saving result table to {{cdmschema}}')
                 }}
 
                 # Connect to Postgres database using hostname
@@ -196,12 +193,13 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 cdmschema <- '{cdmschema_name}'
                 cohortschema <- '{cohortschema_name}'
                 cohort_table_name <- '{cohorttable_name}'
-                {set_cohorts_id_str}
+                cohorts_id <- '{cohorts_id_str}'
 
                 cohortDefinitionSets <- create_cohort_definitionsets(cohorts_id)
                 cohorts <- create_cohorts(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets)
+                cohorts_details_table <- getPhenotypeLog(cohortIds = cohorts$cohortsGenerated$cohortId)
                 create_result_tables(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets)
-                
+
         ''')
 
     logger.info('phenotype_donellla')
