@@ -47,16 +47,15 @@ def validate_integer_string(input_string):
 def phenotype_plugin(options: PhenotypeOptionsType):
     logger = get_run_logger()
     logger.info('Running Phenotype')
+    setup_plugin()
+    logger.info('Setup Done')
 
-    # setup_plugin()
-    
     database_code = options.databaseCode
     cdmschema_name = options.cdmschemaName
     cohortschema_name = options.cohortschemaName
     cohorttable_name = options.cohorttableName
     cohorts_id = options.cohortsId
     
-     
     if cohorts_id == 'default':
         set_cohorts_id_str = "cohorts_id <- 'default'"
     elif validate_integer_string(cohorts_id):
