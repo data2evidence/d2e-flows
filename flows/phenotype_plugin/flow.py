@@ -144,18 +144,18 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                     cohort_sql <- paste0("SELECT subject_id, cohort_definition_id FROM ", {{cohortschema}}, ".", {{cohort_table_name}})
                     cohort_data <- renderTranslateQuerySql(connection = connection, sql = cohort_sql)
                     cohorts_id <- cohortDefinitionSets$cohortId
-
+                    
+                    # Initialize table
                     result_matrix <- matrix(0, 
                                         nrow = nrow(person_id), 
                                         ncol = length(cohorts_id),
                                         dimnames = list(person_id$PERSON_ID, paste0("CohortID_", cohorts_id)))
-
                     result_df <- data.frame(result_matrix, check.names = FALSE)
 
                     # Assign integer 1 to subjects those belong to certain cohorts
                     if (nrow(cohort_data) > 0) {{
                         for (i in 1:nrow(cohort_data)) {{
-                            subject <- cohort_data$SUBJECT_ID[i]
+                            subject <- as.character(cohort_data$SUBJECT_ID[i])
                             cohort <- paste0("CohortID_", cohort_data$COHORT_DEFINITION_ID[i])
                             result_df[subject, cohort] <- 1
                             }}
@@ -164,7 +164,6 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                     # Add PERSON_ID as the first column
                     result_df <- cbind(PERSON_ID = rownames(result_df), result_df)
                     rownames(result_df) <- NULL
-
                     print('Complete creating result table')
 
                     # Save result table
