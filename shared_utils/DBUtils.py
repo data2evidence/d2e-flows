@@ -151,9 +151,7 @@ class DBUtils:
 
 
     def __extract_database_credentials(self, schema_name: str = None) -> dict:
-        secret_block = Secret.load("database-credentials").get()
-        database_credentials_list = json.loads(secret_block)
-        
+        database_credentials_list = Secret.load("database-credentials").get()        
         if database_credentials_list == []:
             raise ValueError(
                 f"'DATABASE_CREDENTIALS' environment variable is empty!")
@@ -170,8 +168,8 @@ class DBUtils:
                     database_credentials["databaseName"] = f"B|{database_credentials.get('dialect')}|{database_credentials.get('databaseName')}|{schema_name}"
                     database_credentials["adminUser"] = database_credentials["readUser"] = "Bearer " + OpenIdAPI().getClientCredentialToken()
                     database_credentials["adminPassword"] = database_credentials["readPassword"] = "qwerty"
-                    database_credentials["host"] = Variable.get("cachedb_host").value
-                    database_credentials["port"]  = Variable.get("cachedb_port").value
+                    database_credentials["host"] = Variable.get("cachedb_host")
+                    database_credentials["port"]  = Variable.get("cachedb_port")
         
         return database_credentials
 

@@ -4,10 +4,10 @@ from datetime import datetime
 import time
 
 
+from prefect import flow, task
 from prefect.variables import Variable
 from prefect_shell import ShellOperation
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect.logging import get_run_logger
 
 from flows.omop_cdm_plugin.types import *
 from flows.omop_cdm_plugin.utils import *
@@ -19,10 +19,9 @@ from shared_utils.create_dataset_tasks import *
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
 
-
+@task
 def setup_plugin(release_version):
-    r_libs_user_directory = Variable.get("r_libs_user").value
-    print(release_version)
+    r_libs_user_directory = Variable.get("r_libs_user")
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -32,7 +31,7 @@ def setup_plugin(release_version):
     else:
         raise ValueError("Prefect variable: 'r_libs_user' is empty.")
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def omop_cdm_plugin(options: OmopCDMPluginOptions):
     match options.flow_action_type:
         case FlowActionType.CREATE_DATA_MODEL:
@@ -122,7 +121,7 @@ def create_omop_cdm_dataset(options: OmopCDMPluginOptions):
 @task(log_prints=True)
 def create_cdm_tables(dbdao, cdm_version: str, logger):
     # currently only supports pg dialect
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
 
     admin_user =  UserType.ADMIN_USER
     set_connection_string = dbdao.get_database_connector_connection_string(

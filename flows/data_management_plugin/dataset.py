@@ -1,10 +1,12 @@
 from functools import partial
 from datetime import datetime
 
-from prefect import get_run_logger, task
+from prefect import task
+from prefect.logging import get_run_logger
 
 from flows.data_management_plugin.hooks import *
 from flows.data_management_plugin.const import *
+from flows.data_management_plugin.types import FlowActionType
 
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.dao.UserDao import UserDao
@@ -73,7 +75,6 @@ def create_schema_tasks(dialect: str,
 
         # create schema if not exists
         create_db_schema_wo(schema_dao)
-
         if count == 0 or count is None:
             action = LiquibaseAction.UPDATE
         elif count > 0:
@@ -138,9 +139,9 @@ def update_datamodel(flow_action_type: str,
 
     
     match flow_action_type:
-        case LiquibaseAction.UPDATE:
+        case FlowActionType.UPDATE_DATA_MODEL:
             action = LiquibaseAction.UPDATE
-        case LiquibaseAction.CHANGELOG_SYNC:
+        case FlowActionType.CHANGELOG_SYNC:
             action = LiquibaseAction.CHANGELOG_SYNC
 
     try:

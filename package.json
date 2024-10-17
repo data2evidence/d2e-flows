@@ -1576,26 +1576,29 @@
             }
           }
         },
-        {          
-          "name": "hello_world_plugin",
-          "type": "phenotype",
-          "entrypoint": "flows.hello_world_plugin.flow.hello_world_plugin",
-          "tags": [
-            "phenotype"
-          ],
+        {
+          "name": "strategus_plugin",
+          "type": "strategus",
+          "entrypoint": "flows.strategus_plugin.flow.strategus_plugin",
+          "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": {"options": {"title": "options", "position": 0, "allOf": [{"$ref": "#/definitions/PhenotypeOptionsType"}]}},
-            "required": ["options"],
-            "definitions": {
-                "PhenotypeOptionsType": {
-                    "title": "PhenotypeOptionsType",
-                    "type": "object",
-                    "properties": {"description": {"title": "Description", "type": "string"}, "owner": {"title": "Owner", "type": "string"}},
-                    "required": ["description", "owner"]
-                }
-            }
+            "properties": {
+              "json_graph": {
+                "position": 0,
+                "title": "json_graph"
+              },
+              "options": {
+                "position": 1,
+                "title": "options"
+              }
+            },
+            "required": [
+              "json_graph",
+              "options"
+            ]
+
           }
         }
       ]
