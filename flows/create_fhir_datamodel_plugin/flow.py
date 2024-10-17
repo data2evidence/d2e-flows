@@ -9,8 +9,9 @@ def create_fhir_datamodel_plugin(options: CreateFhirDataModelOptions):
     
     database_code = options.database_code
     schema_name = options.schema_name
+    vocab_schema = options.vocab_schema
     
     try:
-        readJsonFileAndCreateDuckdbTables(database_code=database_code, schema_name=schema_name)
+        readJsonFileAndCreateDuckdbTables(database_code=database_code, schema_name=schema_name, vocab_schema=vocab_schema)
     except Exception as e:
         logger.error(e)

@@ -1501,6 +1501,9 @@
           "tags": [
             "FHIRDataModel"
           ],
+          "volumes": [
+            "fhir-schema-file-1:/home/docker/fhir"
+          ],
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
@@ -1524,11 +1527,16 @@
                   "schema_name": {
                     "title": "Schema Name",
                     "type": "string"
+                  },
+                  "vocab_schema": {
+                    "title": "Vocab Schema",
+                    "type": "string"
                   }
                 },
                 "required": [
                   "database_code",
-                  "schema_name"
+                  "schema_name",
+                  "vocab_schema"
                 ],
                 "title": "CreateFhirDataModelOptions",
                 "type": "object"

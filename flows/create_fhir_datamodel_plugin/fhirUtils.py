@@ -1,7 +1,7 @@
-import pandas as pd
 from shared_utils.dao.DBDao import DBDao
 import sqlalchemy as sql
 from prefect.logging import get_run_logger
+from prefect.variables import Variable
 
 def getFhirDataModelForObject(listOfObjectColumns, isArray):
     return f"struct({', '.join(listOfObjectColumns)}){'[]' if isArray else ''}"
@@ -190,21 +190,21 @@ def parseFhirSchemaJsonFile(fhirSchema, dbdao: DBDao):
         logger.info(f'Successfully created table: {resource}')
     return True
 
-def readJsonFileAndCreateDuckdbTables(database_code: str, schema_name: str):
+def readJsonFileAndCreateDuckdbTables(database_code: str, schema_name: str, vocab_schema: str):
         logger = get_run_logger()
-        schemaPath = '/home/docker/fhir.schema.json'
+        schemaPath = Variable.get("fhir_schema_file") + '/fhir.schema.json'
         try:
             dbdao = DBDao(use_cache_db=True,
                       database_code=database_code, 
                       schema_name=schema_name,
-                      connectToDuckdb=True)
+                      connectToDuckdb=True,
+                      vocab_schema=vocab_schema)
             engine = dbdao.engine
             with engine.connect() as connection:
                 try:
                     logger.info('Read fhir.schema.json file to get fhir definitions')
                     get_schema_json = sql.text(f"select * from '{schemaPath}'")
                     fhir_schema = connection.execute(get_schema_json).fetchall()
-                    # data = pd.DataFrame(fhir_schema)
                 except Exception as e:
                     logger.error(f"Failed to get fhir schema json file': {e}")
                     raise e

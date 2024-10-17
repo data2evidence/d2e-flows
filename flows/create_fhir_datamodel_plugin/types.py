@@ -1,10 +1,8 @@
 from pydantic import BaseModel
-from typing import Optional
-
-
 class CreateFhirDataModelOptions(BaseModel):
-    schema_name: str
     database_code: str
+    schema_name: str
+    vocab_schema: str
 
     @property
     def use_cache_db(self) -> str:
