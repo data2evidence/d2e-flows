@@ -20,7 +20,7 @@ logging.basicConfig()
 rpy2_logger.setLevel(logging.DEBUG)
     
 def setup_plugin():
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
     # force=TRUE for fresh install everytime flow is run
     if (r_libs_user_directory):
         ShellOperation(
@@ -72,7 +72,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
         user_type=user
     )
    
-    r_libs_user_directory = Variable.get("r_libs_user").value
+    r_libs_user_directory = Variable.get("r_libs_user")
 
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''
