@@ -31,7 +31,6 @@ RUN chown -R docker:docker /app/synpuf1k
 # Create folder to store R packages installed during runtime for plugins which require custom R packages
 RUN mkdir -p /home/docker/plugins/R/site-library
 RUN chown -R docker:docker /home/docker/plugins/R/site-library
-COPY --chown=docker:docker ./.Renviron /home/docker/.Renviron
 
 # Add Apache Ant for i2b2 data model creation
 ENV ANT_VERSION=1.9.6
