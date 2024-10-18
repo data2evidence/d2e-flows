@@ -1,4 +1,0 @@
-GITHUB_PAT = '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'
-JAVA_HOME = '/usr/lib/jvm/openjdk-17/bin/java'
-_JAVA_OPTIONS='-Xmx4g'
-_JAVA_OPTIONS='-Xss16m'
