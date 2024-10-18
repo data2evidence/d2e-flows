@@ -1,5 +1,5 @@
 import sys
-import importlib
+import time
 from flows.ner_extract_plugin.types import NerExtractOptions
 from flows.ner_extract_plugin.nel import EntityExtractorLinker
 import pandas as pd
@@ -11,6 +11,11 @@ from prefect.task_runners import SequentialTaskRunner
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
 def ner_extract_plugin(options: NerExtractOptions):
+
+    print('start sleep')
+    time.sleep(6000)
+    print('end sleep')
+
     logger = get_run_logger()
     logger.info(f"The following spacy models are available: {spacy.info()['pipelines']}")
 

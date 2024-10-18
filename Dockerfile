@@ -53,9 +53,6 @@ RUN chown -R docker:alp ./cdw-config
 COPY --chown=docker:docker --chmod=711 ./requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
-COPY --chown=docker:docker --chmod=711 ./flows flows
-
 # Download NLP 2GB linkers
 RUN mkdir -p /home/docker/.scispacy/datasets
 RUN chown -R docker:docker /home/docker/.scispacy/datasets
@@ -77,5 +74,8 @@ RUN python -m pip install --upgrade "pip<24"
 RUN pip install --no-deps https://huggingface.co/kormilitzin/en_core_med7_trf/resolve/main/en_core_med7_trf-any-py3-none-any.whl
 RUN pip install --no-deps https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.1/en_ner_bc5cdr_md-0.5.1.tar.gz
 RUN pip3 install --upgrade pip
+
+COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
+COPY --chown=docker:docker --chmod=711 ./flows flows
 
 USER docker
