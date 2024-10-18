@@ -15,10 +15,7 @@ import time
 import logging
 from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
 
-# Set up a logger
-logging.basicConfig()
-rpy2_logger.setLevel(logging.DEBUG)
-    
+@task
 def setup_plugin():
     r_libs_user_directory = Variable.get("r_libs_user")
     # force=TRUE for fresh install everytime flow is run
@@ -31,6 +28,7 @@ def setup_plugin():
     else:
         raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
 
+@task
 def validate_integer_string(input_string):
     input_string = input_string.strip()
     logger = get_run_logger()
@@ -45,6 +43,10 @@ def validate_integer_string(input_string):
 
 @flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
 def phenotype_plugin(options: PhenotypeOptionsType):
+    # Setup rpy2 logger
+    logging.basicConfig()
+    rpy2_logger.setLevel(logging.DEBUG)
+
     logger = get_run_logger()
     logger.info('Running Phenotype')
     setup_plugin()
