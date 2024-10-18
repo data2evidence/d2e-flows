@@ -1,9 +1,9 @@
 from rpy2 import robjects
 
+from prefect import flow, task
 from prefect.variables import Variable
 from prefect_shell import ShellOperation
-from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect.logging import get_run_logger
 
 from flows.phenotype_plugin.types import PhenotypeOptionsType
 
@@ -41,7 +41,7 @@ def validate_integer_string(input_string):
             raise ValueError(error_message)
     return True
 
-@flow(log_prints=True, persist_result=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def phenotype_plugin(options: PhenotypeOptionsType):
     # Setup rpy2 logger
     logging.basicConfig()
