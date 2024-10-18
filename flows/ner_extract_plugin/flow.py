@@ -1,24 +1,18 @@
 import sys
 import importlib
-from ner_extract_plugin.types import NerExtractType
-from ner_extract_plugin.nel import EntityExtractorLinker
+from flows.ner_extract_plugin.types import NerExtractOptions
+from flows.ner_extract_plugin.nel import EntityExtractorLinker
 import pandas as pd
+import spacy
 
 from prefect import flow, get_run_logger
 from prefect.task_runners import SequentialTaskRunner
 
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-
-
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
-def ner_extract_plugin(options: NerExtractType):
-    spacy_module = importlib.import_module("spacy")
+def ner_extract_plugin(options: NerExtractOptions):
     logger = get_run_logger()
-    # logger.info(f"The following spacy models are available:")
-    logger.info(f"The following spacy models are available: {spacy_module.info()['pipelines']}")
+    logger.info(f"The following spacy models are available: {spacy.info()['pipelines']}")
 
     # load transcripts
     docstr = open(options.doc, 'r').read()

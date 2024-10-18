@@ -1,12 +1,13 @@
-import importlib
 import pandas as pd
 import sys
-from ner_extract_plugin.umls2omop import mapper
+import spacy
+from spacy import linking
+from scispacy import abbreviation
+
+from flows.ner_extract_plugin.umls2omop import mapper
+
 from prefect import get_run_logger
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
 
 class EntityExtractorLinker(object):
     def __init__(self) -> None:
@@ -14,23 +15,20 @@ class EntityExtractorLinker(object):
         pass
 
     def add_pipeline(self, model_name:str, linker_name:str):
-        spacy_module = importlib.import_module("spacy")
 
         # Import EntityLinker
-        scispacy_linking = importlib.import_module("scispacy.linking")
-        EntityLinker = getattr(scispacy_linking, "EntityLinker")
+        EntityLinker = getattr(linking, "EntityLinker")
 
         # Import Abbreviation_Detector
-        Scispacy_abb = importlib.import_module("scispacy.abbreviation")
         AbbreviationDetector = getattr(Scispacy_abb, "AbbreviationDetector")
 
         logger = get_run_logger()
         logger.info(f"Adding pipeline for model '{model_name}' and linker '{linker_name}'")
         logger.info(f"Loading model ...")
-        nlp = spacy_module.load(model_name) 
+        nlp = spacy.load(model_name) 
         logger.info(f"Adding pipe ...")
 
-        # @spacy_module.Language.factory("abbreviation_detector")
+        # @spacy.Language.factory("abbreviation_detector")
         # def create_abbreviation_detector(nlp, name):
         #     return AbbreviationDetector(nlp)
 

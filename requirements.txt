@@ -17,3 +17,7 @@ torch==2.2.2
 transformers>=4.34.0,<5.0.0
 nmslib==2.1.1
 pyarrow==17.0.0
+spacy==3.7.6
+spacy-transformers==1.1.9
+scispacy==0.5.4
+nmslib==2.1.1

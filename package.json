@@ -1569,6 +1569,37 @@
               "options"
             ]
           }
+        },
+        {
+          "name": "ner_extract_plugin",
+          "type": "NLP",
+          "entrypoint": "flows.flows/ner_extract_plugin.flow.ner_extract_plugin",
+          "tags": [],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+                "options": {
+                    "title": "options",
+                    "position": 0,
+                    "allOf": [{"$ref": "#/definitions/NerExtractOptions"}]
+                }
+            },
+            "required": ["options"],
+            "definitions": {
+                "NerExtractOptions": {
+                    "title": "NerExtractOptions",
+                    "type": "object",
+                    "properties": {
+                        "doc": {
+                            "title": "Doc",
+                            "default": "external/transcript1.txt",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+          }
         }
       ]
     }
