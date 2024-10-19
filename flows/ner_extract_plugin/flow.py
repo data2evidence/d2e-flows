@@ -5,11 +5,11 @@ from flows.ner_extract_plugin.nel import EntityExtractorLinker
 import pandas as pd
 import spacy
 
-from prefect import flow, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
+from prefect import flow
+from prefect.logging import get_run_logger
 
 
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def ner_extract_plugin(options: NerExtractOptions):
 
     print('start sleep')
