@@ -4,6 +4,7 @@ import logging
 import pandas as pd
 import traceback as tb
 from rpy2 import robjects
+from sqlalchemy import text
 from functools import partial
 
 from prefect import task, flow
@@ -68,7 +69,7 @@ class SqlNode(Node):
             # create temporary in-memory table and register input dfs as tables
             con = duckdb.connect()
             for table_name, input_node in self.tables.items():
-                table_df = _input[input_node]["result"]
+                table_df = _input[input_node].data.get("result")
                 con.register(table_name, table_df)
             result_df = con.execute(self.sql).fetch_df()
             return result_df
@@ -238,16 +239,10 @@ class SqlQueryNode(Node):
         self.use_cache_db = _node["use_cache_db"]
 
 
-    # Todo: Ibis does not support bound parameters with raw sql
-    def _map_input(self, _input): 
-        _params = {}
-        for paramname in self.params.keys():
-            input_element = _input
-            for path in self.params[paramname]:
-                input_element_a = input_element[path].data
-            _params[paramname] = input_element_a
-        return _params
-
+    def __compile_with_params(self, sqlquery: str, bind_params: dict) -> str:
+        # Use sqlalchemy as ibis does not support bound parameters with raw sql
+        raw_sql = text(sqlquery).bindparams(**bind_params).compile(compile_kwargs={"literal_binds": True})
+        return str(raw_sql)
 
     def _exec(self, _input: dict[str, Result], sqlquery: str) -> pd.DataFrame | None:
         con = None
@@ -259,16 +254,24 @@ class SqlQueryNode(Node):
                                         host=tenant_configs.get("host"),
                                         user=tenant_configs.get("readUser"),
                                         password=tenant_configs.get("readPassword"))
-            # Todo: Use params from _input
-            result = con.execute(expr=sqlquery)
-            if self.is_select:
+            retrieved_params = {param: _input[node].data.get("result") 
+                                for param, node in self.params.items()}
+            
+            compiled_query = self.__compile_with_params(sqlquery, retrieved_params)
+            
+            result = con.sql(compiled_query)
+            if self._is_select:
                 return result.to_pandas()
+            return
         except Exception as e:
             raise e
 
-
     def test(self, _input: dict[str, Result], task_run_context):
-        return self._exec(_input, self.testsqlquery, task_run_context)
+        try:
+            df = self._exec(_input, self.testsqlquery)
+            return Result(False,  df, self, task_run_context)
+        except Exception as e:
+            return Result(True, tb.format_exc(), self, task_run_context)
 
     def task(self, _input: dict[str, Result], task_run_context):
         try:
