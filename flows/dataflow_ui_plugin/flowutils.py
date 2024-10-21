@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from rpy2 import robjects
-import dask.dataframe as dd
 
 def get_node_list(graph):
     nodes = {}
@@ -34,9 +33,6 @@ def convert_py_to_R(python_obj):
     # Convert python object into rpy2 robject
     if python_obj is None:
         return robjects.r("NULL")
-    elif isinstance(python_obj, dd.DataFrame):
-        dd_to_pd_df = python_obj.compute()
-        return convert_py_to_R(dd_to_pd_df)
     elif isinstance(python_obj, pd.DataFrame):
         with (robjects.default_converter + robjects.pandas2ri.converter).context():
             r_df = robjects.conversion.get_conversion().py2rpy(python_obj)
@@ -91,11 +87,7 @@ def convert_R_to_py(r_obj, name=""):
             return result
 
 def serialize_to_json(data):
-    if isinstance(data, dd.DataFrame):
-        dd_to_pd_df = data.compute()
-        json_df = dd_to_pd_df.to_json(orient="records")
-        return json_df
-    elif isinstance(data, pd.DataFrame):
+    if isinstance(data, pd.DataFrame):
         json_df = data.to_json(orient="records", default_handler=str)
         return json_df
     elif isinstance(data, dict):
