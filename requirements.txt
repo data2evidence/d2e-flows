@@ -1,7 +1,4 @@
-prefect==3.0.3
-prefect[dask]==3.0.3
-prefect[shell]==3.0.3
-prefect[docker]==3.0.3
+prefect[dask, shell, docker]==3.0.3
 bokeh==2.4.2
 minio==7.2.5
 debugpy==1.8.1
@@ -17,3 +14,4 @@ torch==2.2.2
 transformers>=4.34.0,<5.0.0
 nmslib==2.1.1
 pyarrow==17.0.0
+ibis-framework[duckdb, postgres]==9.5.0
