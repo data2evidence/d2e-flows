@@ -1,8 +1,7 @@
 import pytest
 import nodes.nodes as nodes
 from prefect.testing.utilities import prefect_test_harness
-import dask.dataframe as dd
-
+import pandas as pd
 
 @pytest.fixture(autouse=True, scope="session")
 # Run prefect flows against a temp SQLite db
@@ -32,12 +31,12 @@ def mock_task_run_context():
 
 @pytest.fixture
 def mock_ddf_person():
-    return dd.read_csv("./tests/data/person.csv")
+    return pd.read_csv("./tests/data/person.csv")
 
 
 @pytest.fixture
 def mock_ddf_death():
-    return dd.read_csv("./tests/data/death.csv")
+    return pd.read_csv("./tests/data/death.csv")
 
 
 @pytest.fixture
@@ -185,7 +184,7 @@ def mock_dataflow():
                 {
                     "id": "7", 
                     "type": "python_node",
-                    "python_code": "import sqlalchemy as asql\nimport pandas as pd\nimport dask.dataframe as dd\ndef exec(myinput):\n myinput[\"dbrjson\"] = myinput[\"dbread\"].data.compute().to_json(orient=\"records\")\n myinput[\"Hello\"] = \"hello world!\"\n return myinput\ndef test_exec(myinput):\n return exec(myinput)",
+                    "python_code": "import sqlalchemy as asql\nimport pandas as pd\ndef exec(myinput):\n myinput[\"dbrjson\"] = myinput[\"dbread\"].data.compute().to_json(orient=\"records\")\n myinput[\"Hello\"] = \"hello world!\"\n return myinput\ndef test_exec(myinput):\n return exec(myinput)",
                 },
                 "my_r_node":
                 {
@@ -200,15 +199,6 @@ def mock_dataflow():
                     "dataframe": ["py_node", "mysql_node"],
                     "dbtablename": "JoinedTable",
                     "database": "alp",
-                },
-                "dbread":
-                {
-                    "id": "10", 
-                    "type": "db_reader_node",
-                    "database": "alp",
-                    "sqlquery": "select name, size FROM horses",
-                    "columns": ["name", "size"],
-                    "testdata": [["Mr X", 111], ["Mr Y", 333]],
                 },
                 "sqlquery":
                 {
