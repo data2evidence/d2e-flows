@@ -57,6 +57,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
     cohortschema_name = options.cohortschemaName
     cohorttable_name = options.cohorttableName
     cohorts_id = options.cohortsId
+    vocabschema_name = options.vocabschemaName
     
     if cohorts_id == 'default':
         set_cohorts_id_str = "cohorts_id <- 'default'"
@@ -86,16 +87,22 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 {set_db_driver_env_string}
                 {set_connection_string}
 
-                create_cohort_definitionsets <- function(cohorts_ID) {{
+                create_cohort_definitionsets <- function(cohorts_ID, vocabschema_name) {{
                     # For multiple cohorts
                     if (is.character(cohorts_ID) && cohorts_ID == 'default') {{
                         cohorts <- PhenotypeLibrary::getPhenotypeLog()  # showHidden=FALSE
                         cohortDefinitionSets <- PhenotypeLibrary::getPlCohortDefinitionSet(cohorts$cohortId[1:nrow(cohorts)])
                         # To solve the 921.json problem
                         cohortDefinitionSets <- cohortDefinitionSets[cohortDefinitionSets$cohortId!=921,]
+                        for (i in 1:nrow(cohortDefinitionSets)) {{
+                            cohortDefinitionSets$sql[i] <- CirceR::buildCohortQuery(cohortDefinitionSets$json[i], options = CirceR::createGenerateOptions(generateStats = TRUE, vocabularySchema = vocabschema_name))
+                        }}
                         print('Complete creating cohortDefinitionSets')
                     }} else if (class(cohorts_ID) == "integer") {{
                         cohortDefinitionSets <- PhenotypeLibrary::getPlCohortDefinitionSet(cohorts_ID)
+                        for (i in 1:nrow(cohortDefinitionSets)) {{
+                            cohortDefinitionSets$sql[i] <- CirceR::buildCohortQuery(cohortDefinitionSets$json[i], options = CirceR::createGenerateOptions(generateStats = TRUE, vocabularySchema = vocabschema_name))
+                        }}
                         print('Complete creating cohortDefinitionSets')
                     }} else {{
                         print('Invalid cohorts_ID, should be either "default" or integer string')
@@ -125,6 +132,14 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 
                     print(cohortCounts)
                     print('Complete generating the cohort tables')
+
+                    print("Dropping tempoary cohort stats tables")
+                    CohortGenerator::dropCohortStatsTables(
+                    connection = connection,
+                    cohortDatabaseSchema = cohortschema,
+                    cohortTableNames = cohortTableNames
+                    )
+
                     # Save cohortgenerator result
                     DatabaseConnector::insertTable(
                         connection = connection,
@@ -135,6 +150,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                         tempTable = FALSE
                     )
                     print(paste0("Complete saving cohort table to ", {{cohortschema}}))
+
                     return(list(cohortsGenerated=cohortsGenerated, cohortCounts=cohortCounts))
                 }}
 
@@ -196,9 +212,10 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 cdmschema <- '{cdmschema_name}'
                 cohortschema <- '{cohortschema_name}'
                 cohort_table_name <- '{cohorttable_name}'
+                vocabschema_name <- '{vocabschema_name}'
                 {set_cohorts_id_str}
 
-                cohortDefinitionSets <- create_cohort_definitionsets(cohorts_id)
+                cohortDefinitionSets <- create_cohort_definitionsets(cohorts_id, vocabschema_name)
                 cohorts <- create_cohorts(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets)
                 create_result_tables(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets)
                 

@@ -1568,10 +1568,11 @@
                         "cohortschemaName": {"title": "Cohortschemaname", "type": "string"},
                         "cohorttableName": {"title": "Cohorttablename", "type": "string"},
                         "cohortsId": {"title": "Cohortsid", "type": "string"},
+                        "vocabschemaName": {"title": "Vocabschemaname", "type": "string"},
                         "description": {"title": "Description", "type": "string"},
                         "owner": {"title": "Owner", "type": "string"}
                     },
-                    "required": ["databaseCode", "cdmschemaName", "cohortschemaName", "cohorttableName", "cohortsId", "description", "owner"]
+                    "required": ["databaseCode", "cdmschemaName", "cohortschemaName", "cohorttableName", "cohortsId", "vocabschemaName", "description", "owner"]
                 }
             }
           }
