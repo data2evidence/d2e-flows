@@ -89,13 +89,13 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 create_cohort_definitionsets <- function(cohorts_ID) {{
                     # For multiple cohorts
                     if (is.character(cohorts_ID) && cohorts_ID == 'default') {{
-                        cohorts <- getPhenotypeLog()  # showHidden=FALSE
-                        cohortDefinitionSets <- getPlCohortDefinitionSet(cohorts$cohortId[1:nrow(cohorts)])
+                        cohorts <- PhenotypeLibrary::getPhenotypeLog()  # showHidden=FALSE
+                        cohortDefinitionSets <- PhenotypeLibrary::getPlCohortDefinitionSet(cohorts$cohortId[1:nrow(cohorts)])
                         # To solve the 921.json problem
                         cohortDefinitionSets <- cohortDefinitionSets[cohortDefinitionSets$cohortId!=921,]
                         print('Complete creating cohortDefinitionSets')
                     }} else if (class(cohorts_ID) == "integer") {{
-                        cohortDefinitionSets <- getPlCohortDefinitionSet(cohorts_ID)
+                        cohortDefinitionSets <- PhenotypeLibrary::getPlCohortDefinitionSet(cohorts_ID)
                         print('Complete creating cohortDefinitionSets')
                     }} else {{
                         print('Invalid cohorts_ID, should be either "default" or integer string')
@@ -105,7 +105,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
 
                 create_cohorts <- function(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets) {{
                     # Create the cohort tables to hold the cohort generation results
-                    cohortTableNames <- getCohortTableNames(cohortTable = cohort_table_name)
+                    cohortTableNames <- CohortGenerator::getCohortTableNames(cohortTable = cohort_table_name)
                     CohortGenerator::createCohortTables(connection = connection,
                                                         cohortDatabaseSchema = cohortschema,
                                                         cohortTableNames = cohortTableNames)
@@ -190,7 +190,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 }}
 
                 # Connect to Postgres database using hostname
-                connection <- connect(connectionDetails)
+                connection <- DatabaseConnector::connect(connectionDetails)
                 print('Complete connecting to Database')
                                 
                 cdmschema <- '{cdmschema_name}'
