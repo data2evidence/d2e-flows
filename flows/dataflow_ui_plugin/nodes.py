@@ -241,6 +241,8 @@ class SqlQueryNode(Node):
 
     def __compile_with_params(self, sqlquery: str, bind_params: dict) -> str:
         # Use sqlalchemy as ibis does not support bound parameters with raw sql
+        if not bind_params:
+            return sqlquery
         raw_sql = text(sqlquery).bindparams(**bind_params).compile(compile_kwargs={"literal_binds": True})
         return str(raw_sql)
 
