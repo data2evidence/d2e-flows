@@ -9,9 +9,6 @@ from flows.phenotype_plugin.types import PhenotypeOptionsType
 
 from shared_utils.types import UserType
 from shared_utils.dao.DBDao import DBDao
-from shared_utils.api.AnalyticsSvcAPI import AnalyticsSvcAPI
-import os
-import time
 import logging
 from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
 
@@ -79,11 +76,12 @@ def phenotype_plugin(options: PhenotypeOptionsType):
 
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''
-                print('start object')
+                print('Start loading library')
                 .libPaths(c('{r_libs_user_directory}',.libPaths()))
                 library('CohortGenerator', lib.loc = '{r_libs_user_directory}')
                 library('PhenotypeLibrary', lib.loc = '{r_libs_user_directory}')
                 library('DatabaseConnector', lib.loc = '/usr/local/lib/R/site-library')
+                library('CirceR', lib.loc = '/usr/local/lib/R/site-library')
                 {set_db_driver_env_string}
                 {set_connection_string}
 
@@ -221,4 +219,4 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 
         ''')
 
-    logger.info('phenotype_donellla')
+    logger.info('Phenotype done!')
