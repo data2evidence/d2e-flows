@@ -46,8 +46,8 @@ def phenotype_plugin(options: PhenotypeOptionsType):
 
     logger = get_run_logger()
     logger.info('Running Phenotype')
-    setup_plugin()
-    logger.info('Setup Done')
+    # setup_plugin()
+    # logger.info('Setup Done')
 
     database_code = options.databaseCode
     cdmschema_name = options.cdmschemaName
@@ -78,8 +78,8 @@ def phenotype_plugin(options: PhenotypeOptionsType):
         robjects.r(f'''
                 print('Start loading library')
                 .libPaths(c('{r_libs_user_directory}',.libPaths()))
-                library('CohortGenerator', lib.loc = '{r_libs_user_directory}')
-                library('PhenotypeLibrary', lib.loc = '{r_libs_user_directory}')
+                library('CohortGenerator', lib.loc = '/usr/local/lib/R/site-library')
+                library('PhenotypeLibrary', lib.loc = '/usr/local/lib/R/site-library')
                 library('DatabaseConnector', lib.loc = '/usr/local/lib/R/site-library')
                 library('CirceR', lib.loc = '/usr/local/lib/R/site-library')
                 {set_db_driver_env_string}
