@@ -14,12 +14,12 @@ from shared_utils.types import *
 from shared_utils.DBUtils import DBUtils
 
 class DBDao(DBUtils):
-    def __init__(self, use_cache_db: bool, database_code: str, schema_name: str, connectToDuckdb: bool = False, vocab_schema: str = None):        
+    def __init__(self, use_cache_db: bool, database_code: str, schema_name: str, connect_to_duckdb: bool = False, vocab_schema: str = None):        
         super().__init__(use_cache_db=use_cache_db, database_code=database_code)
         self.schema_name = schema_name
 
         if self.use_cache_db:
-            self.engine = self.create_database_engine(schema_name=self.schema_name, connectToDuckdb = connectToDuckdb, vocab_schema=vocab_schema)
+            self.engine = self.create_database_engine(schema_name=self.schema_name, connect_to_duckdb = connect_to_duckdb, vocab_schema=vocab_schema)
             self.tenant_configs = self.get_tenant_configs(schema_name=self.schema_name)
         else:
             self.engine = self.create_database_engine(user_type=UserType.ADMIN_USER)

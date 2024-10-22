@@ -197,7 +197,7 @@ def readJsonFileAndCreateDuckdbTables(database_code: str, schema_name: str, voca
             dbdao = DBDao(use_cache_db=True,
                       database_code=database_code, 
                       schema_name=schema_name,
-                      connectToDuckdb=True,
+                      connect_to_duckdb=True,
                       vocab_schema=vocab_schema)
             engine = dbdao.engine
             with engine.connect() as connection:
