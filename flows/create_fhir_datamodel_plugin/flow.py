@@ -1,7 +1,7 @@
 from prefect.logging import get_run_logger
 from prefect import flow
 from flows.create_fhir_datamodel_plugin.types import *
-from flows.create_fhir_datamodel_plugin.fhirUtils import readJsonFileAndCreateDuckdbTables
+from flows.create_fhir_datamodel_plugin.fhir_utils import read_json_file_and_create_duckdb_tables
 
 @flow(log_prints=True)
 def create_fhir_datamodel_plugin(options: CreateFhirDataModelOptions):
@@ -12,6 +12,6 @@ def create_fhir_datamodel_plugin(options: CreateFhirDataModelOptions):
     vocab_schema = options.vocab_schema
     
     try:
-        readJsonFileAndCreateDuckdbTables(database_code=database_code, schema_name=schema_name, vocab_schema=vocab_schema)
+        read_json_file_and_create_duckdb_tables(database_code=database_code, schema_name=schema_name, vocab_schema=vocab_schema)
     except Exception as e:
         logger.error(e)
