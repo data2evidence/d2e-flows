@@ -12,7 +12,7 @@ class FlowActionType(str, Enum):
     CREATE_DATA_MODEL = "create_datamodel"
     GET_VERSION_INFO = "get_version_info"
     UPDATE_DATA_MODEL = "update_datamodel"
-    CREATE_CDMSCHEMA = "create_cdm_schema"
+    CREATE_SEED_SCHEMAS = "create_seed_schemas"
 
 
 class CDMVersion(str, Enum):

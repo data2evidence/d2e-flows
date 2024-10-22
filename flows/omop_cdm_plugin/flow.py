@@ -23,8 +23,8 @@ def omop_cdm_plugin(options: OmopCDMPluginOptions):
             update_dataset_metadata_flow(options)    
         case FlowActionType.UPDATE_DATA_MODEL:
             update_omop_cdm_dataset_flow(options)
-        case FlowActionType.CREATE_CDMSCHEMA:
-            create_cdm_vocab_schema_flow(options)
+        case FlowActionType.CREATE_SEED_SCHEMAS:
+            create_seed_schemas_flow(options)
         case _:
             error_msg = f"Flow action type '{options.flow_action_type}' not supported, only '{[action.value for action in FlowActionType]}'"
             logger.error(error_msg)
@@ -69,7 +69,7 @@ def create_omop_cdm_dataset_flow(options: OmopCDMPluginOptions, skip_setup: bool
                         )
 
 
-def create_cdm_vocab_schema_flow(options: OmopCDMPluginOptions):
+def create_seed_schemas_flow(options: OmopCDMPluginOptions):
     create_vocab_schema(options)
     create_dataset_schema(options)
 
