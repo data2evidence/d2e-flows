@@ -1271,7 +1271,9 @@
               "FlowActionType": {
                 "enum": [
                   "create_datamodel",
-                  "get_version_info"
+                  "get_version_info",
+                  "update_datamodel",
+                  "create_cdm_schema"
                 ],
                 "title": "FlowActionType",
                 "type": "string"
@@ -1286,8 +1288,16 @@
                     "type": "string"
                   },
                   "data_model": {
-                    "title": "Data Model",
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": "omop5-4",
+                    "title": "Data Model"
                   },
                   "schema_name": {
                     "anyOf": [
