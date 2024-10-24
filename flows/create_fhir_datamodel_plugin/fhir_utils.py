@@ -198,7 +198,8 @@ def read_json_file_and_create_duckdb_tables(database_code: str, schema_name: str
                       database_code=database_code, 
                       schema_name=schema_name,
                       connect_to_duckdb=True,
-                      vocab_schema=vocab_schema)
+                      vocab_schema=vocab_schema,
+                      duckdb_connection_type='write')
             engine = dbdao.engine
             with engine.connect() as connection:
                 try:
