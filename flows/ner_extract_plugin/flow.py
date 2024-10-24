@@ -1,24 +1,21 @@
-import sys
-import time
-from flows.ner_extract_plugin.types import NerExtractOptions
-from flows.ner_extract_plugin.nel import EntityExtractorLinker
+from flows.ner_extract_plugin.nel import *
+from flows.ner_extract_plugin.types import *
+
 import pandas as pd
 import spacy
+import time
 
 from prefect import flow
 from prefect.logging import get_run_logger
 
-
 @flow(log_prints=True)
 def ner_extract_plugin(options: NerExtractOptions):
-
-    print('start sleep')
-    time.sleep(6000)
-    print('end sleep')
-
     logger = get_run_logger()
-    logger.info(f"The following spacy models are available: {spacy.info()['pipelines']}")
 
+    # logger.info('start sleep')
+    # time.sleep(6000)
+
+    logger.info(f"The following spacy models are available: {spacy.info()['pipelines']}")
     # load transcripts
     docstr = open(options.doc, 'r').read()
 
@@ -39,6 +36,4 @@ def ner_extract_plugin(options: NerExtractOptions):
     # results_df = medical_ner_nel.extract_entities(text=docstr, confidence_threshold=0.8)
 
     logger.info(f"Results for confidence_threshold=0.8: \n {results_df}")
-    # print(results_df)
-
     

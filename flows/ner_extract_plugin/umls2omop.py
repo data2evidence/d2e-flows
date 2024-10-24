@@ -2,7 +2,7 @@ import pandas as pd
 from typing import List, Union
 from flows.ner_extract_plugin.types import *
 
-CUItoOHDSI_CSV=f"{PATH_TO_EXTERNAL_FILES}/CUItoOHDSIv1.csv"
+CUItoOHDSI_CSV=f"flows/ner_extract_plugin/external/CUItoOHDSIv1.csv"
 
 class CIO2OMOP(object):
     def __init__(self, mapping_csv: str) -> None:

@@ -1,12 +1,11 @@
 import pandas as pd
-import sys
 import spacy
-from spacy import linking
-from scispacy import abbreviation
+from scispacy.linking import EntityLinker
+from scispacy.abbreviation import AbbreviationDetector
 
 from flows.ner_extract_plugin.umls2omop import mapper
 
-from prefect import get_run_logger
+from prefect.logging import get_run_logger
 
 
 class EntityExtractorLinker(object):
@@ -15,13 +14,6 @@ class EntityExtractorLinker(object):
         pass
 
     def add_pipeline(self, model_name:str, linker_name:str):
-
-        # Import EntityLinker
-        EntityLinker = getattr(linking, "EntityLinker")
-
-        # Import Abbreviation_Detector
-        AbbreviationDetector = getattr(Scispacy_abb, "AbbreviationDetector")
-
         logger = get_run_logger()
         logger.info(f"Adding pipeline for model '{model_name}' and linker '{linker_name}'")
         logger.info(f"Loading model ...")
@@ -32,12 +24,12 @@ class EntityExtractorLinker(object):
         # def create_abbreviation_detector(nlp, name):
         #     return AbbreviationDetector(nlp)
 
-        # nlp.add_pipe("abbreviation_detector")
-        nlp.add_pipe("abbreviation_detector", name="abbreviation_detector", last=True)
+        nlp.add_pipe("abbreviation_detector")
+        # nlp.add_pipe("abbreviation_detector", name="abbreviation_detector", last=True)
 
         logger.info("Loading linker ...")
         nlp.add_pipe("scispacy_linker", config={"resolve_abbreviations": True, "linker_name": linker_name})
-        logger.info("done")
+        logger.info("Adding pipeline done")
         self.pipelines.append((model_name, linker_name, nlp))
 
     def extract_entities(self, text:str, confidence_threshold:float=0.8):
