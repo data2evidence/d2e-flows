@@ -1505,6 +1505,56 @@
           }
         },
         {
+          "name": "create_fhir_datamodel_plugin",
+          "type": "FHIRDataModel",
+          "entrypoint": "flows.create_fhir_datamodel_plugin.flow.create_fhir_datamodel_plugin",
+          "tags": [
+            "FHIRDataModel"
+          ],
+          "volumes": [
+            "fhir-schema-file-1:/home/docker/fhir"
+          ],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+              "options": {
+                "$ref": "#/definitions/CreateFhirDataModelOptions",
+                "position": 0,
+                "title": "options"
+              }
+            },
+            "required": [
+              "options"
+            ],
+            "definitions": {
+              "CreateFhirDataModelOptions": {
+                "properties": {
+                  "database_code": {
+                    "title": "Database Code",
+                    "type": "string"
+                  },
+                  "schema_name": {
+                    "title": "Schema Name",
+                    "type": "string"
+                  },
+                  "vocab_schema": {
+                    "title": "Vocab Schema",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "database_code",
+                  "schema_name",
+                  "vocab_schema"
+                ],
+                "title": "CreateFhirDataModelOptions",
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
           "name": "add_search_index_with_embeddings_plugin",
           "type": "questionnaire",
           "entrypoint": "flows.add_search_index_with_embeddings_plugin.flow.add_search_index_with_embeddings_plugin",

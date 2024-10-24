@@ -33,7 +33,7 @@ class OpenIdAPI(BaseAPI):
         }
 
         result = requests.post(
-            f"{self.url}/token",
+            f"{self.url}token",
             headers=self.getOptions(),
             verify=self.get_verify_value(),
             json=params
