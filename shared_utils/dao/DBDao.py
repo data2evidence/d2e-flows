@@ -14,12 +14,12 @@ from shared_utils.types import *
 from shared_utils.DBUtils import DBUtils
 
 class DBDao(DBUtils):
-    def __init__(self, use_cache_db: bool, database_code: str, schema_name: str):        
+    def __init__(self, use_cache_db: bool, database_code: str, schema_name: str, connect_to_duckdb: bool = False, vocab_schema: str = None, duckdb_connection_type: str = None):        
         super().__init__(use_cache_db=use_cache_db, database_code=database_code)
         self.schema_name = schema_name
 
         if self.use_cache_db:
-            self.engine = self.create_database_engine(schema_name=self.schema_name)
+            self.engine = self.create_database_engine(schema_name=self.schema_name, connect_to_duckdb = connect_to_duckdb, vocab_schema=vocab_schema, duckdb_connection_type=duckdb_connection_type)
             self.tenant_configs = self.get_tenant_configs(schema_name=self.schema_name)
         else:
             self.engine = self.create_database_engine(user_type=UserType.ADMIN_USER)
@@ -27,7 +27,6 @@ class DBDao(DBUtils):
            
         self.metadata = sql.MetaData(schema_name)  # sql.MetaData()
         self.inspector = sql.inspect(self.engine)
-
 
     def check_schema_exists(self) -> bool:
         return self.inspector.has_schema(self.schema_name)
@@ -93,7 +92,6 @@ class DBDao(DBUtils):
                 cdm_source_col == self.schema_name).values(cdm_version=cdm_version)
             res = connection.execute(update_stmt)
             connection.commit()
-
 
     def update_data_ingestion_date(self):
         with self.engine.connect() as connection:
@@ -245,7 +243,6 @@ class DBDao(DBUtils):
         
         return select_statement
 
-
     # DML
     # Todo: To support bulk insert, Currently only suports single row inserts
     def insert_values_into_table(self, table_name: str, column_value_mapping: list[dict]):
@@ -276,8 +273,6 @@ class DBDao(DBUtils):
                 f"Successfully executed stored prcoedure {sp_name}")
             return res
 
-
-
     def get_sqlalchemy_columns(self, table_name: str, column_names: list[str]) -> dict[str, Column]:
         '''
         Returns a dictionary mapping column names to sqlalchemy Column objects
@@ -291,7 +286,7 @@ class DBDao(DBUtils):
             res = connection.execute(sqlalchemy_statement)
             connection.commit()
             return callback(res)
-
+        
     def get_single_value(self, result) -> Any:  # Todo: Replace other dbdao function
         if result.rowcount == 0:
             raise Exception("No value returned")

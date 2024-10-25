@@ -11,6 +11,8 @@ RELEASE_VERSION_MAPPING = {
 class FlowActionType(str, Enum):
     CREATE_DATA_MODEL = "create_datamodel"
     GET_VERSION_INFO = "get_version_info"
+    UPDATE_DATA_MODEL = "update_datamodel"
+    CREATE_SEED_SCHEMAS = "create_seed_schemas"
 
 
 class CDMVersion(str, Enum):
@@ -21,7 +23,7 @@ class CDMVersion(str, Enum):
 class OmopCDMPluginOptions(BaseModel):
     flow_action_type: FlowActionType
     database_code: str
-    data_model: str # omop5-3, omop5-4
+    data_model: Optional[str] = "omop5-4" # omop5-3, omop5-4
     schema_name: Optional[str]
     vocab_schema: Optional[str]
     datasets: Optional[List] = None

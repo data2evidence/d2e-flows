@@ -45,14 +45,16 @@ class DBUtils:
             return dialect
 
 
-    def create_database_engine(self, schema_name: str = None, user_type: UserType = None):
+    def create_database_engine(self, schema_name: str = None, user_type: UserType = None, connect_to_duckdb: bool = False, vocab_schema: str = None, duckdb_connection_type: str = None):
         '''
         Used for SQLAlchemy 
         '''
         if self.use_cache_db:
             if not schema_name:
                 raise ValueError("schema_name cannot be None")
-            connection_string = self.__create_connection_string(schema_name=schema_name, create_engine=True)
+            elif not vocab_schema:
+                raise ValueError("Vocab schema cannot be None")
+            connection_string = self.__create_connection_string(schema_name=schema_name, create_engine=True, connect_to_duckdb = connect_to_duckdb, vocab_schema=vocab_schema, duckdb_connection_type=duckdb_connection_type)
         else:
             if not user_type:
                 raise ValueError("User Type cannot be None")
@@ -93,13 +95,16 @@ class DBUtils:
                                    schema_name: str = None, 
                                    user_type: UserType = None, 
                                    extra_config: str = "", 
-                                   create_engine: bool = False) -> str:
+                                   create_engine: bool = False,
+                                   connect_to_duckdb: bool = False,
+                                   vocab_schema: str = None,
+                                   duckdb_connection_type: str = None) -> str:
         '''
         Creates database connection string to be used for SqlAlchemy Engine and Database Connector
         '''
         
         if self.use_cache_db:
-            database_credentials = self.__extract_database_credentials(schema_name)
+            database_credentials = self.__extract_database_credentials(schema_name, connect_to_duckdb, vocab_schema=vocab_schema, duckdb_connection_type=duckdb_connection_type)
             user = database_credentials.get("adminUser")
             password = database_credentials.get("adminPassword")
         else:
@@ -150,7 +155,7 @@ class DBUtils:
         return connection_string
 
 
-    def __extract_database_credentials(self, schema_name: str = None) -> dict:
+    def __extract_database_credentials(self, schema_name: str = None, connect_to_duckdb: bool = False, vocab_schema: str = None, duckdb_connection_type: str = 'read') -> dict:
         database_credentials_list = Secret.load("database-credentials").get()        
         if database_credentials_list == []:
             raise ValueError(
@@ -165,7 +170,10 @@ class DBUtils:
                 database_credentials = self.__process_database_credentials(_db)
 
                 if schema_name:
-                    database_credentials["databaseName"] = f"B|{database_credentials.get('dialect')}|{database_credentials.get('databaseName')}|{schema_name}"
+                    dialect = database_credentials.get('dialect')
+                    if connect_to_duckdb:
+                        dialect = 'duckdb'
+                    database_credentials["databaseName"] = f"B|{dialect}|{duckdb_connection_type}|{database_credentials.get('databaseName')}|{schema_name}|{vocab_schema}"
                     database_credentials["adminUser"] = database_credentials["readUser"] = "Bearer " + OpenIdAPI().getClientCredentialToken()
                     database_credentials["adminPassword"] = database_credentials["readPassword"] = "qwerty"
                     database_credentials["host"] = Variable.get("cachedb_host")
