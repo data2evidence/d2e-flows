@@ -23,3 +23,10 @@ class DataflowUIJsonGraphType(BaseModel):
 class DataflowUIType(BaseModel):
     json_graph: DataflowUIJsonGraphType
     options: DataflowUIOptionsType
+    
+    
+class JoinType(str, Enum):
+    INNER_JOIN = "inner_join"
+    LEFT_OUTER = "left_outer"
+    FULL_OUTER = "full_outer"
+    

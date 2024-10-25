@@ -55,8 +55,6 @@ def node_task_execution_hook(task, task_run, state, nodename, nodetype, nodeobj,
                 pass
             case "db_writer_node":
                 pass
-            case "db_reader_node":
-                pass
             case "sql_query_node":
                 pass
             case "data_mapping_node":

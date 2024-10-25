@@ -1,6 +1,6 @@
 import pytest
 import nodes.nodes as nodes
-import dask.dataframe as dd
+import pandas as pd
 
 
 def test_csv_node_task(helpers, mock_dataflow, mock_task_run_context):
@@ -9,7 +9,7 @@ def test_csv_node_task(helpers, mock_dataflow, mock_task_run_context):
     result = csv_node.task(mock_task_run_context)
 
     assert result.error == False
-    assert isinstance(result.data, dd.DataFrame)
+    assert isinstance(result.data, pd.DataFrame)
     assert len(result.data.compute().index) == 5
     helpers.assert_result_metadata(result, mock_task_run_context)
 

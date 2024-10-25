@@ -23,7 +23,6 @@ def mock_GetDBConnection(db_name, user_type):
     ("python_node", "py_node", nodes.PythonNode),
     ("r_node", "my_r_node", nodes.RNode),
     ("db_writer_node", "writer_node", nodes.DbWriter),
-    ("db_reader_node", "dbread", nodes.DbQueryReader),
     ("sql_query_node", "sqlquery", nodes.SqlQueryNode),
     ("data_mapping_node", "my_data_mapping", nodes.DataMappingNode),
 ])
@@ -51,7 +50,6 @@ def test_generate_nodes_flow(setup, mock_dataflow):
         ("py_node", nodes.PythonNode),
         ("my_r_node", nodes.RNode),
         ("writer_node", nodes.DbWriter),
-        ("dbread", nodes.DbQueryReader),
         ("sqlquery", nodes.SqlQueryNode),
         ("my_data_mapping", nodes.DataMappingNode)
     ]
