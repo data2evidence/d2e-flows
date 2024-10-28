@@ -426,87 +426,87 @@ class SqlAlchemyDao(DaoBase):
                 
 
 
-def create_table_from_select(self, source_table: str, target_schema: str, target_table: str, columns_to_copy: list[str], filter_conditions: list) -> int:
-                            
-    sanitized_source_table = self.__sanitize_inputs(source_table)
-    sanitized_target_table = self.__sanitize_inputs(target_table)
-    sanitized_target_schema = self.__sanitize_inputs(target_schema)
+    def create_table_from_select(self, source_table: str, target_schema: str, target_table: str, columns_to_copy: list[str], filter_conditions: list) -> int:
+                                
+        sanitized_source_table = self.__sanitize_inputs(source_table)
+        sanitized_target_table = self.__sanitize_inputs(target_table)
+        sanitized_target_schema = self.__sanitize_inputs(target_schema)
 
-    with self.engine.connect() as connection:
-        metadata_obj = sql.MetaData(schema=self.schema_name)
-        source_table = sql.Table(sanitized_source_table, metadata_obj,
-                                    autoload_with=connection)
-        
-        select_statement = self.create_select_statement(source_table, columns_to_copy, filter_conditions)
+        with self.engine.connect() as connection:
+            metadata_obj = sql.MetaData(schema=self.schema_name)
+            source_table = sql.Table(sanitized_source_table, metadata_obj,
+                                        autoload_with=connection)
+            
+            select_statement = self.create_select_statement(source_table, columns_to_copy, filter_conditions)
 
-        compiled_sql_query = str(select_statement.compile(compile_kwargs={"literal_binds": True}))
-        
-        create_from_select_statement = sql.text(f'''CREATE TABLE {sanitized_target_schema}.{sanitized_target_table} AS ({compiled_sql_query});''')
-        row_count = connection.execute(create_from_select_statement).rowcount
+            compiled_sql_query = str(select_statement.compile(compile_kwargs={"literal_binds": True}))
+            
+            create_from_select_statement = sql.text(f'''CREATE TABLE {sanitized_target_schema}.{sanitized_target_table} AS ({compiled_sql_query});''')
+            row_count = connection.execute(create_from_select_statement).rowcount
 
-    return row_count
+        return row_count
 
-def copy_table_as_dataframe(self, source_table_name: str, columns_to_copy: list[str], filter_conditions: str) -> pd.DataFrame:
-    # Construct select statements with filter conditions
-    select_statement = self.create_select_statement(source_table_name, columns_to_copy, filter_conditions)
-    df = pd.read_sql_query(select_statement, self.engine)
-    return df
-
-def create_select_statement(self, table_name: str, columns_to_select: list[str], filter_conditions: list) -> Select:
-    select_from_conditions = sql.and_(*filter_conditions)
-    with self.engine.connect() as connection:
-        metadata_obj = sql.MetaData(schema=self.schema_name)
-        source_table = sql.Table(table_name, metadata_obj,
-                                    autoload_with=connection)
-        
-        match self.db_dialect:
-            case SupportedDatabaseDialects.HANA:
-                # cast text columns to nclob
-                select_statement = sql.select(*map(lambda x: sql.cast(getattr(source_table.c, x), UnicodeText) if isinstance(source_table.c[x].type, Text) else getattr(source_table.c, x), columns_to_select)).where(select_from_conditions)
-
-            case SupportedDatabaseDialects.POSTGRES:
-                select_statement = sql.select(*map(lambda x: getattr(source_table.c, self.__casefold(x)), columns_to_select)).where(select_from_conditions)
-    
-    return select_statement
-
-def copy_table(self, source_table_name: str, target_table_name: str, target_schema_name: str, columns_to_copy: list[str], filter_conditions: str) -> int:
-    with self.engine.connect() as connection:
-        metadata_obj = sql.MetaData(schema=self.schema_name)
-        source_table = sql.Table(source_table_name, metadata_obj, autoload_with=connection)
-
-        # Copy column from source_table including data type
-        target_columns = [source_table.c[col].copy() for col in columns_to_copy]
-        target_constraints = [constraint.copy() for constraint in source_table.constraints if set(constraint.columns.keys()).issubset(columns_to_copy)]
-        target_metadata = sql.MetaData(schema=target_schema_name)
-        target_table = sql.Table(target_table_name, target_metadata, *target_columns,*target_constraints, schema=target_schema_name)
-        
-        # Create the new table in the database
-        target_metadata.create_all(self.engine, tables=[target_table])
-
-        # Create indexes manually
-        for index in source_table.indexes:
-            index_name = index.name
-            index_columns = [col.name for col in index.columns]
-
-            if set(index_columns).issubset(set(columns_to_copy)):
-                column_objects = [target_table.c[column] for column in index_columns]
-                index = sql.Index(index_name, *column_objects)
-                index.create(connection)
-        
+    def copy_table_as_dataframe(self, source_table_name: str, columns_to_copy: list[str], filter_conditions: str) -> pd.DataFrame:
         # Construct select statements with filter conditions
         select_statement = self.create_select_statement(source_table_name, columns_to_copy, filter_conditions)
+        df = pd.read_sql_query(select_statement, self.engine)
+        return df
 
-        # Insert into target table from source table
-        insert_statement = sql.insert(target_table).from_select(columns_to_copy, select_statement)
+    def create_select_statement(self, table_name: str, columns_to_select: list[str], filter_conditions: list) -> Select:
+        select_from_conditions = sql.and_(*filter_conditions)
+        with self.engine.connect() as connection:
+            metadata_obj = sql.MetaData(schema=self.schema_name)
+            source_table = sql.Table(table_name, metadata_obj,
+                                        autoload_with=connection)
+            
+            match self.db_dialect:
+                case SupportedDatabaseDialects.HANA:
+                    # cast text columns to nclob
+                    select_statement = sql.select(*map(lambda x: sql.cast(getattr(source_table.c, x), UnicodeText) if isinstance(source_table.c[x].type, Text) else getattr(source_table.c, x), columns_to_select)).where(select_from_conditions)
+
+                case SupportedDatabaseDialects.POSTGRES:
+                    select_statement = sql.select(*map(lambda x: getattr(source_table.c, self.__casefold(x)), columns_to_select)).where(select_from_conditions)
         
-        result = connection.execute(insert_statement)
-        connection.commit()
-        
-        if self.db_dialect == SupportedDatabaseDialects.POSTGRES:
-            row_count = result.rowcount
-        elif self.db_dialect == SupportedDatabaseDialects.HANA:
-            select_count_stmt = sql.select(
-                sql.func.count()).select_from(target_table)
-            row_count = connection.execute(
-                select_count_stmt).scalar()   
-    return row_count
+        return select_statement
+
+    def copy_table(self, source_table_name: str, target_table_name: str, target_schema_name: str, columns_to_copy: list[str], filter_conditions: str) -> int:
+        with self.engine.connect() as connection:
+            metadata_obj = sql.MetaData(schema=self.schema_name)
+            source_table = sql.Table(source_table_name, metadata_obj, autoload_with=connection)
+
+            # Copy column from source_table including data type
+            target_columns = [source_table.c[col].copy() for col in columns_to_copy]
+            target_constraints = [constraint.copy() for constraint in source_table.constraints if set(constraint.columns.keys()).issubset(columns_to_copy)]
+            target_metadata = sql.MetaData(schema=target_schema_name)
+            target_table = sql.Table(target_table_name, target_metadata, *target_columns,*target_constraints, schema=target_schema_name)
+            
+            # Create the new table in the database
+            target_metadata.create_all(self.engine, tables=[target_table])
+
+            # Create indexes manually
+            for index in source_table.indexes:
+                index_name = index.name
+                index_columns = [col.name for col in index.columns]
+
+                if set(index_columns).issubset(set(columns_to_copy)):
+                    column_objects = [target_table.c[column] for column in index_columns]
+                    index = sql.Index(index_name, *column_objects)
+                    index.create(connection)
+            
+            # Construct select statements with filter conditions
+            select_statement = self.create_select_statement(source_table_name, columns_to_copy, filter_conditions)
+
+            # Insert into target table from source table
+            insert_statement = sql.insert(target_table).from_select(columns_to_copy, select_statement)
+            
+            result = connection.execute(insert_statement)
+            connection.commit()
+            
+            if self.db_dialect == SupportedDatabaseDialects.POSTGRES:
+                row_count = result.rowcount
+            elif self.db_dialect == SupportedDatabaseDialects.HANA:
+                select_count_stmt = sql.select(
+                    sql.func.count()).select_from(target_table)
+                row_count = connection.execute(
+                    select_count_stmt).scalar()   
+        return row_count
