@@ -9,7 +9,6 @@ from flows.data_management_plugin.const import *
 from flows.data_management_plugin.types import FlowActionType
 
 from shared_utils.dao.DBDao import DBDao
-from shared_utils.dao.UserDao import UserDao
 from shared_utils.create_dataset_tasks import *
 from shared_utils.types import DBCredentialsType, UserType, LiquibaseAction
 
@@ -24,7 +23,7 @@ def create_datamodel(database_code: str,
                      count: int = 0,
                      cleansed_schema_option: bool = False):
 
-    dbdao = DBDao(use_cache_db=False, database_code=database_code, schema_name=schema_name)
+    dbdao = DBDao(use_cache_db=False, database_code=database_code, schema_name=schema_name, vocab_schema_name=vocab_schema)
     tenant_configs = dbdao.tenant_configs
 
     task_status = create_schema_tasks(
@@ -65,7 +64,6 @@ def create_schema_tasks(dialect: str,
                         count: int) -> bool:
     try:
         schema_dao = DBDao(database_code=database_code, schema_name=schema_name, use_cache_db=False)
-        user_dao = UserDao(database_code=database_code, schema_name=schema_name, use_cache_db=False)
         
         create_db_schema_wo = create_schema_task.with_options(
             on_completion=[partial(create_dataset_schema_hook,
@@ -82,7 +80,7 @@ def create_schema_tasks(dialect: str,
 
         create_tables_wo = run_liquibase_update_task.with_options(
             on_failure=[partial(drop_schema_hook,
-                                **dict(schema_dao=schema_dao))])
+                                **dict(dbdao=schema_dao))])
 
         create_tables_wo(action=action,
                          dialect=dialect,
@@ -97,15 +95,15 @@ def create_schema_tasks(dialect: str,
 
         # task
         enable_audit_policies_wo = enable_and_create_audit_policies_task.with_options(
-            on_failure=[partial(drop_schema_hook, **dict(schema_dao=schema_dao))])
+            on_failure=[partial(drop_schema_hook, **dict(dbdao=schema_dao))])
         
         enable_audit_policies_wo(schema_dao)
 
         # task
         create_and_assign_roles_wo = create_and_assign_roles_task.with_options(
-            on_failure=[partial(drop_schema_hook, **dict(schema_dao=schema_dao))])
+            on_failure=[partial(drop_schema_hook, **dict(dbdao=schema_dao))])
         
-        create_and_assign_roles_wo(user_dao)
+        create_and_assign_roles_wo(schema_dao)
 
         if data_model in OMOP_DATA_MODELS:
             cdm_version = DATAMODEL_CDM_VERSION.get(data_model)

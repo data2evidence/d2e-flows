@@ -5,10 +5,10 @@ from sqlalchemy.engine.cursor import CursorResult
 from sqlalchemy import MetaData, Table, select, func, text
 
 from shared_utils.types import UserType
-from shared_utils.DBUtils import DBUtils
+from shared_utils.dao.sqlalchemydao import SqlAlchemyDao
 
 
-class VocabDao(DBUtils):
+class VocabDao(SqlAlchemyDao):
     def __init__(self, use_cache_db: bool, database_code: str, schema_name: str):
         super().__init__(use_cache_db=use_cache_db, database_code=database_code)
         self.schema_name = schema_name

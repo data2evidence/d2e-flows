@@ -1,24 +1,28 @@
+from __future__ import annotations
+
 import os
-from functools import partial
+from typing import TYPE_CHECKING
 
 from prefect import task
 from prefect.logging import get_run_logger
 from prefect.logging.loggers import task_run_logger
 from prefect.server.schemas.states import StateType
 
-from shared_utils.dao.DBDao import DBDao
-from shared_utils.dao.UserDao import UserDao
 from shared_utils.liquibase import Liquibase
 from shared_utils.types import SupportedDatabaseDialects
+
+
+if TYPE_CHECKING:
+    from shared_utils.dao.daobase import DaoBase
+
 
 
 def get_plugin_classpath(flow_name: str) -> str:
     return f'{os.getcwd()}/flows/{flow_name}/'
 
 
-@task(log_prints=True,
-      task_run_name="create_schema_task-{dbdao.schema_name}")
-def create_schema_task(dbdao: DBDao):
+@task(log_prints=True)
+def create_schema_task(dbdao: DaoBase):
     schema_exists = dbdao.check_schema_exists()
     if schema_exists is False:
         dbdao.create_schema()
@@ -28,8 +32,7 @@ def create_schema_task(dbdao: DBDao):
         raise Exception(error_msg)
 
 
-@task(log_prints=True,
-      task_run_name="create_and_assign_roles_task-{userdao.schema_name}")
+@task(log_prints=True)
 def run_liquibase_update_task(**kwargs):
     try:
         liquibase = Liquibase(**kwargs)
@@ -41,9 +44,9 @@ def run_liquibase_update_task(**kwargs):
 
     
 @task(log_prints=True)
-def enable_and_create_audit_policies_task(dbdao: DBDao):
+def enable_and_create_audit_policies_task(dbdao: DaoBase):
     logger = get_run_logger()
-    enable_audit_policies = dbdao.tenant_configs.get("enableAuditPolicies")
+    enable_audit_policies = dbdao.tenant_configs.enableAuditPolicies
     if enable_audit_policies:
         dbdao.enable_auditing()
         dbdao.create_system_audit_policy()
@@ -55,60 +58,60 @@ def enable_and_create_audit_policies_task(dbdao: DBDao):
 
 
 @task(log_prints=True)
-def create_and_assign_roles_task(userdao: UserDao):
+def create_and_assign_roles_task(dbdao: DaoBase):
     logger = get_run_logger()
     
     # Check if schema read role exists
-    match userdao.db_dialect:
+    match dbdao.dialect:
         case SupportedDatabaseDialects.HANA:
-            schema_read_role = f"{userdao.schema_name}_READ_ROLE"
+            schema_read_role = f"{dbdao.schema_name}_READ_ROLE"
         case SupportedDatabaseDialects.POSTGRES:
-            schema_read_role = f"{userdao.schema_name}_read_role"
+            schema_read_role = f"{dbdao.schema_name}_read_role"
 
-    schema_read_role_exists = userdao.check_role_exists(schema_read_role)
+    schema_read_role_exists = dbdao.check_role_exists(schema_read_role)
     if schema_read_role_exists:
         logger.info(f"'{schema_read_role}' role already exists")
     else:
         logger.info(f"'{schema_read_role}' does not exist")
-        userdao.create_read_role(schema_read_role)
+        dbdao.create_read_role(schema_read_role)
         
     # grant schema read role read privileges to schema read role
     logger.info(f"Granting read privileges to '{schema_read_role}'")
-    userdao.grant_read_privileges(schema_read_role)
+    dbdao.grant_read_privileges(schema_read_role)
 
     # Check if read user exists
-    read_user_exists = userdao.check_user_exists(userdao.read_user)
+    read_user_exists = dbdao.check_user_exists(dbdao.read_user)
     if read_user_exists:
-        logger.info(f"'{userdao.read_user}' user already exists")
+        logger.info(f"'{dbdao.read_user}' user already exists")
     else:
-        logger.info(f"'{userdao.read_user}' user does not exist")
-        logger.info(f"Creating user '{userdao.read_user}'..")
-        userdao.create_user(userdao.read_user)
+        logger.info(f"'{dbdao.read_user}' user does not exist")
+        logger.info(f"Creating user '{dbdao.read_user}'..")
+        dbdao.create_user(dbdao.read_user)
 
     # Check if read role exists
-    read_role_exists = userdao.check_role_exists(userdao.read_role)
+    read_role_exists = dbdao.check_role_exists(dbdao.read_role)
     if read_role_exists:
-        logger.info(f"'{userdao.read_role}' role already exists")
+        logger.info(f"'{dbdao.read_role}' role already exists")
     else:
-        logger.info(f"'{userdao.read_role}' role does not exist")
+        logger.info(f"'{dbdao.read_role}' role does not exist")
         logger.info(
-            f"Creating '{userdao.read_role}' role and assigning to '{userdao.read_user}' user")
-        userdao.create_and_assign_read_role(userdao.read_user, userdao.read_role)
+            f"Creating '{dbdao.read_role}' role and assigning to '{dbdao.read_user}' user")
+        dbdao.create_and_assign_read_role(dbdao.read_user, dbdao.read_role)
 
     # Grant read role read privileges
-    logger.info(f"Granting read privileges to '{userdao.read_role}' role")
-    userdao.grant_read_privileges(userdao.read_role)
+    logger.info(f"Granting read privileges to '{dbdao.read_role}' role")
+    dbdao.grant_read_privileges(dbdao.read_role)
 
 
-def drop_schema_hook(task, task_run, state, schema_dao: DBDao):
+def drop_schema_hook(task, task_run, state, dbdao: DaoBase):
     logger = task_run_logger(task_run, task)
     logger.info(
-        f"Dropping schema '{schema_dao.database_code}.{schema_dao.schema_name}'..")
+        f"Dropping schema '{dbdao.database_code}.{dbdao.schema_name}'..")
     try:
-        drop_schema = schema_dao.drop_schema()
+        drop_schema = dbdao.drop_schema()
     except Exception as e:
         logger.info(
-            f"Failed to drop schema {schema_dao.database_code}.{schema_dao.schema_name}")
+            f"Failed to drop schema {dbdao.database_code}.{dbdao.schema_name}")
     else:
         logger.info(
-            f"Successfully dropped schema '{schema_dao.database_code}.{schema_dao.schema_name}'")
+            f"Successfully dropped schema '{dbdao.database_code}.{dbdao.schema_name}'")

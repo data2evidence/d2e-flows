@@ -14,7 +14,6 @@ from flows.dataflow_ui_plugin.flowutils import *
 from flows.dataflow_ui_plugin.types import JoinType
 
 from shared_utils.types import UserType
-from shared_utils.DBUtils import DBUtils
 from shared_utils.dao.DBDao import DBDao
 
 
@@ -253,9 +252,9 @@ class SqlQueryNode(Node):
                                    database_code=self.database, 
                                    schema_name=self.schema).tenant_configs
             con = ibis.postgres.connect(database=self.database,
-                                        host=tenant_configs.get("host"),
-                                        user=tenant_configs.get("readUser"),
-                                        password=tenant_configs.get("readPassword"))
+                                        host=tenant_configs.host,
+                                        user=tenant_configs.readUser,
+                                        password=tenant_configs.readPassword.get_secret_value())
             retrieved_params = {param: _input[node].data.get("result") 
                                 for param, node in self.params.items()}
             

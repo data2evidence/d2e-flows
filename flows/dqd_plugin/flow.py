@@ -105,8 +105,7 @@ def execute_dqd(
     dbdao = DBDao(use_cache_db=use_cache_db, database_code=database_code, schema_name=schema_name)
     
     set_db_driver_env = dbdao.set_db_driver_env()
-    set_read_user_connection = dbdao.get_database_connector_connection_string(schema_name=dbdao.schema_name,
-                                                                              user_type=read_user, 
+    set_read_user_connection = dbdao.get_database_connector_connection_string(user_type=read_user, 
                                                                               release_date=release_date)
 
     logger.info(f'''Running DQD with input parameters:
