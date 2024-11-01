@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel
-
+from prefect.input import RunInput
 
 
 class DBCredentialsType(BaseModel):
@@ -88,3 +88,6 @@ class EntityCountDistributionType(BaseModel):
     NOTE_COUNT: str
     EPISODE_COUNT: str
     SPECIMEN_COUNT: str
+
+class AuthToken(RunInput):
+    token: str
