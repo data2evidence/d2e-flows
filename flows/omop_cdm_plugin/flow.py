@@ -9,7 +9,6 @@ from flows.omop_cdm_plugin.versioninfo import update_dataset_metadata_flow
 from flows.omop_cdm_plugin.create import setup_plugin_task, create_datamodel_parent_task
 
 from shared_utils.dao.DBDao import DBDao
-from shared_utils.dao.UserDao import UserDao
 from shared_utils.create_dataset_tasks import *
 
 
@@ -40,10 +39,6 @@ def create_omop_cdm_dataset_flow(options: OmopCDMPluginOptions, skip_setup: bool
                          database_code=database_code, 
                          schema_name=schema_name)
     
-    userdao = UserDao(use_cache_db=use_cache_db,
-                      database_code=database_code, 
-                      schema_name=schema_name)
-    
     # Create schema if there is no existing schema first
     create_schema_task(omop_cdm_dao)
     
@@ -51,7 +46,7 @@ def create_omop_cdm_dataset_flow(options: OmopCDMPluginOptions, skip_setup: bool
         # Skip setup plugin for seeding
         setup_plugin_wo = setup_plugin_task.with_options(
             on_failure=[partial(
-                drop_schema_hook, **dict(schema_dao=omop_cdm_dao)
+                drop_schema_hook, **dict(dbdao=omop_cdm_dao)
             )]
         )
         setup_plugin_wo(release_version=options.release_version)
@@ -59,12 +54,11 @@ def create_omop_cdm_dataset_flow(options: OmopCDMPluginOptions, skip_setup: bool
     # Parent task with hook to drop schema on failure
     create_datamodel_wo = create_datamodel_parent_task.with_options(
         on_failure=[partial(
-            drop_schema_hook, **dict(schema_dao=omop_cdm_dao)
+            drop_schema_hook, **dict(dbdao=omop_cdm_dao)
         )]
     )
     create_datamodel_wo(cdm_version=options.cdm_version, 
                         schema_dao=omop_cdm_dao,
-                        userdao=userdao, 
                         vocab_schema=options.vocab_schema
                         )
 
