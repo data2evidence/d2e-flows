@@ -459,7 +459,7 @@ class SqlAlchemyDao(DaoBase):
             source_table = sql.Table(table_name, metadata_obj,
                                         autoload_with=connection)
             
-            match self.db_dialect:
+            match self.dialect:
                 case SupportedDatabaseDialects.HANA:
                     # cast text columns to nclob
                     select_statement = sql.select(*map(lambda x: sql.cast(getattr(source_table.c, x), UnicodeText) if isinstance(source_table.c[x].type, Text) else getattr(source_table.c, x), columns_to_select)).where(select_from_conditions)
@@ -502,9 +502,9 @@ class SqlAlchemyDao(DaoBase):
             result = connection.execute(insert_statement)
             connection.commit()
             
-            if self.db_dialect == SupportedDatabaseDialects.POSTGRES:
+            if self.dialect == SupportedDatabaseDialects.POSTGRES:
                 row_count = result.rowcount
-            elif self.db_dialect == SupportedDatabaseDialects.HANA:
+            elif self.dialect == SupportedDatabaseDialects.HANA:
                 select_count_stmt = sql.select(
                     sql.func.count()).select_from(target_table)
                 row_count = connection.execute(
