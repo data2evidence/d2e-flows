@@ -36,6 +36,7 @@ def add_search_index_plugin(options: MeilisearchAddIndexType):
         raise ValueError(errorMessage)
     
 
+
     index_name = f"{database_code}_{vocab_schema_name}_{table_name}"
     # Initialize helper classes
     meilisearch_svc_api = MeilisearchSvcAPI()
