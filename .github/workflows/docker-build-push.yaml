@@ -1,51 +1,57 @@
 name: Docker Build and Push to Azure CR
 
 on:
-  workflow_dispatch:
-    inputs:
-      AZ_REGISTRY_REPOSITORY:
-        type: string
-        description: AZ_REGISTRY_REPOSITORY
-        required: true
-      DOCKER_IMG_TAG_NAME:
-        type: string
-        description: DOCKER_IMG_TAG_NAME
-        required: true
+  push:
+    branches:
+      - trex
 
 jobs:
   build-push-image:
     runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "🎉 The job was manually triggered by: ${{ github.actor }}"
-      
+    strategy:
+      matrix:
+        include: 
+          - AZ_REGISTRY_REPOSITORY: d2e-flow/base
+            context: .
+            dockerfile: Dockerfile
+          - AZ_REGISTRY_REPOSITORY: d2e-flow/nlp
+            context: .
+            dockerfile: Dockerfile_NLP
+
+    steps:      
       - name: Check out repository code
         uses: actions/checkout@v4
-        with: 
-          clean: false
 
+      - name: Setting up variables
+        id: setup
+        run: |
+          DOCKER_IMG_TAG_NAME=$(echo ${{ github.sha }} | cut -c1-8)
+          GIT_BRANCH_NAME=$(echo ${{ github.ref }} )
+          echo DOCKER_IMG_TAG_NAME=$DOCKER_IMG_TAG_NAME >> $GITHUB_OUTPUT 
+          echo GIT_BRANCH_NAME="${GIT_BRANCH_NAME}" >> $GITHUB_OUTPUT
+   
       - name: Login to ACR
         uses: docker/login-action@v3
         with:
           registry: ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io
           username: ${{ secrets.AZ_REGISTRY_USERNAME }}
           password: ${{ secrets.AZ_REGISTRY_PASSWORD }}
-   
-      - name: Build and push
+          
+      - name: Build and Push
         id: build-push
         uses: docker/build-push-action@v6
         with:
           push: true
           platforms: "linux/amd64"
-          tags: ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io/${{ inputs.AZ_REGISTRY_REPOSITORY }}:${{ inputs.DOCKER_IMG_TAG_NAME }}
-          context: .
-          build-args: | 
-            GIT_COMMIT_ARG=${{ github.sha }}
-
-      - name: Output summary 
+          tags: ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io/${{ matrix.AZ_REGISTRY_REPOSITORY }}:${{ steps.setup.outputs.DOCKER_IMG_TAG_NAME }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          
+      - name: Output Summary 
         run: | 
           echo "### Output summary 🚀" >> $GITHUB_STEP_SUMMARY
           echo "Job Status: ${{ job.status }} " >> $GITHUB_STEP_SUMMARY
-          echo "AZ_REGISTRY_REPOSITORY: ${{ inputs.AZ_REGISTRY_REPOSITORY }} " >> $GITHUB_STEP_SUMMARY
-          echo "DOCKER_IMG_TAG_NAME: ${{ inputs.DOCKER_IMG_TAG_NAME }} " >> $GITHUB_STEP_SUMMARY
+          echo "GIT_BRANCH_NAME: ${{ steps.setup.outputs.GIT_BRANCH_NAME }} " >> $GITHUB_STEP_SUMMARY
           echo "GIT_COMMIT_ARG: ${{ github.sha }} " >> $GITHUB_STEP_SUMMARY
+          echo "AZ_REGISTRY_REPOSITORY: ${{ matrix.AZ_REGISTRY_REPOSITORY }} " >> $GITHUB_STEP_SUMMARY
+          echo "DOCKER_IMG_TAG_NAME: ${{ steps.setup.outputs.DOCKER_IMG_TAG_NAME }} " >> $GITHUB_STEP_SUMMARY
