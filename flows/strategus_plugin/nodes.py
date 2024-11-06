@@ -13,8 +13,8 @@ from prefect.blocks.system import Secret
 from flows.strategus_plugin.hooks import node_task_generation_hook
 from flows.strategus_plugin.flowutils import get_node_list, convert_py_to_R, serialize_to_json
 
-from shared_utils.DBUtils import DBUtils
-
+from shared_utils.types import UserType
+from shared_utils.dao.DBDao import DBDao
 
 class Node:
     def __init__(self, node):
@@ -856,15 +856,15 @@ class StrategusNode(Node):
                 os.environ['STRATEGUS_KEYRING_PASSWORD'] = Secret.load("strategus-keyring-password").get()
                 
                 database_code = 'alpdev_pg'
-                dbutils = DBUtils(use_cache_db=False, database_code=database_code)
-                db_credentials = dbutils.get_tenant_configs()
-                
+                db_credentials = DBDao(use_cache_db=self.use_cache_db, 
+                                   database_code=self.database, 
+                                   schema_name=self.schema).tenant_configs
                 rDatabaseConnector = ro.packages.importr('DatabaseConnector')
                 rConnectionDetails = rDatabaseConnector.createConnectionDetails(
                     dbms='postgresql', 
-                    connectionString=f'jdbc:{db_credentials["dialect"]}://{db_credentials["host"]}:{db_credentials["port"]}/{db_credentials["databaseName"]}',
-                    user=db_credentials["adminUser"],
-                    password=db_credentials["adminPassword"],
+                    connectionString=f'jdbc:{db_credentials.dialect}://{db_credentials.host}:{db_credentials.port}/{db_credentials.databaseName}',
+                    user=db_credentials.adminUser,
+                    password=db_credentials.adminPassword.get_secret_value(),
                     pathToDriver = databaseConnectorJarFolder
                 )
                 rStrategus.storeConnectionDetails(

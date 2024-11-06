@@ -5,21 +5,15 @@ from sqlalchemy.engine.cursor import CursorResult
 from sqlalchemy import MetaData, Table, select, func, text
 
 from shared_utils.types import UserType
-from shared_utils.DBUtils import DBUtils
+from shared_utils.dao.sqlalchemydao import SqlAlchemyDao
 
 
-class VocabDao(DBUtils):
-    def __init__(self, use_cache_db: bool, database_code: str, schema_name: str):
-        super().__init__(use_cache_db=use_cache_db, database_code=database_code)
-        self.schema_name = schema_name
-        self.db_dialect = self.get_database_dialect()
-        
-        if self.use_cache_db:
-            self.engine = self.create_database_engine(schema_name=self.schema_name)
-        else:
-            self.engine = self.create_database_engine(user_type=UserType.ADMIN_USER)
+class VocabDao(SqlAlchemyDao):
+    def __init__(self, use_cache_db: bool, database_code: str,
+                 user_type: UserType = UserType.ADMIN_USER,
+                 schema_name: str = None, vocab_schema_name: str = None):
 
-        self.metadata = MetaData(schema_name)  # sql.MetaData()
+        super().__init__(use_cache_db, database_code, user_type, schema_name, vocab_schema_name)
 
 
     def get_stream_connection(self, yield_per: int) -> Connection:

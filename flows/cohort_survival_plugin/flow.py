@@ -50,7 +50,7 @@ def cohort_survival_plugin(options: CohortSurvivalOptionsType):
     
     dbdao = DBDao(use_cache_db=use_cache_db,
                   database_code=database_code, 
-                  chema_name=schema_name)    
+                  schema_name=schema_name)    
     
     generate_cohort_survival_data(
         dbdao,
@@ -93,11 +93,11 @@ def generate_cohort_survival_data(
             # VARIABLES
             target_cohort_definition_id <- {target_cohort_definition_id}
             outcome_cohort_definition_id <- {outcome_cohort_definition_id}
-            pg_host <- "{db_credentials['host']}"
-            pg_port <- "{db_credentials['port']}"
-            pg_dbname <- "{db_credentials['databaseName']}"
-            pg_user <- "{db_credentials['adminUser']}"
-            pg_password <- "{db_credentials['adminPassword']}"
+            pg_host <- "{db_credentials.host}"
+            pg_port <- "{db_credentials.port}"
+            pg_dbname <- "{db_credentials.databaseName}"
+            pg_user <- "{db_credentials.adminUser}"
+            pg_password <- "{db_credentials.adminPassword.get_secret_value()}"
             pg_schema <- "{dbdao.schema_name}"
 
             con <- NULL
