@@ -183,7 +183,7 @@ def get_and_update_attributes(dataset: PortalDatasetType,
                     )
             try:
                 # update with latest version or error msg
-                db_dialect = dataset_dao.db_dialect
+                db_dialect = dataset_dao.dialect
                 tenant_configs = dataset_dao.tenant_configs
 
                 latest_available_schema_version = get_latest_available_version(dialect=db_dialect,

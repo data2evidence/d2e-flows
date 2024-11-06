@@ -4,9 +4,8 @@ from typing import Any
 from datetime import datetime
 from contextlib import contextmanager
 
-from shared_utils.dao.daobase import UserType
 from shared_utils.dao.sqlalchemydao import SqlAlchemyDao
-from shared_utils.types import SupportedDatabaseDialects
+from shared_utils.types import UserType, SupportedDatabaseDialects
 
 class IbisDao(SqlAlchemyDao):
     """
