@@ -44,6 +44,10 @@ def get_duckdb_column_string(duckdb_data_types, data_structure, concat_columns:b
     for property in data_structure:
         if property.find('_') == -1:
             list_of_table_columns.append(get_fhir_dataModel(duckdb_data_types, data_structure, property))
+    #Add extra columns
+    list_of_table_columns.append("isActive BOOLEAN")
+    list_of_table_columns.append("createAt TIMESTAMP")
+    list_of_table_columns.append("lastUpdateAt TIMESTAMP")
     return ', '.join(list_of_table_columns) if concat_columns else list_of_table_columns
 
 def get_nested_property(json_schema, property_path, property_details, heirarchy):
@@ -117,7 +121,10 @@ def get_property_path(fhir_definition_properties):
         return None
 
 def is_resource(schema, resource_definition: any):
-    return schema[3]['mapping'][resource_definition] != None
+    for index, item in enumerate(schema[3]['mapping']):
+        if item[0] == resource_definition:
+            return True
+    return False
 
 def get_fhir_table_structure(json_schema, fhir_definition_name):
     try:
@@ -139,7 +146,7 @@ def get_fhir_table_structure(json_schema, fhir_definition_name):
         else:
             return f"The input resource {fhir_definition} is not a FHIR resource"
     except Exception as err:
-        print(err)
+        print(f"get_fhir_table_structure {err}")
         print(f"Error while creating duckdb table for resource : {fhir_definition_name}")
         raise err
 
@@ -164,13 +171,13 @@ def convert_fhir_data_types_to_duckdb(json_schema):
                 data_types[fhir_data_type] = "json"
     return data_types
 
-def create_fhir_table(fhir_definition, fhir_table_definition, dbdao: DBDao):
+def create_fhir_table(fhir_definition, fhir_table_definition, dbdao: DBDao, schema_name: str):
     logger = get_run_logger()
     engine = dbdao.engine
     with engine.connect() as connection:
         trans = connection.begin()
         try:
-            create_fhir_datamodel_table = sql.text(f"create or replace table {fhir_definition}Fhir ({fhir_table_definition})")
+            create_fhir_datamodel_table = sql.text(f"create or replace table {schema_name}.{fhir_definition}Fhir ({fhir_table_definition})")
             connection.execute(create_fhir_datamodel_table)
             trans.commit()
         except Exception as e:
@@ -178,15 +185,15 @@ def create_fhir_table(fhir_definition, fhir_table_definition, dbdao: DBDao):
             logger.error(f"Failed to create table: {fhir_definition}: {e}")
             raise e
 
-def parse_fhir_schema_json_file(fhir_schema, dbdao: DBDao):
+def parse_fhir_schema_json_file(fhir_schema, dbdao: DBDao, schema_name: str):
     logger = get_run_logger()
-    #Get Discriminator from the list 
-    fhir_resources = fhir_schema[0][3]['mapping']
     duckdb_data_types = convert_fhir_data_types_to_duckdb(fhir_schema)
-    for resource in fhir_resources:
+    #Get Discriminator from the list 
+    for index, item in enumerate(fhir_schema[0][3]['mapping']):
+        resource = item[0]
         parsed_fhir_definitions = get_fhir_table_structure(fhir_schema[0], resource)
         duckdb_table_structure = get_duckdb_column_string(duckdb_data_types, parsed_fhir_definitions, True)
-        create_fhir_table(resource, duckdb_table_structure, dbdao)
+        create_fhir_table(resource, duckdb_table_structure, dbdao, schema_name)
         logger.info(f'Successfully created table: {resource}')
     return True
 
@@ -209,7 +216,7 @@ def read_json_file_and_create_duckdb_tables(database_code: str, schema_name: str
                 except Exception as e:
                     logger.error(f"Failed to get fhir schema json file': {e}")
                     raise e
-            parse_fhir_schema_json_file(fhir_schema, dbdao)
+            parse_fhir_schema_json_file(fhir_schema, dbdao, schema_name)
             logger.info('FHIR DataModel created successfuly!')
             return True
         except Exception as err:
