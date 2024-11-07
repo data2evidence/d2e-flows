@@ -1,6 +1,7 @@
 import duckdb
 from typing import Union
 
+from prefect import task
 from prefect.logging import get_run_logger
 
 from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path
@@ -23,7 +24,7 @@ def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str 
         overwrite=1)
     """
 
-
+@task(log_prints=True)
 def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     '''
     Create duckdb full text search indexes based on columns specified in DUCKDB_FULLTEXT_SEARCH_CONFIG
