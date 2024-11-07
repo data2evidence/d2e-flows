@@ -38,6 +38,7 @@ class PG_TENANT_USERS(str, Enum):
 class SupportedDatabaseDialects(str, Enum):
     HANA = "hana"
     POSTGRES = "postgres"
+    DUCKDB = "duckdb"
 
 
 class RequestType(str, Enum):

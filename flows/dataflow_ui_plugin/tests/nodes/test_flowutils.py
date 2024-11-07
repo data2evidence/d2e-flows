@@ -1,6 +1,5 @@
 import pytest
 from nodes.flowutils import serialize_to_json, get_node_list, get_incoming_edges, get_scheduler_address
-import dask.dataframe as dd
 import pandas as pd
 
 
@@ -16,7 +15,7 @@ def test_get_node_list(mock_dataflow):
     ('death_sql_node', {'death_csv_node': {"id": "3", 'file': './tests/data/death.csv', 'type': 'csv_node', 'columns': [
      'person_id', 'death_date', 'death_datetime', 'death_type_concept_id', 'cause_concept_id', 'cause_source_value', 'cause_source_concept_id'], 'hasheader': True, 'name': 'death_csv', 'datatypes': {}, 'delimiter': ','}}),
     ("sqlquery", {'py_node': {"id":"7" , 'type': 'python_node',
-     'python_code': 'import sqlalchemy as asql\nimport pandas as pd\nimport dask.dataframe as dd\ndef exec(myinput):\n myinput["dbrjson"] = myinput["dbread"].data.compute().to_json(orient="records")\n myinput["Hello"] = "hello world!"\n return myinput\ndef test_exec(myinput):\n return exec(myinput)'}}), ("multiplybyten", {})
+     'python_code': 'import sqlalchemy as asql\nimport pandas as pd\ndef exec(myinput):\n myinput["dbrjson"] = myinput["dbread"].data.compute().to_json(orient="records")\n myinput["Hello"] = "hello world!"\n return myinput\ndef test_exec(myinput):\n return exec(myinput)'}}), ("multiplybyten", {})
 ])
 def test_get_incoming_edges(node_name, expected_data, mock_dataflow):
     incoming_edges = get_incoming_edges(
@@ -32,10 +31,8 @@ mock_json = [{"col1": "str1", "col2": 1}, {
     (mock_json, [{"col1": "str1", "col2": 1}, {"col1": "str2", "col2": 2}]),
     (pd.DataFrame.from_dict(mock_json),
      '[{"col1":"str1","col2":1},{"col1":"str2","col2":2}]'),
-    (dd.from_pandas(pd.DataFrame.from_dict(mock_json), npartitions=1),
-     '[{"col1":"str1","col2":1},{"col1":"str2","col2":2}]'),
-    ({"pd_df": pd.DataFrame.from_dict(mock_json), "dd_df": dd.from_pandas(
-        pd.DataFrame.from_dict(mock_json), npartitions=1)},
+    ('[{"col1":"str1","col2":1},{"col1":"str2","col2":2}]'),
+    ({"pd_df": pd.DataFrame.from_dict(mock_json)},
      {'pd_df': '[{"col1":"str1","col2":1},{"col1":"str2","col2":2}]',
       'dd_df': '[{"col1":"str1","col2":1},{"col1":"str2","col2":2}]'}
      )

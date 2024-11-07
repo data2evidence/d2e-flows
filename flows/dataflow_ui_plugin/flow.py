@@ -1,5 +1,4 @@
 import traceback
-import sqlalchemy as sql
 from functools import partial
 from collections import OrderedDict
 from prefect_dask import DaskTaskRunner
@@ -138,7 +137,6 @@ def execute_nodes_flow(graph, sorted_nodes, test):
             _input = get_incoming_edges(graph, nodes, nodename)
             if node["type"] not in [
                 "csv_node",
-                "db_reader_node",
                 "sql_node",
                 "python_node",
                 "db_writer_node",
@@ -191,7 +189,7 @@ def execute_node_task(nodename, node_type, node, input, test):
         result = _node.test(task_run_context)
     else:
         match node_type:
-            case ('db_reader_node' | 'csv_node'):
+            case ('csv_node'):
                 result = _node.task(task_run_context)
             case _:
                 result = _node.task(input, task_run_context)

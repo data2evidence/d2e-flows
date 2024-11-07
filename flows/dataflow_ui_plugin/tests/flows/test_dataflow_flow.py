@@ -1,10 +1,8 @@
 import pytest
-from importlib import import_module
 import pandas as pd
-import dask.dataframe as dd
+
 
 from dataflow_ui_plugin.flow import setup_plugin
-from dataflow_ui_plugin.nodes import DbQueryReader
 # from main import execute_dataflow_flow
 # import flows.dataflow.flow as dataflow_flow
 
@@ -17,9 +15,6 @@ def setup(monkeypatch):
     monkeypatch.setattr(dbutils, 'create_database_engine', mock_GetDBConnection)
     # monkeypatch.setattr(dataflow_flow, 'persist_results_flow',
     #                     mock_persist_results_flow)
-
-    # Mock DbQueryReader to run its own test method instead of task
-    monkeypatch.setattr(DbQueryReader, 'task', DbQueryReader.test)
 
 
 def mock_GetDBConnection(db_name, user_type):
@@ -48,7 +43,7 @@ def test_execute_dataflow_flow(setup, mock_dataflow):
     # # Assert person_csv_node
     # person_csv_node_result = execute_nodes_flow_results.result()[
     #     "person_csv_node"].data
-    # assert isinstance(person_csv_node_result, dd.DataFrame)
+    # assert isinstance(person_csv_node_result, pd.DataFrame)
     # assert len(person_csv_node_result.index) == 5
 
     # # Assert person_sql_node node results
@@ -71,7 +66,7 @@ def test_execute_dataflow_flow(setup, mock_dataflow):
     # # Assert dbread node results
     # dbread_result = execute_nodes_flow_results.result()[
     #     "dbread"].data
-    # assert isinstance(dbread_result, dd.DataFrame)
+    # assert isinstance(dbread_result, pd.DataFrame)
     # assert len(dbread_result.compute().index) == 2
 
     # # Assert givethree node results
@@ -104,4 +99,4 @@ def test_execute_dataflow_flow(setup, mock_dataflow):
     # assert isinstance(my_data_mapping_result, pd.DataFrame)
     # assert len(my_data_mapping_result.index) == 2
 
-    # TODO: add tests for [writer_node, sqlquery nodes] nodes, but those requires more mocking / test database + remove mock from DbQueryReader.task after implementing test database
+    # TODO: add tests for [writer_node, sqlquery nodes] nodes, but those requires more mocking / test database
