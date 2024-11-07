@@ -25,7 +25,7 @@ jobs:
       - name: Setting up variables
         id: setup
         run: |
-          DOCKER_IMG_TAG_NAME=$(echo ${{ github.sha }} | cut -c1-8)
+          DOCKER_IMG_TAG_NAME=$(echo $(git rev-parse --short HEAD))
           GIT_BRANCH_NAME=$(echo ${{ github.ref }} )
           echo DOCKER_IMG_TAG_NAME=$DOCKER_IMG_TAG_NAME >> $GITHUB_OUTPUT 
           echo GIT_BRANCH_NAME="${GIT_BRANCH_NAME}" >> $GITHUB_OUTPUT
