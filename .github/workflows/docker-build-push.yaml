@@ -6,8 +6,7 @@ on:
       - trex
   pull_request:
     types: [opened, ready_for_review, reopened, synchronize]
-    branches:
-      - trex
+    
 
 jobs:
   build-push-image:
