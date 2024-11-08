@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 # Factory to return the correct dao implementation        
 def DBDao(**kwargs) -> DaoBase:
-    testinstance = IbisDao(**kwargs)
+    testinstance = SqlAlchemyDao(**kwargs)
     match testinstance.dialect:
         case SupportedDatabaseDialects.POSTGRES | SupportedDatabaseDialects.DUCKDB:
             return IbisDao(**vars(testinstance))

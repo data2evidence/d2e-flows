@@ -5,9 +5,11 @@ import pandas as pd
 import re
 
 import sqlalchemy as sql
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql.selectable import Select
 from sqlalchemy.types import Text, UnicodeText
 from sqlalchemy.sql.schema import Table, Column
+from sqlalchemy.engine.cursor import CursorResult
 from sqlalchemy.schema import CreateSchema, DropSchema
 
 from shared_utils.dao.daobase import DaoBase
@@ -23,6 +25,7 @@ class SqlAlchemyDao(DaoBase):
                  schema_name: str = None, vocab_schema_name: str = None):
 
         super().__init__(use_cache_db, database_code, user_type, schema_name, vocab_schema_name)
+        self.metadata = sql.MetaData(self.schema_name)
 
 
     # --- Property methods ---
@@ -277,7 +280,7 @@ class SqlAlchemyDao(DaoBase):
         Returns a dictionary mapping column names to sqlalchemy Column objects
         '''
         with self.engine.connect() as connection:
-            metadata_obj = sql.MetaData(schema=self.schema_name)
+            metadata_obj = self.metadata
             table = Table(table_name, metadata_obj, autoload_with=connection)            
             return {column_name: getattr(table.c, column_name.casefold()) for column_name in column_names}
         
@@ -455,7 +458,7 @@ class SqlAlchemyDao(DaoBase):
     def create_select_statement(self, table_name: str, columns_to_select: list[str], filter_conditions: list) -> Select:
         select_from_conditions = sql.and_(*filter_conditions)
         with self.engine.connect() as connection:
-            metadata_obj = sql.MetaData(schema=self.schema_name)
+            metadata_obj = self.metadata
             source_table = sql.Table(table_name, metadata_obj,
                                         autoload_with=connection)
             
@@ -465,7 +468,7 @@ class SqlAlchemyDao(DaoBase):
                     select_statement = sql.select(*map(lambda x: sql.cast(getattr(source_table.c, x), UnicodeText) if isinstance(source_table.c[x].type, Text) else getattr(source_table.c, x), columns_to_select)).where(select_from_conditions)
 
                 case SupportedDatabaseDialects.POSTGRES:
-                    select_statement = sql.select(*map(lambda x: getattr(source_table.c, self.__casefold(x)), columns_to_select)).where(select_from_conditions)
+                    select_statement = sql.select(*map(lambda x: getattr(source_table.c, x), columns_to_select)).where(select_from_conditions)
         
         return select_statement
 
@@ -510,3 +513,19 @@ class SqlAlchemyDao(DaoBase):
                 row_count = connection.execute(
                     select_count_stmt).scalar()   
         return row_count
+    
+    # --- Meilisearch methods ---
+
+    def get_stream_connection(self, yield_per: int) -> Connection:
+        return self.engine.connect().execution_options(yield_per=yield_per)
+
+    def get_stream_result_set(self, connection, table_name: str) -> CursorResult:
+        table = Table(table_name, self.metadata, autoload_with=connection)
+        stmt = sql.select(table)
+        stream_result_set = connection.execute(stmt)
+        return stream_result_set
+
+    def get_stream_result_set_concept_synonym(self, connection, table_name: str) -> CursorResult:
+        stmt = sql.text('''select c.concept_name as concept_name, STRING_AGG (cs.concept_synonym_name , ',') as synonym_name from cdmvocab.concept_synonym cs join cdmvocab.concept c on cs.concept_id = c.concept_id group by concept_name''')
+        stream_result_set = connection.execute(stmt).all()
+        return stream_result_set

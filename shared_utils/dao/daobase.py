@@ -175,10 +175,7 @@ class DaoBase(ABC):
     def drop_schema(self, cascade: bool=True):
         pass
 
-    @abstractmethod
-    def delete_record(self, table_name: str, conditions: list):
-        pass
-    
+
     @abstractmethod
     def truncate_table(self, table_name: str):
         pass
@@ -358,7 +355,7 @@ class DaoBase(ABC):
                 connection_type = "read"
             case UserType.ADMIN_USER:
                 connection_type = "write"
-        db_name = f"B|{self.dialect}|{connection_type}|{self.database_code}|{self.schema_name}"
+        db_name = f"B|{self.dialect}|{connection_type}|{self.database_code}"
         
         if self.dialect == SupportedDatabaseDialects.DUCKDB:
             db_name.append(f"|{self.schema_name}|{self.vocab_schema_name}")
@@ -371,7 +368,7 @@ class DaoBase(ABC):
             raise ValueError("Invalid characters in idenitifier")
         return re.sub(r'[^a-zA-Z0-9_.]', '', input)
 
-    def __casefold(self, obj_name: str) -> str:
+    def _casefold(self, obj_name: str) -> str:
         if not obj_name.startswith("GDM."):
             return obj_name.casefold()
         else:

@@ -7,7 +7,7 @@ from prefect.logging import get_run_logger
 
 from flows.add_search_index_plugin.config import MeilisearchAddIndexType
 
-from shared_utils.dao.VocabDao import VocabDao
+from shared_utils.dao.DBDao import DBDao
 from shared_utils.api.MeilisearchSvcAPI import MeilisearchSvcAPI
 
 
@@ -39,9 +39,9 @@ def add_search_index_plugin(options: MeilisearchAddIndexType):
     index_name = f"{database_code}_{vocab_schema_name}_{table_name}"
     # Initialize helper classes
     meilisearch_svc_api = MeilisearchSvcAPI()
-    vocab_dao = VocabDao(use_cache_db=use_cache_db,
-                         database_code=database_code, 
-                         schema_name=vocab_schema_name)
+    vocab_dao = DBDao(use_cache_db=use_cache_db,
+                      database_code=database_code, 
+                      schema_name=vocab_schema_name)
     
     logger.info(f"Getting stream connection")
     conn = vocab_dao.get_stream_connection(yield_per=CHUNK_SIZE)
@@ -76,8 +76,8 @@ def add_search_index_plugin(options: MeilisearchAddIndexType):
             index_settings = MEILISEARCH_INDEX_CONFIG[table_name.lower(
             )]["index_settings"]
             # Get table information
-            table_length = vocab_dao.get_table_length(table_name)
-            column_names = vocab_dao.get_column_names(table_name)
+            table_length = vocab_dao.get_table_row_count(table_name)
+            column_names = vocab_dao.get_columns(table_name)
 
             # Add table column names to meilisearch settings as searchableAttributes
             index_settings["searchableAttributes"] = column_names

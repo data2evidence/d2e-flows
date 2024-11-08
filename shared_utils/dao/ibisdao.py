@@ -18,7 +18,7 @@ class IbisDao(SqlAlchemyDao):
     
     def __init__(self, use_cache_db: bool, database_code: str,
                  user_type: UserType = UserType.ADMIN_USER,
-                 schema_name: str = None, vocab_schema_name: str = None):
+                 schema_name: str = None, vocab_schema_name: str = None, metadata = None):
 
         super().__init__(use_cache_db, database_code, user_type, schema_name, vocab_schema_name)
 
@@ -28,7 +28,7 @@ class IbisDao(SqlAlchemyDao):
         with self.ibis_connect() as con:
             con.create_database(name=self.schema_name)
 
-    # Todo: Fallback to sqlalchemy because ibis cannot set length for str types
+    # Fallback to sqlalchemy because ibis cannot set length for str types
     # def create_table(self, table_name: str, columns: dict):
     #     """
     #     table_name:
@@ -92,7 +92,7 @@ class IbisDao(SqlAlchemyDao):
         return table in tables
 
 
-    # Todo: Use sqlalchemy implementation as ibis lists cannot filter by table type 
+    # Use sqlalchemy implementation as ibis lists cannot filter by table type 
     # def get_table_names(self, include_views: bool = False) -> list[str]:
     #     with self.ibis_connect() as con:
     #         tables = con.list_tables(database=self.schema_name)
@@ -191,12 +191,37 @@ class IbisDao(SqlAlchemyDao):
             last_record = getattr(table_obj, "dateexecuted").max().execute()
             return last_record.to_pydatetime()
         
-    # --- Update methods ---
-    
-    # --- Delete methods ---
-    def delete_record():
-        pass
 
+    # --- Update methods ---
+    # Use sqlalchemy implementation
+    # def insert_values_into_table(self, table_name: str, column_value_mapping: list[dict]):
+        # This works for simple data
+        # with self.ibis_connect() as con:
+            # con.insert(table_name=table_name, 
+            #            database=self.schema_name,
+            #            obj=column_value_mapping)
+
+        # Alternative implementation
+        # Expects dict of scalar values to have an index
+        # df = pd.DataFrame.from_records(column_value_mapping, index=[0])
+        
+        # with self.ibis_connect() as con:
+        #     table_to_insert = con.table(name=table_name,
+        #                                 database=self.schema_name)
+        #     # Fill missing df columns with null
+        #     for col in table_to_insert.columns:
+        #         if col not in column_value_mapping.keys():
+        #             column_value_mapping[col] = pd.NA
+            
+        #     df = pd.DataFrame.from_records(column_value_mapping, index=[0])      
+            
+        #     Ibis throws exception for null values
+        #     con.insert(table_name=table_name, 
+        #                database=self.schema_name,
+        #                obj=df)
+        
+
+    # --- Delete methods ---
     def drop_schema(self, cascade: bool=True):
         with self.ibis_connect() as con:
             con.drop_database(name=self.schema_name, cascade=cascade)
@@ -244,48 +269,6 @@ class IbisDao(SqlAlchemyDao):
     # --- Static methods ---
 
 
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # --- Unsupported methods ---
-    # def insert_values_into_table(self, table_name: str, column_value_mapping: list[dict]):
-        # This works for simple data
-        # with self.ibis_connect() as con:
-            # con.insert(table_name=table_name, 
-            #            database=self.schema_name,
-            #            obj=column_value_mapping)
-
-        # Alternative implementation
-        # Expects dict of scalar values to have an index
-        # df = pd.DataFrame.from_records(column_value_mapping, index=[0])
-        
-        # with self.ibis_connect() as con:
-        #     table_to_insert = con.table(name=table_name,
-        #                                 database=self.schema_name)
-        #     # Fill missing df columns with null
-        #     for col in table_to_insert.columns:
-        #         if col not in column_value_mapping.keys():
-        #             column_value_mapping[col] = pd.NA
-            
-        #     df = pd.DataFrame.from_records(column_value_mapping, index=[0])      
-            
-        #     Ibis throws exception for null values
-        #     con.insert(table_name=table_name, 
-        #                database=self.schema_name,
-        #                obj=df)
-        
         
     # --- User methods ---
     def check_user_exists(self, user: str) -> bool:
