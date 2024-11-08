@@ -1,11 +1,13 @@
 from pydantic import BaseModel
+from typing import Optional
 
 # PATH_TO_EXTERNAL_FILES = r"external"
 
 class NerExtractOptions(BaseModel):
-    # currently load prescription sample doc
-    # TODO: can be any doc
-    doc: str # "ner_extract_plugin/external/transcript1.txt"
+    database_code: str
+    schema_name: str
+    note_table: Optional[str] = 'note'
+    note_nlp_table: Optional[str] = 'note'
 
     @property
     def use_cache_db(self) -> str:
