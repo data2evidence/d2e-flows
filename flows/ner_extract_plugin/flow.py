@@ -14,7 +14,8 @@ from prefect.logging import get_run_logger
 def ner_extract_plugin(options: NerExtractOptions):
     
     logger = get_run_logger()
-    logger.info(f"The following spacy models are available: {spacy.info()['pipelines']}")
+    model_info = spacy.info()['pipelines']
+    logger.info(f"The following spacy models are available: {model_info}")
 
     logger.info("Start the connection to database")
     database_code = options.database_code
@@ -55,7 +56,7 @@ def ner_extract_plugin(options: NerExtractOptions):
             note_df['section_concept_id'] = 'N/A'
             note_df['snippet'] = note_df.apply(lambda x: note_text[x['start']-10:x['end']+10], axis=1)
             note_df['note_nlp_source_concept_id'] = 'N/A'
-            note_df['nlp_system'] = note_df.apply(lambda x: '/'.join(x[['model','linker']]), axis=1)
+            note_df['nlp_system'] = note_df.apply(lambda x: '-'.join(x[['model','linker']]+[f'-{model_info[x.model]}']), axis=1)
             note_df['nlp_date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             note_df['nlp_datetime'] = datetime.now().strftime("%Y-%m-%d")
             note_df['term_exists'] = 'N/A'
