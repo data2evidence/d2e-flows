@@ -5,7 +5,7 @@ setup(
     name='data_management_plugin',
     version='0.0.0',
     packages=find_packages(),
-    install_requires=["prefect==2.19.9", "s3fs==2023.1.0", "aiobotocore==2.4.2", "botocore==1.27.59"],
+    install_requires=[],
     include_package_data=True,
     package_data = {
         "": [
