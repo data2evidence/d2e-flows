@@ -119,7 +119,7 @@ class IbisDao(SqlAlchemyDao):
             table_obj = con.table(name="vocabulary", 
                                   database=self.vocab_schema_name)
             
-            expr = table_obj.filter(table_obj.vocabulary_id == "None").select(table_obj.vocabulary_version)
+            expr = table_obj.filter(table_obj.vocabulary_id == "None").select(table_obj.vocabulary_version).order_by(ibis.desc(table_obj.vocabulary_version))
             vocab_version = expr.execute()
             return vocab_version.iloc[0,0]
 
