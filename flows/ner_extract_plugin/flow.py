@@ -53,13 +53,13 @@ def ner_extract_plugin(options: NerExtractOptions):
             # logger.info(f"Complete the analysis of note {note_id}")
             # map note_df to note_nlp table
             note_df['note_id'] = note_id
-            note_df['section_concept_id'] = 'N/A'
+            note_df['section_concept_id'] = -1
             note_df['snippet'] = note_df.apply(lambda x: note_text[x['start']-10:x['end']+10], axis=1)
-            note_df['note_nlp_source_concept_id'] = 'N/A'
+            note_df['note_nlp_source_concept_id'] = -1
             note_df['nlp_system'] = note_df.apply(lambda x: '-'.join(x[['model','linker']]+[f'-{model_info[x.model]}']), axis=1)
-            note_df['nlp_date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            note_df['nlp_datetime'] = datetime.now().strftime("%Y-%m-%d")
-            note_df['term_exists'] = 'N/A'
+            note_df['nlp_date'] = datetime.now().strftime("%Y-%m-%d")
+            note_df['nlp_datetime'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            note_df['term_exists'] = 'U'
             note_df['term_temporal'] ='N/A'
             note_df['term_modifiers'] ='N/A'
             note_df = note_df.rename(columns={'start':'offset',
