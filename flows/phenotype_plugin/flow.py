@@ -97,6 +97,11 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                         }}
                         print('Complete creating cohortDefinitionSets')
                     }} else if (class(cohorts_ID) == "integer") {{
+                        # TODO check why 921 doesn't run through
+                        if (921 %in% cohorts_ID) {{
+                            print(paste0(c("Phenotype 921 is not supported currrently, only the following phenotype id will run through:", cohorts_ID), collapse=" "))
+                            cohorts_ID <- cohorts_ID[cohorts_ID!=921]
+                        }}
                         cohortDefinitionSets <- PhenotypeLibrary::getPlCohortDefinitionSet(cohorts_ID)
                         for (i in 1:nrow(cohortDefinitionSets)) {{
                             cohortDefinitionSets$sql[i] <- CirceR::buildCohortQuery(cohortDefinitionSets$json[i], options = CirceR::createGenerateOptions(generateStats = TRUE, vocabularySchema = vocabschema_name))
@@ -153,35 +158,18 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                 }}
 
                 create_result_tables <- function(connection, cdmschema, cohortschema, cohort_table_name, cohortDefinitionSets) {{
-                    # Extract patient id
-                    person_sql <- paste0("SELECT person_id FROM ", {{cdmschema}}, ".person")
-                    person_id <- renderTranslateQuerySql(connection = connection, sql = person_sql)
-                    cohort_sql <- paste0("SELECT subject_id, cohort_definition_id FROM ", {{cohortschema}}, ".", {{cohort_table_name}})
-                    cohort_data <- renderTranslateQuerySql(connection = connection, sql = cohort_sql)
                     cohorts_id <- cohortDefinitionSets$cohortId
+                    sql <- paste0("SELECT SUBJECT_ID as person_id, COHORT_DEFINITION_ID as phenotype_id, cohort_start_date, cohort_end_date FROM ", {{cohortschema}},".", {{cohort_table_name}}, " Order by person_id")
+                    result_df <- DatabaseConnector::querySql(connection=connection, sql=sql)
                     
-                    # Initialize table
-                    result_matrix <- matrix(0, 
-                                        nrow = nrow(person_id), 
-                                        ncol = length(cohorts_id),
-                                        dimnames = list(person_id$PERSON_ID, paste0("CohortID_", cohorts_id)))
-                    result_df <- data.frame(result_matrix, check.names = FALSE)
+                    # remove raw cohort tables
+                    DatabaseConnector::dbRemoveTable(
+                        conn = connection,
+                        name = cohort_table_name,
+                        databaseSchema = cohortschema
+                        )
 
-                    # Assign integer 1 to subjects those belong to certain cohorts
-                    if (nrow(cohort_data) > 0) {{
-                        for (i in 1:nrow(cohort_data)) {{
-                            subject <- as.character(cohort_data$SUBJECT_ID[i])
-                            cohort <- paste0("CohortID_", cohort_data$COHORT_DEFINITION_ID[i])
-                            result_df[subject, cohort] <- 1
-                            }}
-                    }}
-
-                    # Add PERSON_ID as the first column
-                    result_df <- cbind(PERSON_ID = rownames(result_df), result_df)
-                    rownames(result_df) <- NULL
-                    print('Complete creating result table')
-
-                    # Save result table
+                    # save result_df
                     DatabaseConnector::insertTable(
                         connection = connection,
                         databaseSchema = cohortschema,
@@ -190,6 +178,7 @@ def phenotype_plugin(options: PhenotypeOptionsType):
                         createTable = TRUE,
                         tempTable = FALSE
                     )
+
                     # Save master table, showHidden=TRUE, display each required cohort in master table
                     master_table <- data.frame(getPhenotypeLog(cohorts_id, showHidden=TRUE)) 
                     DatabaseConnector::insertTable(
