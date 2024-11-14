@@ -13,7 +13,6 @@ from flows.data_characterization_plugin.hooks import *
 from flows.data_characterization_plugin.types import *
 
 from shared_utils.dao.DBDao import DBDao
-from shared_utils.dao.UserDao import UserDao
 from shared_utils.create_dataset_tasks import *
 from shared_utils.types import UserType, SupportedDatabaseDialects, LiquibaseAction
 
@@ -63,11 +62,7 @@ def data_characterization_plugin(options: DCOptionsType):
                                database_code=database_code, 
                                schema_name=results_schema)
     
-    user_dao = UserDao(use_cache_db=use_cache_db,
-                       database_code=database_code, 
-                       schema_name=results_schema)
-    
-    dialect = results_schema_dao.get_database_dialect()
+    dialect = results_schema_dao.dialect
     
     match dialect:
         case SupportedDatabaseDialects.POSTGRES:
@@ -84,7 +79,6 @@ def data_characterization_plugin(options: DCOptionsType):
         flow_name,
         changelog_file,
         results_schema_dao,
-        user_dao,
         logger
     )
 
@@ -129,11 +123,10 @@ def create_data_characterization_schema(vocab_schema_name: str,
                                         flow_name: str,
                                         changelog_file: str,
                                         results_schema_dao,
-                                        user_dao, 
                                         logger):
     try:
         plugin_classpath = get_plugin_classpath(flow_name)
-        dialect = results_schema_dao.get_database_dialect()
+        dialect = results_schema_dao.dialect
         tenant_configs = results_schema_dao.tenant_configs
         
         # create results schema
@@ -141,7 +134,7 @@ def create_data_characterization_schema(vocab_schema_name: str,
         
         # create result tables with liquibase
         create_tables_wo = run_liquibase_update_task.with_options(
-            on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
+            on_failure=[partial(drop_schema_hook, **dict(dbdao=results_schema_dao))])
         
         create_tables_wo(action=LiquibaseAction.UPDATE,
                          data_model=CHARACTERIZATION_DATA_MODEL,
@@ -155,15 +148,15 @@ def create_data_characterization_schema(vocab_schema_name: str,
 
         # task
         enable_audit_policies_wo = enable_and_create_audit_policies_task.with_options(
-            on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
+            on_failure=[partial(drop_schema_hook, **dict(dbdao=results_schema_dao))])
         
         enable_audit_policies_wo(results_schema_dao)
 
         # task 
         create_and_assign_roles_wo = create_and_assign_roles_task.with_options(
-            on_failure=[partial(drop_schema_hook, **dict(schema_dao=results_schema_dao))])
+            on_failure=[partial(drop_schema_hook, **dict(dbdao=results_schema_dao))])
         
-        create_and_assign_roles_wo(user_dao)
+        create_and_assign_roles_wo(results_schema_dao)
 
         logger.info(f"Data Characterization results schema '{results_schema_dao.schema_name}' successfully created and privileges assigned!")
 
@@ -275,4 +268,3 @@ def execute_export_to_ares(schema_name: str,
         results_schema_dao.drop_schema()
         
         raise Exception(f"An error occurred while executing export to ares: {error_message}") 
-

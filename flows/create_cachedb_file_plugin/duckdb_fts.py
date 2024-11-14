@@ -36,8 +36,7 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_c
             f"Creating duckdb fulltext search index for table:{vocab_table_name}...")
         config_document_identifier = DUCKDB_FULLTEXT_SEARCH_CONFIG[
             vocab_table_name]["document_identifier"]
-        columns = [column.get("name")
-                   for column in db_dao.get_columns(vocab_table_name)]
+        columns = db_dao.get_columns(vocab_table_name)
 
         fts_creation_sql = get_duckdb_fts_creation_sql(
             table_name=vocab_table_name,

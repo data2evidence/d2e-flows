@@ -16,7 +16,8 @@ def create_table_indices(duckdb_file_path: str, duckdb_database_name: str, logge
             con.execute(create_indices_script)
             logger.info(f"All indices successfully created")
 
-@task(log_prints=True)            
+
+@task(log_prints=True)
 def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     logger = get_run_logger()
 
@@ -42,8 +43,8 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
                 limit_statement = "LIMIT 0" if create_for_cdw_config_validation else ""
 
                 result = con.execute(
-                    f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
-                        db_credentials['databaseName']} user={db_credentials['readUser']} password={db_credentials['readPassword']}', '{db_dao.schema_name}', '{table}') {limit_statement})"""
+                    f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials.host} port={db_credentials.port} dbname={
+                        db_credentials.databaseName} user={db_credentials.readUser} password={db_credentials.readPassword.get_secret_value()}', '{db_dao.schema_name}', '{table}') {limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
         except Exception as err:

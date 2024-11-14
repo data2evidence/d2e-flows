@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import os
+
 from functools import partial
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import String, TIMESTAMP
 
 from prefect import flow, task
@@ -11,13 +15,15 @@ from flows.i2b2_plugin.types import *
 from flows.i2b2_plugin.utils import *
 
 from shared_utils.dao.DBDao import DBDao
-from shared_utils.dao.UserDao import UserDao
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
 from shared_utils.create_dataset_tasks import (create_schema_task, 
                                                create_and_assign_roles_task, 
                                                drop_schema_hook)
 
+
+if TYPE_CHECKING:
+    from shared_utils.dao.daobase import DaoBase
 
 
 @flow(log_prints=True)
@@ -38,23 +44,18 @@ def create_i2b2_dataset_flow(options: i2b2PluginType):
                   database_code=database_code, 
                   schema_name=schema_name)
     
-    userdao = UserDao(use_cache_db=use_cache_db,
-                      database_code=database_code, 
-                      schema_name=schema_name)
-
     # Create schema if there is no existing schema first
     create_schema_task(dbdao)
     
     # Parent task with hook to drop schema on failure
     setup_and_create_datamodel_wo = setup_and_create_datamodel.with_options(
         on_failure=[partial(
-            drop_schema_hook, **dict(schema_dao=dbdao)
+            drop_schema_hook, **dict(dbdao=dbdao)
         )]
     )
     setup_and_create_datamodel_wo(tag_name=options.tag_name,
                                   data_model=options.data_model,
                                   dbdao=dbdao,
-                                  userdao=userdao,
                                   load_demo_data=options.load_demo_data
                                   )
 
@@ -63,14 +64,13 @@ def create_i2b2_dataset_flow(options: i2b2PluginType):
 def setup_and_create_datamodel(tag_name: str,
                                data_model: str, 
                                dbdao: DBDao,
-                               userdao: UserDao, 
                                load_demo_data):
     logger = get_run_logger()
     setup_plugin(tag_name, dbdao, logger)
     version = get_version_from_tag(tag_name)
     create_crc_tables_and_procedures(version, dbdao, logger)
     create_metadata_table(dbdao, tag_name, data_model[1:], logger)
-    create_and_assign_roles_task(userdao)
+    create_and_assign_roles_task(dbdao)
     if load_demo_data:
         load_demo_i2b2_data(dbdao, logger)
 
@@ -103,17 +103,17 @@ def setup_plugin(tag_name: str, dbdao: DBDao, logger):
         logger.info(f"Downloading source code..")
         download_source_code(tag_name)
         unzip_source_code(tag_name)
-        # setup_apache_ant(tag_name) # Used to setup apache ant during flow run
+        #setup_apache_ant(tag_name) # use version of apache ant in i2b2 source code
         
         new_install_dir = f"{path_to_ant(tag_name)}/NewInstall/Crcdata"
         path = os.path.join(os.getcwd(), new_install_dir)
         os.chdir(f"{path}")
         
-        database_name = dbdao.tenant_configs["databaseName"]
-        pg_user = dbdao.tenant_configs["adminUser"]
-        pg_password = dbdao.tenant_configs["adminPassword"]
-        host = dbdao.tenant_configs["host"]
-        port = dbdao.tenant_configs["port"]
+        database_name = dbdao.tenant_configs.databaseName
+        pg_user = dbdao.tenant_configs.adminUser
+        pg_password = dbdao.tenant_configs.adminPassword.get_secret_value()
+        host = dbdao.tenant_configs.host
+        port = dbdao.tenant_configs.port
         
         with open('db.properties', 'w') as file:
             file.write(f'''
