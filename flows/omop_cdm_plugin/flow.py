@@ -9,7 +9,6 @@ from flows.omop_cdm_plugin.versioninfo import update_dataset_metadata_flow
 from flows.omop_cdm_plugin.create import setup_plugin_task, create_datamodel_parent_task
 
 from shared_utils.dao.DBDao import DBDao
-from shared_utils.dao.UserDao import UserDao
 from shared_utils.create_dataset_tasks import *
 
 
@@ -31,7 +30,7 @@ def omop_cdm_plugin(options: OmopCDMPluginOptions):
             raise ValueError(error_msg)
 
 
-def create_omop_cdm_dataset_flow(options: OmopCDMPluginOptions, skip_setup: bool = False):   
+def create_omop_cdm_dataset_flow(options: OmopCDMPluginOptions):   
     database_code = options.database_code
     schema_name = options.schema_name
     use_cache_db = options.use_cache_db
@@ -40,31 +39,17 @@ def create_omop_cdm_dataset_flow(options: OmopCDMPluginOptions, skip_setup: bool
                          database_code=database_code, 
                          schema_name=schema_name)
     
-    userdao = UserDao(use_cache_db=use_cache_db,
-                      database_code=database_code, 
-                      schema_name=schema_name)
-    
     # Create schema if there is no existing schema first
     create_schema_task(omop_cdm_dao)
-    
-    if not skip_setup:
-        # Skip setup plugin for seeding
-        setup_plugin_wo = setup_plugin_task.with_options(
-            on_failure=[partial(
-                drop_schema_hook, **dict(schema_dao=omop_cdm_dao)
-            )]
-        )
-        setup_plugin_wo(release_version=options.release_version)
 
     # Parent task with hook to drop schema on failure
     create_datamodel_wo = create_datamodel_parent_task.with_options(
         on_failure=[partial(
-            drop_schema_hook, **dict(schema_dao=omop_cdm_dao)
+            drop_schema_hook, **dict(dbdao=omop_cdm_dao)
         )]
     )
     create_datamodel_wo(cdm_version=options.cdm_version, 
                         schema_dao=omop_cdm_dao,
-                        userdao=userdao, 
                         vocab_schema=options.vocab_schema
                         )
 
@@ -76,12 +61,12 @@ def create_seed_schemas_flow(options: OmopCDMPluginOptions):
 
 def create_vocab_schema(options: OmopCDMPluginOptions):
     new_options = update_parameters(options, "schema_name", options.vocab_schema)
-    create_omop_cdm_dataset_flow(options=new_options, skip_setup=False)
+    create_omop_cdm_dataset_flow(options=new_options)
 
  
 def create_dataset_schema(options: OmopCDMPluginOptions):
     new_options = update_parameters(options, "vocab_schema", options.schema_name)
-    create_omop_cdm_dataset_flow(options=new_options, skip_setup=True)
+    create_omop_cdm_dataset_flow(options=new_options)
 
 
 def update_parameters(options: OmopCDMPluginOptions, 

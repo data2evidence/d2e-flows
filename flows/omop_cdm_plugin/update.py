@@ -44,7 +44,7 @@ def update_omop_cdm_dataset_flow(options: OmopCDMPluginOptions):
 def run_update_migration_script(schema_dao, logger):
     # Inlcudes update of cdm version
     
-    script_directory = Path(f"flows/omop_cdm_plugin/update_scripts/{schema_dao.db_dialect}")
+    script_directory = Path(f"flows/omop_cdm_plugin/update_scripts/{schema_dao.dialect}")
     ddl_script_file_path = script_directory / "OMOPCDM_5.4.1_ddl.sql"
     pk_script_file_path = script_directory / "OMOPCDM_5.4.1_primary_keys.sql"
     idx_script_file_path = script_directory / "OMOPCDM_5.4.1_indices.sql"
