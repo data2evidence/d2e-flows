@@ -45,13 +45,9 @@ def create_i2b2_dataset(options: i2b2PluginType):
         
         tenant_configs = dbdao.tenant_configs
         
-        
-        setup_plugin(tag_name)
         create_i2b2_schema(dbdao)
         overwrite_db_properties(tag_name, tenant_configs, schema_name)
-
         version = get_version_from_tag(tag_name)
-
         create_crc_tables(version)
         create_crc_stored_procedures(version)
         
@@ -87,31 +83,13 @@ def update_dataset_metadata(options: i2b2PluginType):
             get_and_update_attributes(token, dataset, use_cache_db)
 
 
-@task(log_prints=True)
-async def setup_plugin(tag_name: str):
-    logger = get_run_logger()
-    repo_dir = "i2b2_plugin/i2b2_data"
-    path = os.path.join(os.getcwd(), repo_dir)
-    
-    os.makedirs(f"{path}", 0o777, True)
-    os.chdir(f"{path}")
-    
-    try:
-        await download_source_code(tag_name)
-        await unzip_source_code(tag_name)
-        #await setup_apache_ant(tag_name) # use version of apache ant in i2b2 source code
-    except Exception as e:
-        logger.error(e)
-        raise(e)
-
 
 @task(log_prints=True)
 def overwrite_db_properties(tag_name: str, tenant_configs: dict, schema_name: str):
     logger = get_run_logger()
     try:
         new_install_dir = f"{path_to_ant(tag_name)}/NewInstall/Crcdata"
-        path = os.path.join(os.getcwd(), new_install_dir)
-        os.chdir(f"{path}")
+        os.chdir(f"{new_install_dir}")
         
         database_name = tenant_configs["databaseName"]
         pg_user = tenant_configs["adminUser"]

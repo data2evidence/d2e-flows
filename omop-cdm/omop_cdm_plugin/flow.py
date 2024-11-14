@@ -20,15 +20,6 @@ from omop_cdm_plugin.createdatamodel import *
 def setup_plugin(release_version):
     # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
     sys.path.append('/app/pysrc')
-    r_libs_user_directory = os.getenv("R_LIBS_USER")
-    # force=TRUE for fresh install everytime flow is run
-    if (r_libs_user_directory):
-        ShellOperation(
-            commands=[
-                f"Rscript -e \"remotes::install_github('OHDSI/CommonDataModel@{release_version}',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\""
-            ]).run()
-    else:
-        raise ValueError("Environment variable: 'R_LIBS_USER' is empty.")
 
 
 @flow(log_prints=True, task_runner=SequentialTaskRunner)
