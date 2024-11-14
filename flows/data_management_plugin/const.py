@@ -2,7 +2,6 @@ from os import getcwd
 from re import compile
 
 from shared_utils.dao.DBDao import DBDao
-from shared_utils.DBUtils import DBUtils
 from shared_utils.types import InternalPluginType
 
 OMOP_DATA_MODELS = ["omop", "omop5-4", "custom-omop-ms", "custom-omop-ms-phi"]
@@ -21,7 +20,7 @@ def hana_to_postgres(table_name: str) -> str:
 
 def get_db_dialect(options):
     if options.flow_name in InternalPluginType.values():
-        return DBUtils(use_cache_db=False, database_code=options.database_code).get_database_dialect()
+        return DBDao(use_cache_db=False, database_code=options.database_code).dialect
     else:
         return options.dialect
 

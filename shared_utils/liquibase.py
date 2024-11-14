@@ -41,18 +41,17 @@ class Liquibase:
     def create_params(self) -> List:
         changeLogFile = f"db/migrations/{self.dialect}/{self.changelog_file}"
 
-        host = self.tenant_configs.get("host")
-        port = self.tenant_configs.get("port")
-        database_name = self.tenant_configs.get("databaseName")
-        ssl_trust_store = self.tenant_configs.get("sslTrustStore")
-        host_name_in_cert = self.tenant_configs.get("hostnameInCertificate")
-        admin_user = self.tenant_configs.get("adminUser")
-        admin_password = self.tenant_configs.get("adminPassword")
+        host = self.tenant_configs.host
+        port = self.tenant_configs.port
+        database_name = self.tenant_configs.databaseName
+        ssl_trust_store = self.tenant_configs.sslTrustStore
+        host_name_in_cert = self.tenant_configs.hostnameInCertificate
+        admin_user = self.tenant_configs.adminUser
+        admin_password = self.tenant_configs.adminPassword.get_secret_value()
 
         liquibase_path = Variable.get("liquibase_path") if Variable.get("liquibase_path") else "/app/liquibase/liquibase"
-        hana_driver_class_path = Variable.get("hana_driver_class_path") if Variable.get("hana_driver_class_path") else  "/app/inst/drivers/ngdbc-latest.jar"
+        hana_driver_class_path = Variable.get("hana_driver_class_path") if Variable.get("hana_driver_class_path") else "/app/liquibase/lib/ngdbc-latest.jar"
         postgres_driver_class_path = Variable.get("postgres_driver_class_path") if Variable.get("postgres_driver_class_path") else "/app/inst/drivers/postgresql-42.3.1.jar"
-
         match self.dialect:
             case SupportedDatabaseDialects.HANA:
                 classpath = f"{hana_driver_class_path}:{self.plugin_classpath}"

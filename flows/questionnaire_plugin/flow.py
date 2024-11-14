@@ -39,7 +39,7 @@ def create_questionnaire_definition_task(db_connection, questionnaire_definition
     logger = get_run_logger(f"Running Create Questionnaire Definition..")
     try:
         
-        match db_connection.db_dialect:
+        match db_connection.dialect:
             case SupportedDatabaseDialects.HANA:
                 questionnaire_table = "GDM.QUESTIONNAIRE"
                 questionnaire_item_table = "GDM.ITEM_QUESTIONNAIRE"
@@ -89,7 +89,7 @@ def create_questionnaire_item(items: List[IItemType],
         questionnaire_item_values_to_insert = _parse_questionnaire_definition_item(
             item_obj, item_id, questionnaire_id, parent_item_id).dict()
 
-        if dbconnection.db_dialect == SupportedDatabaseDialects.HANA:
+        if dbconnection.dialect == SupportedDatabaseDialects.HANA:
             # handle different column names for databases
             convert_columns_to_hana(
                 questionnaire_item_values_to_insert, "gdm_questionnaire_id", "GDM.QUESTIONNAIRE_ID")
