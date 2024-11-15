@@ -1,6 +1,6 @@
 import duckdb
 from prefect import get_run_logger
-from create_cachedb_file_plugin.util import resolve_duckdb_file_path
+from create_cachedb_file_plugin.util import resolve_duckdb_file_path, DUCKDB_EXTENSION_FILEPATH
 
 
 def create_table_indices(duckdb_file_path: str, duckdb_database_name: str, logger):
@@ -30,9 +30,11 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
     for table in table_names:
         try:
             logger.info(f"Copying table: {table} from postgres into duckdb...")
+
+            postgres_scan_extension_path = f'{DUCKDB_EXTENSION_FILEPATH}/postgres_scanner.duckdb_extension'
             
             with duckdb.connect(duckdb_file_path) as con:
-
+                con.load_extension(postgres_scan_extension_path)
                 # If create_for_cdw_config_validation is True, add a LIMIT 0 to select statement so that only an empty table is created
                 limit_statement = "LIMIT 0" if create_for_cdw_config_validation else ""
 

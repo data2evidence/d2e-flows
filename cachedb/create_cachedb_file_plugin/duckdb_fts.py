@@ -2,7 +2,7 @@ import duckdb
 from prefect import get_run_logger
 from typing import Union
 from create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG
-from create_cachedb_file_plugin.util import resolve_duckdb_file_path
+from create_cachedb_file_plugin.util import resolve_duckdb_file_path, DUCKDB_EXTENSION_FILEPATH
 
 
 def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str | int], columns: list[str]):
@@ -40,6 +40,8 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_c
             columns=columns
         )
 
+        fts_extension_path = f'{DUCKDB_EXTENSION_FILEPATH}/fts.duckdb_extension'
+
         duckdb_file_path = resolve_duckdb_file_path(
             duckdb_database_name, create_for_cdw_config_validation)
         with duckdb.connect(duckdb_file_path) as con:
@@ -55,6 +57,7 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_c
                 logger.info(
                     f"Colum successfully addded")
 
+            con.load_extension(fts_extension_path)
             con.execute(fts_creation_sql)
             logger.info(
                 f"Fulltext search index created successfully")
