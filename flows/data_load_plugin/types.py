@@ -1,13 +1,13 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
-class File(BaseModel):
+class FileType(BaseModel):
     path: str
     table_name: str
     truncate: Optional[bool] = False
 
 class DataloadOptions(BaseModel):
-    files: List[File]
+    files: List[FileType]
     database_code: str
     schema_name: str
     header: Optional[bool] = True

@@ -45,8 +45,7 @@ def get_tables_to_copy(source_dbdao, table_filter: list[DatamartCopyTableConfig]
 
 def get_columns_to_copy(source_dbdao, source_table: str, table_filter: list[DatamartCopyTableConfig]) -> list[str]:
     # get all columns in source_table
-
-    source_table_columns = [column.get("name") for column in source_dbdao.get_columns(table=source_table)]
+    source_table_columns = source_dbdao.get_columns(table=source_table)
     
     # retrieve columns to always exclude using COLUMNS_TO_EXCLUDE_REGEX
     exclude_pattern = re.compile(COLUMNS_TO_EXCLUDE_REGEX)

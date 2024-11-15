@@ -28,7 +28,7 @@ def create_cachedb_file_plugin(options: CreateDuckdbDatabaseFileType):
                   schema_name=schema_name)
     
     # Check if dialect is supported by duckdb
-    check_supported_duckdb_dialects(dbdao.db_dialect, logger)
+    check_supported_duckdb_dialects(dbdao.dialect, logger)
 
     remove_existing_file_if_exists(duckdb_database_name, create_for_cdw_config_validation, logger)
 

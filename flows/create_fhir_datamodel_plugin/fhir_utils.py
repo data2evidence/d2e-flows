@@ -1,5 +1,6 @@
-from shared_utils.dao.DBDao import DBDao
 import sqlalchemy as sql
+from shared_utils.dao.DBDao import DBDao
+
 from prefect.logging import get_run_logger
 from prefect.variables import Variable
 
