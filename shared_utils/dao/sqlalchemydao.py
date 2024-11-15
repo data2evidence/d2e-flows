@@ -22,9 +22,10 @@ class SqlAlchemyDao(DaoBase):
     
     def __init__(self, use_cache_db: bool, database_code: str,
                  user_type: UserType = UserType.ADMIN_USER,
-                 schema_name: str = None, vocab_schema_name: str = None):
+                 schema_name: str = None, vocab_schema_name: str = None,
+                 connect_to_duckdb = False, metadata = None):
 
-        super().__init__(use_cache_db, database_code, user_type, schema_name, vocab_schema_name)
+        super().__init__(use_cache_db, database_code, user_type, schema_name, vocab_schema_name, connect_to_duckdb)
         self.metadata = sql.MetaData(self.schema_name)
 
 
@@ -39,15 +40,25 @@ class SqlAlchemyDao(DaoBase):
                     f"?encrypt={configs.encrypt}?sslValidateCertificate={configs.validateCertificate}"
             case _:
                 database_name = configs.databaseName
-        
-        connection_string = self.create_sqlalchemy_connection_url(
-            dialect=configs.dialect,
-            user=configs.adminUser,
-            password=configs.adminPassword.get_secret_value(),
-            host=configs.host,
-            port=configs.port,
-            database_name=database_name
-        )
+
+        if self.connect_to_duckdb:
+            connection_string = self.create_cachedb_sqlalchemy_connection_url(
+                dialect=configs.dialect,
+                user=configs.adminUser,
+                password=configs.adminPassword.get_secret_value(),
+                host=configs.host,
+                port=configs.port,
+                database_name=database_name
+            )
+        else:
+            connection_string = self.create_sqlalchemy_connection_url(
+                dialect=configs.dialect,
+                user=configs.adminUser,
+                password=configs.adminPassword.get_secret_value(),
+                host=configs.host,
+                port=configs.port,
+                database_name=database_name
+            )
         return sql.create_engine(connection_string)
     
     @property

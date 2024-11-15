@@ -18,7 +18,7 @@ class DBCredentialsType(BaseModel):
     validateCertificate: Optional[bool] = False
     sslTrustStore: Optional[SecretStr] = ""
     hostnameInCertificate: Optional[str] = ""
-    enableAuditPolicies: bool = ""
+    enableAuditPolicies: bool = False
     readRole: Optional[str] = ""
 
 

@@ -51,7 +51,8 @@ class DaoBase(ABC):
                  database_code: str,
                  user_type: UserType = UserType.ADMIN_USER,
                  schema_name: str = None,
-                 vocab_schema_name: str = None):
+                 vocab_schema_name: str = None,
+                 connect_to_duckdb: bool = False):
         
         secret_block = Secret.load("database-credentials").get()
         if secret_block is None:
@@ -63,6 +64,7 @@ class DaoBase(ABC):
         self.user_type = user_type
         self.schema_name = schema_name
         self.vocab_schema_name = vocab_schema_name
+        self.connect_to_duckdb = connect_to_duckdb
 
     # --- Property methods ---
     
@@ -82,18 +84,18 @@ class DaoBase(ABC):
     @property
     def tenant_configs(self) -> DBCredentialsType | CacheDBCredentialsType:
         database_credentials = self.__extract_database_credentials()
-        
-        if self.use_cache_db and database_credentials.dialect == SupportedDatabaseDialects.DUCKDB:
+        if self.use_cache_db:
             if (self.schema_name is None and self.vocab_name is None):
                 raise AttributeError(f"Schema name and vocab name needs to be set if 'use_cache_db' is True!")
-            database_credentials.databaseName = self.__create_cachedb_db_name()
+            if self.connect_to_duckdb == True:
+                database_credentials.dialect = SupportedDatabaseDialects.DUCKDB
+            database_credentials.databaseName = self.__create_cachedb_db_name(database_credentials)
             database_credentials.adminUser = database_credentials.readUser = "Bearer " + OpenIdAPI().getClientCredentialToken()
             database_credentials.adminPassword = database_credentials.readPassword = "Qwerty"
             database_credentials.host = Variable.get("cachedb_host")
             database_credentials.port = Variable.get("cachedb_port")
             database_credentials_dict = database_credentials.model_dump()
             return CacheDBCredentialsType(**database_credentials_dict)
-    
         return database_credentials
 
 
@@ -244,7 +246,17 @@ class DaoBase(ABC):
                 base_url = f"{getattr(DialectDrivers.sqlalchemy, dialect)}://{database_name}"
             case _:
                 base_url = f"{getattr(DialectDrivers.sqlalchemy, dialect)}://{user}:{password}@{host}:{port}/{database_name}"
+        return base_url
 
+    def create_cachedb_sqlalchemy_connection_url(self,
+                                                 dialect: SupportedDatabaseDialects, 
+                                                 database_name: str = None,
+                                                 user: str = None,
+                                                 password: str = None,
+                                                 host: str = None,
+                                                 port: int = None) -> str:
+        
+        base_url = f"postgresql://{user.get_secret_value()}@{host}:{port}/{database_name}"
         return base_url
 
     @staticmethod
@@ -349,17 +361,17 @@ class DaoBase(ABC):
                 raise ValueError(dialect_err)
         return database_credentials
 
-    def __create_cachedb_db_name(self) -> str:
+    def __create_cachedb_db_name(self, database_credentials: DBCredentialsType) -> str:
+        if database_credentials.dialect == SupportedDatabaseDialects.POSTGRES:
+           database_credentials.dialect = "postgresql" 
         match self.user_type:
             case UserType.READ_USER:
                 connection_type = "read"
             case UserType.ADMIN_USER:
                 connection_type = "write"
-        db_name = f"B|{self.dialect}|{connection_type}|{self.database_code}"
-        
-        if self.dialect == SupportedDatabaseDialects.DUCKDB:
-            db_name.append(f"|{self.schema_name}|{self.vocab_schema_name}")
-            
+        db_name = f"B|{database_credentials.dialect}|{connection_type}|{self.database_code}"
+        if database_credentials.dialect == SupportedDatabaseDialects.DUCKDB:
+            db_name += f"|{self.schema_name}|{self.vocab_schema_name}"
         return db_name
 
     def __sanitize_inputs(self, input: str):
