@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 def DBDao(**kwargs) -> DaoBase:
     testinstance = SqlAlchemyDao(**kwargs)
     match testinstance.dialect:
-        case SupportedDatabaseDialects.POSTGRES | SupportedDatabaseDialects.DUCKDB:
+        case SupportedDatabaseDialects.POSTGRES:
             return IbisDao(**vars(testinstance))
-        case SupportedDatabaseDialects.HANA:
+        case SupportedDatabaseDialects.HANA | SupportedDatabaseDialects.DUCKDB:
             return SqlAlchemyDao(**vars(testinstance))
         case _:
             supported_dialects = [dialect.value for dialect in SupportedDatabaseDialects]
