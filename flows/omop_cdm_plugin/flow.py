@@ -6,7 +6,7 @@ from prefect import flow
 from flows.omop_cdm_plugin.types import *
 from flows.omop_cdm_plugin.update import update_omop_cdm_dataset_flow
 from flows.omop_cdm_plugin.versioninfo import update_dataset_metadata_flow
-from flows.omop_cdm_plugin.create import setup_plugin_task, create_datamodel_parent_task
+from flows.omop_cdm_plugin.create import create_datamodel_parent_task
 
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.create_dataset_tasks import *
