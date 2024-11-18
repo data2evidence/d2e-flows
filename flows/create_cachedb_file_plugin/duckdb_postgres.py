@@ -1,4 +1,6 @@
 import duckdb
+
+from prefect import task
 from prefect.logging import get_run_logger
 
 from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path
@@ -13,8 +15,9 @@ def create_table_indices(duckdb_file_path: str, duckdb_database_name: str, logge
             con.execute(f"""SET session search_path = '{duckdb_database_name}'""")
             con.execute(create_indices_script)
             logger.info(f"All indices successfully created")
-            
 
+
+@task(log_prints=True)
 def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     logger = get_run_logger()
 
