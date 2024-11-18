@@ -248,13 +248,11 @@ class DaoBase(ABC):
                 base_url = f"{getattr(DialectDrivers.sqlalchemy, dialect)}://{user}:{password}@{host}:{port}/{database_name}"
         return base_url
 
-    def create_cachedb_sqlalchemy_connection_url(self,
-                                                 dialect: SupportedDatabaseDialects, 
-                                                 database_name: str = None,
-                                                 user: str = None,
-                                                 password: str = None,
-                                                 host: str = None,
-                                                 port: int = None) -> str:
+    def create_cachedb_connection_url(self,
+                                      database_name: str = None,
+                                      user: str = None,
+                                      host: str = None,
+                                      port: int = None) -> str:
         
         base_url = f"postgresql://{user.get_secret_value()}@{host}:{port}/{database_name}"
         return base_url

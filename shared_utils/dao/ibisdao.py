@@ -247,14 +247,22 @@ class IbisDao(SqlAlchemyDao):
         con = None
         try:
             configs = self.tenant_configs
-            connection_string = self.create_ibis_connection_url(
-                dialect=configs.dialect,
-                user=configs.adminUser,
-                password=configs.adminPassword.get_secret_value(),
-                host=configs.host,
-                port=configs.port,
-                database_name=configs.databaseName
-            )            
+            if self.connect_to_duckdb:
+                connection_string = self.create_cachedb_connection_url(
+                    user=configs.adminUser,
+                    host=configs.host,
+                    port=configs.port,
+                    database_name=configs.databaseName
+                )
+            else:
+                connection_string = self.create_ibis_connection_url(
+                    dialect=configs.dialect,
+                    user=configs.adminUser,
+                    password=configs.adminPassword.get_secret_value(),
+                    host=configs.host,
+                    port=configs.port,
+                    database_name=configs.databaseName
+                )            
             con = ibis.connect(connection_string, schema=self.schema_name)
             yield con
         finally:

@@ -42,10 +42,8 @@ class SqlAlchemyDao(DaoBase):
                 database_name = configs.databaseName
 
         if self.connect_to_duckdb:
-            connection_string = self.create_cachedb_sqlalchemy_connection_url(
-                dialect=configs.dialect,
+            connection_string = self.create_cachedb_connection_url(
                 user=configs.adminUser,
-                password=configs.adminPassword.get_secret_value(),
                 host=configs.host,
                 port=configs.port,
                 database_name=database_name
