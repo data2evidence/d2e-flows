@@ -100,14 +100,9 @@ def setup_plugin(tag_name: str, dbdao: DBDao, logger):
     os.chdir(f"{path}")
     
     try:
-        logger.info(f"Downloading source code..")
-        download_source_code(tag_name)
-        unzip_source_code(tag_name)
-        #setup_apache_ant(tag_name) # use version of apache ant in i2b2 source code
-        
+        logger.info(f"Ovewriting db.properties..")
         new_install_dir = f"{path_to_ant(tag_name)}/NewInstall/Crcdata"
-        path = os.path.join(os.getcwd(), new_install_dir)
-        os.chdir(f"{path}")
+        os.chdir(f"{new_install_dir}")
         
         database_name = dbdao.tenant_configs.databaseName
         pg_user = dbdao.tenant_configs.adminUser

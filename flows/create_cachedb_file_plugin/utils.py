@@ -5,6 +5,8 @@ from prefect.variables import Variable
 
 from shared_utils.types import SupportedDatabaseDialects
 
+DUCKDB_EXTENSIONS_FILEPATH = "/app/duckdb_extensions"
+
 def resolve_duckdb_file_path(duckdb_database_name: str, create_for_cdw_config_validation: bool):
     '''
     Gets duckdb data folder based on create_for_cdw_config_validation flag

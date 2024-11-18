@@ -19,19 +19,6 @@ if TYPE_CHECKING:
 
 from flows.omop_cdm_plugin.types import CDMVersion, RELEASE_VERSION_MAPPING
 
-
-@task(log_prints=True)
-def setup_plugin_task(release_version):
-    r_libs_user_directory = Variable.get("r_libs_user")
-    # force=TRUE for fresh install everytime flow is run
-    if (r_libs_user_directory):
-        ShellOperation(
-            commands=[
-                f"Rscript -e \"remotes::install_github('OHDSI/CommonDataModel@{release_version}',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\""
-            ]).run()
-    else:
-        raise ValueError("Prefect variable: 'r_libs_user' is empty.")
-
     
 @task(log_prints=True, 
       timeout_seconds=1800,

@@ -16,19 +16,6 @@ from shared_utils.dao.DBDao import DBDao
 from shared_utils.create_dataset_tasks import *
 from shared_utils.types import UserType, SupportedDatabaseDialects, LiquibaseAction
 
-@task
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    r_libs_user_directory = Variable.get("r_libs_user")
-    # force=TRUE for fresh install everytime flow is run
-    if (r_libs_user_directory):
-        ShellOperation(
-            commands=[
-                f"Rscript -e \"remotes::install_github('OHDSI/Achilles@v1.7.2',quiet=FALSE,upgrade='never',force=TRUE, dependencies=FALSE, lib='{r_libs_user_directory}')\""
-            ]).run()
-    else:
-        raise ValueError("Prefect variable: 'r_libs_user' is empty.")
-
 
 @flow(log_prints=True, 
       persist_result=True,
@@ -36,7 +23,6 @@ def setup_plugin():
       )
 def data_characterization_plugin(options: DCOptionsType):
     logger = get_run_logger()
-    setup_plugin()
 
     schema_name = options.schemaName
     database_code = options.databaseCode
