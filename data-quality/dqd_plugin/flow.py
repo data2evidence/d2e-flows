@@ -21,6 +21,7 @@ def setup_plugin():
     sys.path.append('/app/pysrc')
     # Install dqd R package from plugin
     r_libs_user_directory = os.getenv("R_LIBS_USER")
+    # Offline installation from external files
     if (r_libs_user_directory):
         ShellOperation(
             commands=[

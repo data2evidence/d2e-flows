@@ -1,6 +1,7 @@
 import os
 from prefect import get_run_logger
 
+DUCKDB_EXTENSION_FILEPATH = "/app/duckdb_extensions"
 
 def resolve_duckdb_file_path(duckdb_database_name: str, create_for_cdw_config_validation: bool):
     '''
