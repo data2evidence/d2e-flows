@@ -18,9 +18,9 @@ class IbisDao(SqlAlchemyDao):
     
     def __init__(self, use_cache_db: bool, database_code: str,
                  user_type: UserType = UserType.ADMIN_USER,
-                 schema_name: str = None, vocab_schema_name: str = None, metadata = None):
+                 schema_name: str = None, vocab_schema_name: str = None, connect_to_duckdb = False, metadata = None):
 
-        super().__init__(use_cache_db, database_code, user_type, schema_name, vocab_schema_name)
+        super().__init__(use_cache_db, database_code, user_type, schema_name, vocab_schema_name, connect_to_duckdb)
 
     # --- Create methods ---
     def create_schema(self) -> None:
@@ -247,14 +247,22 @@ class IbisDao(SqlAlchemyDao):
         con = None
         try:
             configs = self.tenant_configs
-            connection_string = self.create_ibis_connection_url(
-                dialect=configs.dialect,
-                user=configs.adminUser,
-                password=configs.adminPassword.get_secret_value(),
-                host=configs.host,
-                port=configs.port,
-                database_name=configs.databaseName
-            )            
+            if self.connect_to_duckdb:
+                connection_string = self.create_cachedb_connection_url(
+                    user=configs.adminUser,
+                    host=configs.host,
+                    port=configs.port,
+                    database_name=configs.databaseName
+                )
+            else:
+                connection_string = self.create_ibis_connection_url(
+                    dialect=configs.dialect,
+                    user=configs.adminUser,
+                    password=configs.adminPassword.get_secret_value(),
+                    host=configs.host,
+                    port=configs.port,
+                    database_name=configs.databaseName
+                )            
             con = ibis.connect(connection_string, schema=self.schema_name)
             yield con
         finally:

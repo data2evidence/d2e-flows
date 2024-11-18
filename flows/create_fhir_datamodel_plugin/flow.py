@@ -14,4 +14,5 @@ def create_fhir_datamodel_plugin(options: CreateFhirDataModelOptions):
     try:
         read_json_file_and_create_duckdb_tables(database_code=database_code, schema_name=schema_name, vocab_schema=vocab_schema)
     except Exception as e:
-        logger.error(e)
+        logger.error("Failed to create fhir data model", e)
+        raise e
