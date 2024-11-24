@@ -48,6 +48,7 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     
     analytics_svc_api = AnalyticsSvcAPI(token)
     
+    
     cohort_json_expression = json.dumps(cohort_json.expression)
     cohort_name = cohort_json.name
     
@@ -87,6 +88,7 @@ def create_cohort(dbdao, admin_user, schema_name: str, cohort_definition_id: int
     set_db_driver_env_string = dbdao.set_db_driver_env()
     
     set_connection_string = dbdao.get_database_connector_connection_string(
+        schema_name=dbdao.schema_name,
         user_type=admin_user
     )
    
