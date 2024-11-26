@@ -1681,6 +1681,72 @@
                 }
             }
           }
+        },
+        {
+          "name": "loyalty_score_plugin",
+          "type": "loyaltyscore",
+          "entrypoint": "flows.loyalty_score_plugin.flow.loyalty_score_plugin",
+          "tags": [],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+                "options": {
+                    "$ref": "#/definitions/LoyaltyPluginType",
+                    "position": 0,
+                    "title": "options"
+                }
+            },
+            "required": ["options"],
+            "definitions": {
+                "LoyaltyPluginType": {
+                    "properties": {
+                        "mode": {"title": "Mode", "type": "string"},
+                        "schemaName": {"title": "Schemaname", "type": "string"},
+                        "databaseCode": {
+                            "title": "Databasecode",
+                            "type": "string"
+                        },
+                        "indexDate": {"title": "Indexdate", "type": "string"},
+                        "lookbackYears": {
+                            "title": "Lookbackyears",
+                            "type": "integer"
+                        },
+                        "returnYears": {
+                            "default": 0,
+                            "title": "Returnyears",
+                            "type": "integer"
+                        },
+                        "testRatio": {"title": "Testratio", "type": "number"},
+                        "coeffTableName": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}],
+                            "title": "Coefftablename"
+                        },
+                        "loyaltycohortTableName": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}],
+                            "title": "Loyaltycohorttablename"
+                        },
+                        "retrainCoeffTableName": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}],
+                            "title": "Retraincoefftablename"
+                        }
+                    },
+                    "required": [
+                        "mode",
+                        "schemaName",
+                        "databaseCode",
+                        "indexDate",
+                        "lookbackYears",
+                        "testRatio",
+                        "coeffTableName",
+                        "loyaltycohortTableName",
+                        "retrainCoeffTableName"
+                    ],
+                    "title": "LoyaltyPluginType",
+                    "type": "object"
+                }
+            }
+          }
         }
       ]
     }
