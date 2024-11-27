@@ -103,14 +103,6 @@ jobs:
         if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'develop'
         id: prune-images
         continue-on-error: true
-        env:
-          AZ_REG_FQDN: ${{ env.AZ_REG_FQDN }}
-          AZ_REG_KEEP_REGEX: ${{ env.AZ_REG_KEEP_REGEX }}
-          AZ_REG_NAME: ${{ env.AZ_REG_NAME }}
-          AZ_REG_PASSWORD: ${{ env.AZ_REG_PASSWORD }}
-          AZ_REG_PRUNE_DAYS: ${{ env.AZ_REG_PRUNE_DAYS }}
-          AZ_REG_REPOSITORY: ${{ env.AZ_REG_REPOSITORY }}
-          AZ_REG_USERNAME: ${{ env.AZ_REG_USERNAME }}
         run: |
           npx --suppess-warnings zx scripts/analyze-acr.mjs
           if [ $AZ_REG_PRUNE_ENABLE_DELETE = true ]; then
