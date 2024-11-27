@@ -111,12 +111,13 @@ jobs:
           else
             echo "INFO . manifests delete skipped"
           fi
+          echo AZ_REG_ARTIFACTS_NAME=${AZ_REG_REPOSITORY/\//--} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
 
       - name: Upload ACR manifests artifacts
         if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'develop'
         uses: actions/upload-artifact@v4
         with:
-          name: acr-manifests
+          name: ${{ env.AZ_REG_ARTIFACTS_NAME }}
           retention-days: 30
           path: |
             private*manifests*
