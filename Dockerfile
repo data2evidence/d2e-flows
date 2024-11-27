@@ -26,7 +26,7 @@ RUN chown -R docker:docker /app/synpuf1k
 
 # Create folder to store vocab CSVs
 RUN mkdir -p /app/vocab
-RUN chown -R docker:docker /app/synpuf1k
+RUN chown -R docker:docker /app/vocab
 
 # Create folder to store R packages installed during runtime for plugins which require custom R packages
 RUN mkdir -p /home/docker/plugins/R/site-library

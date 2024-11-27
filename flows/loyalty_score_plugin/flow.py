@@ -32,7 +32,7 @@ def load_coef_table(conn, coeff_table_name, schema_name):
                 con = conn,
                 schema = schema_name
                 )
-        coef.set_index('features',inplace=True)
+        coef.set_index('Feature',inplace=True)
     else:         
         coef = pd.read_json(Coefficeints, orient='index')
     feature = list(coef.index.values)
