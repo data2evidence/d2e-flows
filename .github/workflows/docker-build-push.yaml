@@ -26,6 +26,7 @@ jobs:
       DOCKER_BUILD_DISABLE: ${{ vars.DOCKER_BUILD_DISABLE || 'false' }}
       DOCKER_BUILD_PUSH_BOOL_OVERRIDE: ${{ vars.DOCKER_BUILD_PUSH_BOOL_OVERRIDE || 'false' }}
       GIT_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
     strategy:
       matrix:
         include:
