@@ -1,5 +1,6 @@
-from shared_utils.dao.DBDao import DBDao
 import sqlalchemy as sql
+from shared_utils.dao.DBDao import DBDao
+
 from prefect.logging import get_run_logger
 from prefect.variables import Variable
 
@@ -202,11 +203,10 @@ def read_json_file_and_create_duckdb_tables(database_code: str, schema_name: str
         schema_path = Variable.get("fhir_schema_file") + '/fhir.schema.json'
         try:
             dbdao = DBDao(use_cache_db=True,
-                      database_code=database_code, 
-                      schema_name=schema_name,
-                      connect_to_duckdb=True,
-                      vocab_schema=vocab_schema,
-                      duckdb_connection_type='write')
+                          database_code=database_code, 
+                          schema_name=schema_name,
+                          vocab_schema_name=vocab_schema,
+                          connect_to_duckdb=True)
             engine = dbdao.engine
             with engine.connect() as connection:
                 try:

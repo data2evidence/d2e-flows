@@ -1,9 +1,10 @@
 import duckdb
 from typing import Union
 
+from prefect import task
 from prefect.logging import get_run_logger
 
-from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path
+from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path, DUCKDB_EXTENSIONS_FILEPATH
 from flows.create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG
 
 
@@ -23,20 +24,21 @@ def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str 
         overwrite=1)
     """
 
-
+@task(log_prints=True)
 def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     '''
     Create duckdb full text search indexes based on columns specified in DUCKDB_FULLTEXT_SEARCH_CONFIG
     '''
     logger = get_run_logger()
 
+    fts_extension_path = f'{DUCKDB_EXTENSIONS_FILEPATH}/fts.duckdb_extension';
+
     for vocab_table_name in DUCKDB_FULLTEXT_SEARCH_CONFIG.keys():
         logger.info(
             f"Creating duckdb fulltext search index for table:{vocab_table_name}...")
         config_document_identifier = DUCKDB_FULLTEXT_SEARCH_CONFIG[
             vocab_table_name]["document_identifier"]
-        columns = [column.get("name")
-                   for column in db_dao.get_columns(vocab_table_name)]
+        columns = db_dao.get_columns(vocab_table_name)
 
         fts_creation_sql = get_duckdb_fts_creation_sql(
             table_name=vocab_table_name,
@@ -58,7 +60,7 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_c
                     f"ALTER TABLE {vocab_table_name} ADD COLUMN {config_document_identifier} INTEGER DEFAULT nextval('{sequence_name}');")
                 logger.info(
                     f"Colum successfully addded")
-
+            con.load_extension(fts_extension_path)
             con.execute(fts_creation_sql)
             logger.info(
                 f"Fulltext search index created successfully")

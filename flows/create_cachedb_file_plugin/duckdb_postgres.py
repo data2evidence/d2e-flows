@@ -1,7 +1,9 @@
 import duckdb
+
+from prefect import task
 from prefect.logging import get_run_logger
 
-from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path
+from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path, DUCKDB_EXTENSIONS_FILEPATH
 
 def create_table_indices(duckdb_file_path: str, duckdb_database_name: str, logger):
     with duckdb.connect(duckdb_file_path) as con:
@@ -13,7 +15,9 @@ def create_table_indices(duckdb_file_path: str, duckdb_database_name: str, logge
             con.execute(f"""SET session search_path = '{duckdb_database_name}'""")
             con.execute(create_indices_script)
             logger.info(f"All indices successfully created")
-            
+
+
+@task(log_prints=True)
 def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
     logger = get_run_logger()
 
@@ -32,15 +36,15 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
             logger.info(f"Copying table: {table} from postgres into duckdb...")
 
             
-
+            postgres_scan_extension_path = f'{DUCKDB_EXTENSIONS_FILEPATH}/postgres_scanner.duckdb_extension';
             with duckdb.connect(duckdb_file_path) as con:
-
+                con.load_extension(postgres_scan_extension_path)
                 # If create_for_cdw_config_validation is True, add a LIMIT 0 to select statement so that only an empty table is created
                 limit_statement = "LIMIT 0" if create_for_cdw_config_validation else ""
 
                 result = con.execute(
-                    f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials['host']} port={db_credentials['port']} dbname={
-                        db_credentials['databaseName']} user={db_credentials['readUser']} password={db_credentials['readPassword']}', '{db_dao.schema_name}', '{table}') {limit_statement})"""
+                    f"""CREATE TABLE {duckdb_database_name}."{table}" AS FROM (SELECT * FROM postgres_scan('host={db_credentials.host} port={db_credentials.port} dbname={
+                        db_credentials.databaseName} user={db_credentials.readUser} password={db_credentials.readPassword.get_secret_value()}', '{db_dao.schema_name}', '{table}') {limit_statement})"""
                 ).fetchone()
                 logger.info(f"{result[0]} rows copied")
         except Exception as err:

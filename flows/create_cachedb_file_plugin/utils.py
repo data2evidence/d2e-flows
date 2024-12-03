@@ -1,7 +1,11 @@
 import os
+
+from prefect import task
 from prefect.variables import Variable
 
 from shared_utils.types import SupportedDatabaseDialects
+
+DUCKDB_EXTENSIONS_FILEPATH = "/app/duckdb_extensions"
 
 def resolve_duckdb_file_path(duckdb_database_name: str, create_for_cdw_config_validation: bool):
     '''
@@ -13,7 +17,7 @@ def resolve_duckdb_file_path(duckdb_database_name: str, create_for_cdw_config_va
     else:
         return f"{Variable.get('duckdb_data_folder')}/{duckdb_database_name}"
 
-
+@task(log_prints=True)
 def remove_existing_file_if_exists(duckdb_database_name: str, create_for_cdw_config_validation: bool, logger):
     duckdb_file_path = resolve_duckdb_file_path(
         duckdb_database_name, create_for_cdw_config_validation)
@@ -21,7 +25,9 @@ def remove_existing_file_if_exists(duckdb_database_name: str, create_for_cdw_con
         logger.info(f"Removing existing duckdb file at {duckdb_file_path}")
         os.remove(duckdb_file_path)
 
+
 # Todo: implement check for plugin supported dialects
+@task(log_prints=True)
 def check_supported_duckdb_dialects(dialect, logger):
     SUPPORTED_DUCKDB_DIALECTS = [
         SupportedDatabaseDialects.POSTGRES.value

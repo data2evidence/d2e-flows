@@ -1,23 +1,33 @@
 from enum import Enum
-from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel, SecretStr
+
 from prefect.input import RunInput
 
-
 class DBCredentialsType(BaseModel):
-    adminPassword: str
-    adminUser: str
-    readPassword: str
     readUser: str
+    readPassword: SecretStr
+    adminUser: str
+    adminPassword: SecretStr
+    user: str
+    password: SecretStr
     dialect: str
     databaseName: str
     host: str
     port: int
-    encrypt: bool
-    validateCertificate: bool
-    sslTrustStore: str
-    hostnameInCertificate: str
-    enableAuditPolicies: bool
-    readRole: str
+    encrypt: Optional[bool] = False
+    validateCertificate: Optional[bool] = False
+    sslTrustStore: Optional[SecretStr] = ""
+    hostnameInCertificate: Optional[str] = ""
+    enableAuditPolicies: bool = False
+    readRole: Optional[str] = ""
+
+
+class CacheDBCredentialsType(DBCredentialsType):
+    readUser: SecretStr
+    adminUser: SecretStr
+    user: SecretStr
+
 
 
 class UserType(str, Enum):
@@ -73,6 +83,7 @@ class InternalPluginType(str, Enum):
     @staticmethod
     def values():
         return InternalPluginType._value2member_map_
+
 
 class EntityCountDistributionType(BaseModel):
     OBSERVATION_PERIOD_COUNT: str
