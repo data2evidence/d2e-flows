@@ -35,8 +35,6 @@ def get_incoming_edges(graph, nodes, nodename):
     return connected_nodes
 
 def convert_py_to_R(python_obj):
-    dd = importlib.import_module("dask.dataframe")
-    ro = importlib.import_module('rpy2.robjects')
     # Convert python object into rpy2 robject
     if python_obj is None:
         return ro.r("NULL")
@@ -65,7 +63,6 @@ def convert_py_to_R(python_obj):
         return python_obj
 
 def convert_R_to_py(r_obj, name=""):
-    ro = importlib.import_module('rpy2.robjects')
     result = r_obj
     remove_list = True
     if r_obj == ro.vectors.NULL:
