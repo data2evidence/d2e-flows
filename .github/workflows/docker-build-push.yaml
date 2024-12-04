@@ -1,27 +1,43 @@
-name: Docker Build and Push to Azure CR
+name: Docker Build
 
 on:
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
   push:
     branches:
       - trex
-  pull_request:
-    types: [opened, ready_for_review, reopened, synchronize]
-    
 
 jobs:
-  build-push-image:
+  bld:
     runs-on: ubuntu-latest
+    env:
+      AZ_REG_FQDN: ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io
+      AZ_REG_NAME: ${{ vars.AZ_REGISTRY_NAME }}
+      AZ_REG_PASSWORD: ${{ secrets.AZ_REGISTRY_PASSWORD }}
+      AZ_REG_PRUNE_DAYS: ${{ vars.AZ_REG_PRUNE_DAYS || '20' }}
+      AZ_REG_PRUNE_ENABLE_DELETE: ${{ vars.AZ_REG_PRUNE_ENABLE_DELETE || 'false' }}
+      AZ_REG_PRUNE_FORCE_ANALYZE: ${{ vars.AZ_REG_PRUNE_FORCE_ANALYZE || 'false' }}
+      AZ_REG_PRUNE_KEEP_REGEX: ${{ vars.AZ_REG_PRUNE_KEEP_REGEX }}
+      AZ_REG_USERNAME: ${{ vars.AZ_REGISTRY_USERNAME }}
+      DOCKER_BUILD_DISABLE: ${{ vars.DOCKER_BUILD_DISABLE || 'false' }}
+      DOCKER_BUILD_PUSH_BOOL_OVERRIDE: ${{ vars.DOCKER_BUILD_PUSH_BOOL_OVERRIDE || 'false' }}
+      GIT_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
     strategy:
       matrix:
-        include: 
-          - AZ_REGISTRY_REPOSITORY: d2e-flow/base
-            context: .
-            dockerfile: Dockerfile
-          - AZ_REGISTRY_REPOSITORY: d2e-flow/nlp
-            context: .
-            dockerfile: Dockerfile_NLP
+        include:
+          - AZ_REG_REPOSITORY: d2e-flow/base
+            DOCKER_BUILD_CONTEXT_PATH: .
+            DOCKER_BUILD_FILE_PATH: Dockerfile
+          - AZ_REG_REPOSITORY: d2e-flow/nlp
+            DOCKER_BUILD_CONTEXT_PATH: .
+            DOCKER_BUILD_FILE_PATH: Dockerfile_NLP
 
-    steps:      
+    steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
         with:
@@ -37,46 +53,71 @@ jobs:
           large-packages: false
           docker-images: true
           swap-storage: true
-          
+
       - name: Check out repository code
         uses: actions/checkout@v4
 
       - name: Setting up variables
         id: setup
+        env:
+          DOCKER_BUILD_PUSH_BOOL_OVERRIDE: ${{ vars.DOCKER_BUILD_PUSH_BOOL_OVERRIDE || false }}
         run: |
-          DOCKER_IMG_TAG_NAME=$(echo $(git rev-parse --short HEAD))
-          GIT_BRANCH_NAME=$(echo ${{ github.ref }} )
-          ACR_IMAGE_PUSH=false
-          if [[ ${{ github.event_name }} == "push" ]]; then 
-            ACR_IMAGE_PUSH=true
-          fi 
-          echo DOCKER_IMG_TAG_NAME=$DOCKER_IMG_TAG_NAME >> $GITHUB_OUTPUT 
-          echo GIT_BRANCH_NAME="${GIT_BRANCH_NAME}" >> $GITHUB_OUTPUT
-          echo ACR_IMAGE_PUSH="${ACR_IMAGE_PUSH}" >> $GITHUB_OUTPUT
-   
+          GITHUB_SHA_SHORT=$(git rev-parse --short HEAD)
+          DOCKER_IMG_TAG_NAME=$GITHUB_SHA_SHORT
+
+          DOCKER_BUILD_PUSH_BOOL_STR=false
+          if [[ $GITHUB_EVENT_NAME == "push" ]] || [ $GITHUB_EVENT_NAME = "workflow_dispatch" ] || [ $DOCKER_BUILD_PUSH_BOOL_OVERRIDE = true]; then
+            DOCKER_BUILD_PUSH_BOOL_STR=true
+          fi
+
+          echo DOCKER_BUILD_PUSH_BOOL_STR=$DOCKER_BUILD_PUSH_BOOL_STR | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo DOCKER_IMG_TAG_NAME=$DOCKER_IMG_TAG_NAME | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo GIT_BRANCH_NAME="${GIT_BRANCH_NAME}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
+          echo AZ_REG_REPOSITORY=${{ matrix.AZ_REG_REPOSITORY }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo DOCKER_BUILD_CONTEXT_PATH=${{ matrix.DOCKER_BUILD_CONTEXT_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo DOCKER_BUILD_FILE_PATH=${{ matrix.DOCKER_BUILD_FILE_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
+          echo GITHUB_SHA=$GITHUB_SHA | tee -a $GITHUB_STEP_SUMMARY
+          echo GITHUB_SHA_SHORT=$GITHUB_SHA_SHORT | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
       - name: Login to ACR
         uses: docker/login-action@v3
         with:
-          registry: ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io
-          username: ${{ secrets.AZ_REGISTRY_USERNAME }}
-          password: ${{ secrets.AZ_REGISTRY_PASSWORD }}
-          
+          registry: ${{ env.AZ_REG_FQDN }}
+          username: ${{ env.AZ_REG_USERNAME }}
+          password: ${{ env.AZ_REG_PASSWORD }}
+
       - name: Build and Push
         id: build-push
+        if: env.DOCKER_BUILD_DISABLE == 'false'
         uses: docker/build-push-action@v6
         with:
-          push: ${{ steps.setup.outputs.ACR_IMAGE_PUSH }}
+          context: ${{ env.DOCKER_BUILD_CONTEXT_PATH }}
+          file: ${{ env.DOCKER_BUILD_FILE_PATH }}
           platforms: "linux/amd64"
-          tags: ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io/${{ matrix.AZ_REGISTRY_REPOSITORY }}:${{ steps.setup.outputs.DOCKER_IMG_TAG_NAME }}, ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io/${{ matrix.AZ_REGISTRY_REPOSITORY }}:main
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          
-      - name: Output Summary 
-        run: | 
-          echo "### Output summary 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "Job Status: ${{ job.status }} " >> $GITHUB_STEP_SUMMARY
-          echo "GIT_BRANCH_NAME: ${{ steps.setup.outputs.GIT_BRANCH_NAME }} " >> $GITHUB_STEP_SUMMARY
-          echo "GIT_COMMIT_ARG: ${{ github.sha }} " >> $GITHUB_STEP_SUMMARY
-          echo "AZ_REGISTRY_REPOSITORY: ${{ matrix.AZ_REGISTRY_REPOSITORY }} " >> $GITHUB_STEP_SUMMARY
-          echo "ACR_IMAGE_PUSH: ${{ steps.setup.outputs.ACR_IMAGE_PUSH }} " >> $GITHUB_STEP_SUMMARY
-          echo "DOCKER_IMG_TAG_NAME: ${{ steps.setup.outputs.DOCKER_IMG_TAG_NAME }} " >> $GITHUB_STEP_SUMMARY
+          push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR == 'true' }}
+          tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ env.DOCKER_IMG_TAG_NAME }}, ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:main
+
+      - name: Prune ACR Images created before vars.AZ_REG_PRUNE_DAYS_TAGGED
+        if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'develop'
+        id: prune
+        continue-on-error: true
+        run: |
+          npx --suppess-warnings zx scripts/analyze-acr.mjs
+          if [ $AZ_REG_PRUNE_ENABLE_DELETE = true ]; then
+            echo "INFO . manifests delete ..."
+            sh "private-acr-manifests-delete.sh"
+          else
+            echo "INFO . manifests delete skipped"
+          fi
+          echo AZ_REG_ARTIFACTS_NAME=${AZ_REG_REPOSITORY/\//--} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
+      - name: Upload ACR manifests artifacts
+        if: steps.prune.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.AZ_REG_ARTIFACTS_NAME }}
+          retention-days: 30
+          path: |
+            private*manifests*
