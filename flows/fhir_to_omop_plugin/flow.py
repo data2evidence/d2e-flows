@@ -1,21 +1,13 @@
-import sys
 from prefect_shell.commands import ShellOperation, shell_run_command
 from prefect import flow, task, get_run_logger
-from prefect.task_runners import SequentialTaskRunner
 
-from fhir_to_omop_plugin.types import FHIRToOMOPOptionsType
+from flows.fhir_to_omop_plugin.types import FHIRToOMOPOptionsType
 
 
-def setup_plugin():
-    # Setup plugin by adding path to python flow source so that modules from app/pysrc in dataflow-gen-agent container can be imported dynamically
-    sys.path.append('/app/pysrc')
-
-@flow(log_prints=True, task_runner=SequentialTaskRunner)
+@flow(log_prints=True)
 def fhir_to_omop_plugin(options: FHIRToOMOPOptionsType):
     logger = get_run_logger()
     logger.info('Running FHIR to OMOP transformation')
-    
-    setup_plugin()  
     
     batch_chunksize = options.batchChunksize
     fhirGateway_jdbc_curl = options.fhirGatewayJdbcCurl
