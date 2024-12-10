@@ -22,7 +22,8 @@ def loyalty_score_plugin(options:LoyaltyPluginType):
                 retrain_algo(options)
             else:
                 error_msg = f"'return_years' should > 0 when select 'retrain_algo'"
-                logger.error(error_msg)    
+                raise ValueError(error_msg)
+            
 
 def load_coef_table(conn, coeff_table_name, schema_name):
     if coeff_table_name:
