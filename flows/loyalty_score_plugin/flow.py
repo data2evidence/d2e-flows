@@ -48,23 +48,19 @@ def calculate_loyalty_score(options:LoyaltyPluginType):
     database_code = options.databaseCode
     schema_name = options.schemaName
     use_cache_db = options.use_cache_db
-
     index_datetime = datetime.fromisoformat(index_date)
     cal_st = index_datetime.replace(year=index_datetime.year-lookback_years).strftime("%Y-%m-%d")
     cal_ed = index_datetime.strftime("%Y-%m-%d")
-    data, conn, engine = data_prep(cal_st, cal_ed, database_code, schema_name, use_cache_db)
-    coef, feature = load_coef_table(conn, coeff_table_name, schema_name)
-    data['loyalty_score'] = data[feature].dot(coef.loc[feature]) + coef.loc['Intercept']
-    logger.info(f'Loyalty score calculation completed')
-    logger.info(f'The loyalty cohort is stored {schema_name}.{loyalty_cohort_table}')
-    data.to_sql(name = loyalty_cohort_table,
-                con = engine,
-                schema = schema_name,
-                if_exists = 'replace',
-                index = False,
-                chunksize = 32,
-                )
-    conn.close()
+    dbdao = DBDao(use_cache_db=use_cache_db,
+                  database_code=database_code, 
+                  schema_name=schema_name)
+    with dbdao.ibis_postgres_connect() as conn:
+        data = data_prep(conn, cal_st, cal_ed, database_code, schema_name, use_cache_db)
+        coef, feature = load_coef_table(conn, coeff_table_name, schema_name)
+        data['loyalty_score'] = data[feature].dot(coef.loc[feature]) + coef.loc['Intercept']
+        logger.info(f'Loyalty score calculation completed')
+        logger.info(f'The loyalty cohort is stored {schema_name}.{loyalty_cohort_table}')
+        conn.create_table(loyalty_cohort_table, data, overwrite=True)
         
 def retrain_algo(options:LoyaltyPluginType):
     logger = get_run_logger()
@@ -76,67 +72,40 @@ def retrain_algo(options:LoyaltyPluginType):
     schema_name = options.schemaName
     use_cache_db = options.use_cache_db
     test_ratio = options.testRatio
-
     index_datetime = datetime.fromisoformat(index_date)
     train_st = index_datetime.replace(year=index_datetime.year-lookback_years-return_years).strftime("%Y-%m-%d")
     train_ed = index_datetime.replace(year=index_datetime.year-return_years).strftime("%Y-%m-%d")
-    data, conn, engine = data_prep(train_st, train_ed, database_code, schema_name, use_cache_db)
-    feature = list(set(data.columns) - set(['person_id']))
-    # Achieve gold labels
-    var_sql = sql.text(f'''
-    SELECT person_id, count(*)
-    FROM {schema_name}.visit_occurrence
-    where visit_start_date > '{train_ed}' and visit_end_date <= '{index_date}'
-    group by person_id
-    ''')
-    record = conn.execute(var_sql).fetchall()
-    data['Return'] = 0
-    for person_id, visit_count in record:
-        data.loc[data.person_id==person_id, 'Return'] = int(visit_count>=1)
-
-    X_train, X_test, y_train, y_test = train_test_split(data[feature], data.Return, test_size=test_ratio, 
-                                                        random_state=42, shuffle=True,
-                                                        stratify=data.Return)
-    lasso = Lasso(alpha=0.005, random_state=42)
-    lasso.fit(X_train, y_train)
-    coef_retrain = pd.DataFrame(data=lasso.coef_, index=feature, columns=['coeff'])
-    coef_retrain.loc['Intercept'] = lasso.intercept_
-    logger.info(f'Algorithm retrain completed')
-    logger.info(f'Retrain coefficients are stored at {schema_name}.{retrain_coeff_table_name}')
-    coef_retrain.to_sql(name = retrain_coeff_table_name,
-                con = engine,
-                schema = schema_name,
-                if_exists = 'replace',
-                index = True,
-                index_label='Feature',
-                chunksize = 32,
-                )
-    y_pred = lasso.predict(X_test)
-    auc_roc = roc_auc_score(y_test, y_pred)
-    summary_table = pd.DataFrame.from_dict({'auc_roc_retrain': auc_roc},orient='index', columns=['value'])
-    summary_table.to_sql(name = f'{retrain_coeff_table_name}_summary_table',
-                con = engine,
-                schema = schema_name,
-                if_exists = 'replace',
-                chunksize = 32,
-                index=True,
-                index_label='Metric'
-                )
-    logger.info(f'Retrain auc roc is stored at {schema_name}.{retrain_coeff_table_name}_summary_table')
-    conn.close()
-
+    dbdao = DBDao(use_cache_db=use_cache_db,
+                  database_code=database_code, 
+                  schema_name=schema_name)
+    with dbdao.ibis_postgres_connect() as conn:
+        data = data_prep(conn, train_st, train_ed, database_code, schema_name, use_cache_db)
+        feature = list(set(data.columns) - set(['person_id']))
+        get_gold_label(conn, data, schema_name, train_ed, index_date)
+        X_train, X_test, y_train, y_test = train_test_split(data[feature], data.Return, test_size=test_ratio, 
+                                                            random_state=42, shuffle=True,
+                                                            stratify=data.Return)
+        lasso = Lasso(alpha=0.005, random_state=42)
+        lasso.fit(X_train, y_train)
+        coef_retrain = pd.DataFrame(data=lasso.coef_, index=feature, columns=['coeff'])
+        coef_retrain.loc['Intercept'] = lasso.intercept_
+        logger.info(f'Algorithm retrain completed')
+        logger.info(f'Retrain coefficients are stored at {schema_name}.{retrain_coeff_table_name}')
+        conn.create_table(retrain_coeff_table_name, data, overwrite=True)
+        y_pred = lasso.predict(X_test)
+        auc_roc = roc_auc_score(y_test, y_pred)
+        summary_table = pd.DataFrame.from_dict({'auc_roc_retrain': auc_roc},orient='index', columns=['value'])
+        summary_table.index.name = 'Metric'
+        summary_table_name = f'{retrain_coeff_table_name}_summary_table'
+        conn.create_table(summary_table_name, summary_table, overwrite=True)
+        logger.info(f'Retrain auc roc is stored at {schema_name}.{retrain_coeff_table_name}_summary_table')
 
 @task(log_prints=True)
-def data_prep(index_st, index_ed, database_code, schema_name, use_cache_db):
+def data_prep(conn, index_st, index_ed, database_code, schema_name, use_cache_db):
     index_st_datetime = datetime.fromisoformat(index_st)
     age18 = index_st_datetime.replace(year=index_st_datetime.year-18).strftime("%Y-%m-%d")
     logger = get_run_logger()
     logger.info("Start the connection to database")
-    dbdao = DBDao(use_cache_db=use_cache_db,
-                  database_code=database_code, 
-                  schema_name=schema_name)
-    engine = dbdao.engine
-    conn = engine.connect()
     basic_para = {'conn': conn, 
                 'schema_name': schema_name, 
                 'index_st':index_st,
@@ -148,35 +117,41 @@ def data_prep(index_st, index_ed, database_code, schema_name, use_cache_db):
     same_MD(data, **basic_para)
     data = routine(data, **basic_para).run()
     logger.info('Data preparation completed')
-    return data, conn, engine
+    return data
 
 @task(log_prints=True)
 def eligible_person(conn, schema_name, index_st, index_ed, age18):
-    exclude_sql = sql.text(f'''
-        SELECT DISTINCT age.person_id
-        FROM (
-            SELECT p.person_id
-            FROM {schema_name}.person p
-            LEFT JOIN {schema_name}.death d ON p.person_id = d.person_id
-            WHERE 
-                TO_DATE(concat(year_of_birth, '-', month_of_birth, '-', day_of_birth), 'yyyy-mm-dd') < '{age18}'
-                AND
-                (d.person_id is null) or (d.death_date > '{index_ed}')
-            ) age
-        INNER JOIN (
-        Select person_id, count(*)
-        from {schema_name}.visit_occurrence 
-        where visit_start_date < '{index_ed}' and visit_end_date > '{index_st}'
-        group by person_id
-        having count(*) >= 1
-        ) v
-        ON age.person_id = v.person_id
-        ''')
+    person = conn.table(database=schema_name, name='person')
+    death = conn.table(database=schema_name, name='death')
+    visit_occurrence = conn.table(database=schema_name, name='visit_occurrence')
+    birth_date = (
+        person.year_of_birth.cast('string') + '-' + 
+        person.month_of_birth.cast('string') + '-' + 
+        person.day_of_birth.cast('string')
+    ).cast('date')
+    age_filter = (
+            person.left_join(death, person.person_id == death.person_id)
+            .filter(
+                (birth_date < age18) & 
+                ((death.person_id.isnull()) | (death.death_date > index_ed))
+            )
+            .select(person.person_id)
+        )
+    visit_filter = (
+        visit_occurrence
+        .filter((visit_occurrence.visit_start_date < index_ed) & (visit_occurrence.visit_end_date > index_st))
+        .group_by(visit_occurrence.person_id)
+        .aggregate(count=visit_occurrence.person_id.count())
+        .filter(lambda t: t['count'] >= 1)
+    )
+    final_expr = (
+        age_filter
+        .inner_join(visit_filter, age_filter.person_id == visit_filter.person_id)
+        .select(age_filter.person_id)
+        .distinct()
+    )
+    return final_expr.execute()
 
-    record = conn.execute(exclude_sql).fetchall()
-    person_id = [x[0] for x in record]
-    data = pd.DataFrame(person_id,columns=['person_id'])
-    return data
 
 if __name__ == '__main__':
     database_name = "alpdev_pg"
