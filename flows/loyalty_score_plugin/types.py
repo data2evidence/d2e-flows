@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional
 from enum import Enum
 
 Concept_Standard = 'flows/loyalty_score_plugin/external/concept_ls_Standard.csv'
@@ -11,9 +11,6 @@ class FlowActionType(str, Enum):
 
 class LoyaltyPluginType(BaseModel):
     mode: str
-    # match mode:
-    #     case FlowActionType.LOYALTY_SCORE:
-
     schemaName: str
     databaseCode: str
     indexDate: str

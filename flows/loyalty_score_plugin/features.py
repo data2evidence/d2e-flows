@@ -1,10 +1,6 @@
 from flows.loyalty_score_plugin.types import Concept_Standard
 
-import sqlalchemy as sql
 import pandas as pd
-
-# from prefect import flow, task
-# from prefect.logging import get_run_logger
 
 concept_code = pd.read_csv(Concept_Standard)
 

@@ -5,7 +5,6 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from shared_utils.dao.DBDao import DBDao
-import sqlalchemy as sql
 from datetime import datetime
 import pandas as pd
 
