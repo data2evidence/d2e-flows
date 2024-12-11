@@ -18,6 +18,7 @@ def create_cachedb_file_plugin(options: CreateDuckdbDatabaseFileType):
     schema_name = options.schemaName
     use_cache_db = options.use_cache_db
     create_for_cdw_config_validation = options.createForCdwConfigValidation
+    tables_to_create_duckdb_fts_index = options.tablesToCreateDuckdbFtsIndex
 
 
     # Set hardcoded name for duckdb databae file if create_for_cdw_config_validation is TRUE
@@ -38,7 +39,8 @@ def create_cachedb_file_plugin(options: CreateDuckdbDatabaseFileType):
 
     # Dont create fulltext search index for cdw config validation duckdb files
     if not create_for_cdw_config_validation:
-        create_duckdb_fts_index(dbdao, duckdb_database_name,
+        create_duckdb_fts_index(dbdao, duckdb_database_name, 
+                                tables_to_create_duckdb_fts_index,
                                 create_for_cdw_config_validation)
 
 

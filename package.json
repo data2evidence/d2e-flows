@@ -249,6 +249,16 @@
                     ],
                     "default": false,
                     "title": "Createforcdwconfigvalidation"
+                  },
+                  "tablesToCreateDuckdbFtsIndex": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/DUCKDB_FULLTEXT_SEARCH_CONFIG_ENUM"
+                    },
+                    "title": "Tablestocreateduckdbftsindex",
+                    "default": [
+                      "concept"
+                    ]
                   }
                 },
                 "required": [
@@ -257,6 +267,22 @@
                 ],
                 "title": "CreateDuckdbDatabaseFileType",
                 "type": "object"
+              },
+              "DUCKDB_FULLTEXT_SEARCH_CONFIG_ENUM": {
+                "enum": [
+                  "concept",
+                  "concept_relationship",
+                  "relationship",
+                  "vocabulary",
+                  "concept_synonym",
+                  "concept_class",
+                  "domain",
+                  "concept_ancestor",
+                  "concept_recommended",
+                  "note"
+                ],
+                "type": "string",
+                "title": "DUCKDB_FULLTEXT_SEARCH_CONFIG_ENUM"
               }
             }
           }
