@@ -6,20 +6,20 @@ Concept_Standard = 'flows/loyalty_score_plugin/external/concept_ls_Standard.csv'
 Coefficeints = 'flows/loyalty_score_plugin/external/coefficients.json'
 
 class FlowActionType(str, Enum):
-    LOYALTY_SCORE = "calculate_loyalty_score"
-    RETRAIN_ALGO = "retrain_loyalty_algo"
+    LOYALTY_SCORE = "calculate"
+    RETRAIN_ALGO = "retrain"
 
 class LoyaltyPluginType(BaseModel):
     mode: str
-    schemaName: str
-    databaseCode: str
-    indexDate: str
-    lookbackYears: int
-    returnYears: int = 0
-    testRatio: float
-    coeffTableName: Optional[str] 
-    loyaltycohortTableName: Optional[str] # table name to store the loyalty score result
-    retrainCoeffTableName: Optional[str]
+    schema_name: str
+    database_code: str
+    index_date: str
+    lookback_years: int
+    return_years: int = 0
+    test_ratio: float = 0
+    coeff_table_name: Optional[str] 
+    loyalty_cohort_table_name: Optional[str] # table name to store the loyalty score result
+    retraincoeff_table_name: Optional[str]
 
     @property
     def use_cache_db(self) -> str:

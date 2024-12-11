@@ -1702,45 +1702,54 @@
                 "LoyaltyPluginType": {
                     "properties": {
                         "mode": {"title": "Mode", "type": "string"},
-                        "schemaName": {"title": "Schemaname", "type": "string"},
-                        "databaseCode": {
-                            "title": "Databasecode",
+                        "schema_name": {
+                            "title": "Schema Name",
                             "type": "string"
                         },
-                        "indexDate": {"title": "Indexdate", "type": "string"},
-                        "lookbackYears": {
-                            "title": "Lookbackyears",
+                        "database_code": {
+                            "title": "Database Code",
+                            "type": "string"
+                        },
+                        "index_date": {
+                            "title": "Index Date",
+                            "type": "string"
+                        },
+                        "lookback_years": {
+                            "title": "Lookback Years",
                             "type": "integer"
                         },
-                        "returnYears": {
+                        "return_years": {
                             "default": 0,
-                            "title": "Returnyears",
+                            "title": "Return Years",
                             "type": "integer"
                         },
-                        "testRatio": {"title": "Testratio", "type": "number"},
-                        "coeffTableName": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}],
-                            "title": "Coefftablename"
+                        "test_ratio": {
+                            "default": 0,
+                            "title": "Test Ratio",
+                            "type": "number"
                         },
-                        "loyaltycohortTableName": {
+                        "coeff_table_name": {
                             "anyOf": [{"type": "string"}, {"type": "null"}],
-                            "title": "Loyaltycohorttablename"
+                            "title": "Coeff Table Name"
                         },
-                        "retrainCoeffTableName": {
+                        "loyalty_cohort_table_name": {
                             "anyOf": [{"type": "string"}, {"type": "null"}],
-                            "title": "Retraincoefftablename"
+                            "title": "Loyalty Cohort Table Name"
+                        },
+                        "retraincoeff_table_name": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}],
+                            "title": "Retraincoeff Table Name"
                         }
                     },
                     "required": [
                         "mode",
-                        "schemaName",
-                        "databaseCode",
-                        "indexDate",
-                        "lookbackYears",
-                        "testRatio",
-                        "coeffTableName",
-                        "loyaltycohortTableName",
-                        "retrainCoeffTableName"
+                        "schema_name",
+                        "database_code",
+                        "index_date",
+                        "lookback_years",
+                        "coeff_table_name",
+                        "loyalty_cohort_table_name",
+                        "retraincoeff_table_name"
                     ],
                     "title": "LoyaltyPluginType",
                     "type": "object"

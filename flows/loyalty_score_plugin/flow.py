@@ -18,20 +18,17 @@ def loyalty_score_plugin(options:LoyaltyPluginType):
         case FlowActionType.LOYALTY_SCORE:
             calculate_loyalty_score(options)
         case FlowActionType.RETRAIN_ALGO:
-            if options.returnYears > 0:
+            if (options.return_years > 0) and (options.test_ratio > 0):
                 retrain_algo(options)
             else:
-                error_msg = f"'return_years' should > 0 when select 'retrain_algo'"
+                error_msg = f"'return_years' and 'test_ratio' should > 0 when mode = 'retrain_algo'"
                 raise ValueError(error_msg)
             
 
 def load_coef_table(conn, coeff_table_name, schema_name):
     if coeff_table_name:
-        coef = pd.read_sql_table(
-                table_name = coeff_table_name,
-                con = conn,
-                schema = schema_name
-                )
+        coef = conn.table(database=schema_name, name=coeff_table_name)
+        coef = coef.select(coef).to_pandas()
         coef.set_index('Feature',inplace=True)
     else:         
         coef = pd.read_json(Coefficeints, orient='index')
@@ -41,12 +38,12 @@ def load_coef_table(conn, coeff_table_name, schema_name):
 
 def calculate_loyalty_score(options:LoyaltyPluginType):
     logger = get_run_logger()
-    loyalty_cohort_table = options.loyaltycohortTableName
-    coeff_table_name = options.coeffTableName
-    index_date = options.indexDate
-    lookback_years =  options.lookbackYears
-    database_code = options.databaseCode
-    schema_name = options.schemaName
+    loyalty_cohort_table = options.loyalty_cohort_table_name
+    coeff_table_name = options.coeff_table_name
+    index_date = options.index_date
+    lookback_years =  options.lookback_years
+    database_code = options.database_code
+    schema_name = options.schema_name
     use_cache_db = options.use_cache_db
     index_datetime = datetime.fromisoformat(index_date)
     cal_st = index_datetime.replace(year=index_datetime.year-lookback_years).strftime("%Y-%m-%d")
@@ -64,14 +61,14 @@ def calculate_loyalty_score(options:LoyaltyPluginType):
         
 def retrain_algo(options:LoyaltyPluginType):
     logger = get_run_logger()
-    retrain_coeff_table_name = options.retrainCoeffTableName
-    index_date = options.indexDate
-    lookback_years =  options.lookbackYears
-    return_years = options.returnYears
-    database_code = options.databaseCode
-    schema_name = options.schemaName
+    retrain_coeff_table_name = options.retraincoeff_table_name
+    index_date = options.index_date
+    lookback_years =  options.lookback_years
+    return_years = options.return_years
+    database_code = options.database_code
+    schema_name = options.schema_name
     use_cache_db = options.use_cache_db
-    test_ratio = options.testRatio
+    test_ratio = options.test_ratio
     index_datetime = datetime.fromisoformat(index_date)
     train_st = index_datetime.replace(year=index_datetime.year-lookback_years-return_years).strftime("%Y-%m-%d")
     train_ed = index_datetime.replace(year=index_datetime.year-return_years).strftime("%Y-%m-%d")
@@ -87,15 +84,15 @@ def retrain_algo(options:LoyaltyPluginType):
                                                             stratify=data.Return)
         lasso = Lasso(alpha=0.005, random_state=42)
         lasso.fit(X_train, y_train)
-        coef_retrain = pd.DataFrame(data=lasso.coef_, index=feature, columns=['coeff'])
-        coef_retrain.loc['Intercept'] = lasso.intercept_
+        coef_retrain = pd.DataFrame({'Feature':feature, 'coeff':lasso.coef_})
+        coef_retrain.loc[-1] = ['Intercept', lasso.intercept_]
         logger.info(f'Algorithm retrain completed')
+        coef_retrain['coeff'] = coef_retrain['coeff'].round(3)
+        conn.create_table(retrain_coeff_table_name, coef_retrain, overwrite=True)
         logger.info(f'Retrain coefficients are stored at {schema_name}.{retrain_coeff_table_name}')
-        conn.create_table(retrain_coeff_table_name, data, overwrite=True)
         y_pred = lasso.predict(X_test)
-        auc_roc = roc_auc_score(y_test, y_pred)
-        summary_table = pd.DataFrame.from_dict({'auc_roc_retrain': auc_roc},orient='index', columns=['value'])
-        summary_table.index.name = 'Metric'
+        auc_roc = round(roc_auc_score(y_test, y_pred),3)
+        summary_table = pd.DataFrame({'Metric':['auc_roc_retrain'], 'value': [auc_roc]})
         summary_table_name = f'{retrain_coeff_table_name}_summary_table'
         conn.create_table(summary_table_name, summary_table, overwrite=True)
         logger.info(f'Retrain auc roc is stored at {schema_name}.{retrain_coeff_table_name}_summary_table')
@@ -111,7 +108,7 @@ def data_prep(conn, index_st, index_ed, database_code, schema_name, use_cache_db
                 'index_st':index_st,
                 'index_ed':index_ed}
     data = eligible_person(age18=age18, **basic_para)
-    diagonis(data, **basic_para)
+    diagnosis(data, **basic_para)
     medications(data, **basic_para)
     visits(data, **basic_para)
     same_MD(data, **basic_para)
@@ -166,15 +163,15 @@ if __name__ == '__main__':
     test_ratio = 0.2
 
     options = LoyaltyPluginType(
-        schemaName = schema_name,
-        databaseCode = database_name,
-        indexDate = index_date,
-        lookbackYears = lookback_years,
-        # returnYears = 0,
-        testRatio = test_ratio,
-        coeffTableName = coefficeint_table,
-        loyaltycohortTableName = loyalty_cohort_table,
-        retrainCoeffTableName = retrain_Coef_Name
+        schema_name = schema_name,
+        database_code = database_name,
+        index_date = index_date,
+        lookback_years = lookback_years,
+        # return_years = 0,
+        test_ratio = test_ratio,
+        coeff_table_name = coefficeint_table,
+        loyalty_cohort_table_name = loyalty_cohort_table,
+        retraincoeff_table_name = retrain_Coef_Name
 
     )
     loyalty_score_plugin(options)

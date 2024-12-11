@@ -19,11 +19,10 @@ def get_gold_label(conn, data, schema_name, train_ed, index_date):
 
 def getcodes(feature:str):
     concept_ls = concept_code.loc[concept_code.variable==feature,'standard_concept'].astype(str).values
-    # concept_ls = "'" + "','".join(concept_ls) + "'" # swith to ibis
     return list(concept_ls)
 
 # @task(log_prints=True)
-def diagonis(data, conn, schema_name, index_st, index_ed):
+def diagnosis(data, conn, schema_name, index_st, index_ed):
     condition = conn.table(database=schema_name, name='condition_occurrence')
     expr = (
         condition
@@ -52,7 +51,6 @@ def medications(data, conn, schema_name, index_st, index_ed):
     data['Medication_2'] = data.person_id.isin(person).astype(int)
 
 def visits(data, conn, schema_name, index_st, index_ed):
-    # TODO: improve coding
     # ED_visit
     concept_ids = getcodes('ED Visit')
     visit = conn.table(database=schema_name, name='visit_occurrence')

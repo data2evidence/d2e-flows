@@ -10,11 +10,11 @@ The table may be updated in the future to reflect updates to OMOP concepts and t
     **ref**: SI of [Klann JG, Henderson DW, Morris M, et al. A broadly applicable approach to enrich electronic-health-record cohorts by identifying patients with complete data: a multisite evaluation.](https://academic.oup.com/jamia/article/30/12/1985/7251531)
 
 ### Parameters explaination
-#### Plugin Mode 1：calculate_loyalty_score
+#### Plugin Mode 1：calculate
 ```
 {
   "options": {
-    "mode": "calculate_loyalty_score", # Required: calculate loyalty score or retrain model
+    "mode": "calculate", # Required: calculate loyalty score or retrain model
     "indexDate": "2011-11-11", # Required: from which date to look back to compute the loyalty score
     "testRatio": 0.2, # Not used
     "schemaName": "cdmdefault", # Required: schema name of source data
@@ -30,11 +30,11 @@ The table may be updated in the future to reflect updates to OMOP concepts and t
 **Output table includes 20 variables and calculated loyalty score**
 ![alt text](image.png)
 
-#### Plugin Mode 2：retrain_loyalty_algo
+#### Plugin Mode 2：retrain
 ``` 
 {
   "options": {
-    "mode": "retrain_loyalty_algo", # Required: calculate loyalty score or retrain model
+    "mode": "retrain", # Required: calculate loyalty score or retrain model
     "indexDate": "2011-11-11", # Required: from which date to look back to compute the loyalty score
     "testRatio": 0.2, # Required: split a portion of the data as testdataset
     "schemaName": "cdmdefault", # Required: schema name of source data
