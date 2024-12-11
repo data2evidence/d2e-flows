@@ -13,11 +13,11 @@ from prefect.logging import get_run_logger
 
 @flow(log_prints=True)
 def loyalty_score_plugin(options:LoyaltyPluginType):
-    logger = get_run_logger("")
-    match options.mode:
-        case FlowActionType.LOYALTY_SCORE:
+    options = options.config
+    match options:
+        case CalculateConfig():
             calculate_loyalty_score(options)
-        case FlowActionType.RETRAIN_ALGO:
+        case RetrainConfig():
             if (options.return_years > 0) and (options.test_ratio > 0):
                 retrain_algo(options)
             else:
@@ -36,7 +36,7 @@ def load_coef_table(conn, coeff_table_name, schema_name):
     feature.remove('Intercept')
     return coef, feature
 
-def calculate_loyalty_score(options:LoyaltyPluginType):
+def calculate_loyalty_score(options:CalculateConfig):
     logger = get_run_logger()
     loyalty_cohort_table = options.loyalty_cohort_table_name
     coeff_table_name = options.coeff_table_name
@@ -59,18 +59,18 @@ def calculate_loyalty_score(options:LoyaltyPluginType):
         logger.info(f'The loyalty cohort is stored {schema_name}.{loyalty_cohort_table}')
         conn.create_table(loyalty_cohort_table, data, overwrite=True)
         
-def retrain_algo(options:LoyaltyPluginType):
+def retrain_algo(options:RetrainConfig):
     logger = get_run_logger()
     retrain_coeff_table_name = options.retraincoeff_table_name
     index_date = options.index_date
-    lookback_years =  options.lookback_years
+    train_years =  options.train_years
     return_years = options.return_years
     database_code = options.database_code
     schema_name = options.schema_name
     use_cache_db = options.use_cache_db
     test_ratio = options.test_ratio
     index_datetime = datetime.fromisoformat(index_date)
-    train_st = index_datetime.replace(year=index_datetime.year-lookback_years-return_years).strftime("%Y-%m-%d")
+    train_st = index_datetime.replace(year=index_datetime.year-train_years-return_years).strftime("%Y-%m-%d")
     train_ed = index_datetime.replace(year=index_datetime.year-return_years).strftime("%Y-%m-%d")
     dbdao = DBDao(use_cache_db=use_cache_db,
                   database_code=database_code, 
@@ -148,32 +148,5 @@ def eligible_person(conn, schema_name, index_st, index_ed, age18):
         .distinct()
     )
     return final_expr.execute()
-
-
-if __name__ == '__main__':
-    database_name = "alpdev_pg"
-    schema_name = "cdmdefault"
-    mode = "calculate_loyalty_score"
-    loyalty_cohort_table = 'debug_cohort_table'
-    coefficeint_table = 'debug'
-    retrain_Coef_Name = 'debug_retrain_coef'
-
-    index_date = '2011-11-11'
-    lookback_years = 2
-    test_ratio = 0.2
-
-    options = LoyaltyPluginType(
-        schema_name = schema_name,
-        database_code = database_name,
-        index_date = index_date,
-        lookback_years = lookback_years,
-        # return_years = 0,
-        test_ratio = test_ratio,
-        coeff_table_name = coefficeint_table,
-        loyalty_cohort_table_name = loyalty_cohort_table,
-        retraincoeff_table_name = retrain_Coef_Name
-
-    )
-    loyalty_score_plugin(options)
 
 
