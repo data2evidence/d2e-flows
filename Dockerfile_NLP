@@ -1,5 +1,5 @@
-FROM alpcr.azurecr.io/alp-dataflow-gen-base:develop as dbsvc-build
-
+# FROM alpcr.azurecr.io/alp-dataflow-gen-base:develop as dbsvc-build
+FROM alpcr.azurecr.io/alp-dataflow-gen-base:bump-dask-sql-version as dbsvc-build
 
 FROM dbsvc-build AS final-build
 
@@ -62,6 +62,8 @@ WORKDIR /app
 
 COPY --chown=docker:docker --chmod=711 ./requirements_NLP.txt .
 RUN pip install -r requirements_NLP.txt
+
+COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
 
 RUN mkdir -p ./flows
 RUN chown -R docker:docker ./flows
