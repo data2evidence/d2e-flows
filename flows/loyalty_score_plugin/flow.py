@@ -7,6 +7,7 @@ from sklearn.metrics import roc_auc_score
 from shared_utils.dao.DBDao import DBDao
 from datetime import datetime
 import pandas as pd
+from sqlalchemy import String
 
 from prefect import flow, task
 from prefect.logging import get_run_logger
@@ -51,13 +52,22 @@ def calculate_loyalty_score(options:CalculateConfig):
     dbdao = DBDao(use_cache_db=use_cache_db,
                   database_code=database_code, 
                   schema_name=schema_name)
-    with dbdao.ibis_postgres_connect() as conn:
+    with dbdao.ibis_connect() as conn:
         data = data_prep(conn, cal_st, cal_ed, database_code, schema_name, use_cache_db)
         coef, feature = load_coef_table(conn, coeff_table_name, schema_name)
         data['loyalty_score'] = data[feature].dot(coef.loc[feature]) + coef.loc['Intercept']
         logger.info(f'Loyalty score calculation completed')
         logger.info(f'The loyalty cohort is stored {schema_name}.{loyalty_cohort_table}')
-        conn.create_table(loyalty_cohort_table, data, overwrite=True)
+
+    with dbdao.engine.connect() as conn:
+        data.to_sql(
+                name = loyalty_cohort_table,
+                con = conn,
+                schema = schema_name,
+                if_exists = 'replace',
+                chunksize = 32,
+                index = False
+        )
         
 def retrain_algo(options:RetrainConfig):
     logger = get_run_logger()
@@ -75,7 +85,7 @@ def retrain_algo(options:RetrainConfig):
     dbdao = DBDao(use_cache_db=use_cache_db,
                   database_code=database_code, 
                   schema_name=schema_name)
-    with dbdao.ibis_postgres_connect() as conn:
+    with dbdao.ibis_connect() as conn:
         data = data_prep(conn, train_st, train_ed, database_code, schema_name, use_cache_db)
         feature = list(set(data.columns) - set(['person_id']))
         get_gold_label(conn, data, schema_name, train_ed, index_date)
@@ -88,13 +98,29 @@ def retrain_algo(options:RetrainConfig):
         coef_retrain.loc[-1] = ['Intercept', lasso.intercept_]
         logger.info(f'Algorithm retrain completed')
         coef_retrain['coeff'] = coef_retrain['coeff'].round(3)
-        conn.create_table(retrain_coeff_table_name, coef_retrain, overwrite=True)
-        logger.info(f'Retrain coefficients are stored at {schema_name}.{retrain_coeff_table_name}')
         y_pred = lasso.predict(X_test)
         auc_roc = round(roc_auc_score(y_test, y_pred),3)
         summary_table = pd.DataFrame({'Metric':['auc_roc_retrain'], 'value': [auc_roc]})
         summary_table_name = f'{retrain_coeff_table_name}_summary_table'
-        conn.create_table(summary_table_name, summary_table, overwrite=True)
+
+    with dbdao.engine.connect() as conn:
+        coef_retrain.to_sql(
+                name = retrain_coeff_table_name,
+                con = conn,
+                schema = schema_name,
+                if_exists = 'replace',
+                chunksize = 32,
+                index = False
+        )
+        logger.info(f'Retrain coefficients are stored at {schema_name}.{retrain_coeff_table_name}')
+        summary_table.to_sql(
+                name = summary_table_name,
+                con = conn,
+                schema = schema_name,
+                if_exists = 'replace',
+                chunksize = 32,
+                index = False
+        )
         logger.info(f'Retrain auc roc is stored at {schema_name}.{retrain_coeff_table_name}_summary_table')
 
 @task(log_prints=True)

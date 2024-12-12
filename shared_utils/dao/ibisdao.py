@@ -263,23 +263,7 @@ class IbisDao(SqlAlchemyDao):
                 # gc.collect()
         
         # To check open cursors in pg: SELECT * FROM pg_cursors WHERE name = 'Crsr_IDs
-   
-    @contextmanager
-    def ibis_postgres_connect(self):
-        # Temporary as Ibis does not have a context manager yet
-        con = None
-        try:
-            configs = self.tenant_configs        
-            con = ibis.postgres.connect(database=configs.databaseName, 
-                                        host=configs.host, 
-                                        user=configs.adminUser, 
-                                        password=configs.adminPassword.get_secret_value(), 
-                                        schema=self.schema_name)
-            yield con
-        finally:
-            if con:
-                con.disconnect()
-       
+
         
 
     # --- Static methods ---
