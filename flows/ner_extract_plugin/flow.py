@@ -27,18 +27,16 @@ def ner_extract_plugin(options: NerExtractOptions):
     dbdao = DBDao(use_cache_db=use_cache_db,
                   database_code=database_code, 
                   schema_name=schema_name)
-    engine = dbdao.engine
 
-    with engine.connect() as conn:
+    with dbdao.ibis_connect() as conn:
         logger.info("Loading Notes")
-        note_sql = sql.text(f'SELECT note_id,note_text from {schema_name}.{note_table}')
-        record = conn.execute(note_sql).fetchall()
-
-        note_nlp_sql = sql.text(f'SELECT COUNT(*) FROM {schema_name}.{note_nlp_table}')
-        count = conn.execute(note_nlp_sql).fetchall()[0][0]
+        note = conn.table(database=schema_name, name=note_table)
+        note_nlp = conn.table(database=schema_name, name=note_nlp_table)
+        record = note.select(['note_id','note_text']).execute()
+        count = note_nlp.count().execute()
         rst_df = pd.DataFrame()
 
-        for note_id, note_text in record:
+        for note_id, note_text in record.values:
             # Two steps of add_pipeline and extract
             logger.info(f"Start to analyze note {note_id}")
             medical_ner_nel = EntityExtractorLinker()
@@ -86,8 +84,9 @@ def ner_extract_plugin(options: NerExtractOptions):
                 'term_exists',
                 'term_temporal',
                 'term_modifiers']
+    with dbdao.engine.connect() as conn:
         rst_df[cols].to_sql(name = note_nlp_table,
-                    con = engine,
+                    con = conn,
                     schema = schema_name,
                     if_exists = 'append',
                     index = False,
