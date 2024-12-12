@@ -1,8 +1,8 @@
-from flows.loyalty_score_plugin.types import Concept_Standard
+from flows.loyalty_score_plugin.types import Concept_ls_Standard
 
 import pandas as pd
 
-concept_code = pd.read_csv(Concept_Standard)
+concept_code = pd.read_csv(Concept_ls_Standard)
 
 def get_gold_label(conn, data, schema_name, train_ed, index_date):
     # Achieve gold labels

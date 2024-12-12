@@ -32,7 +32,7 @@ def load_coef_table(conn, coeff_table_name, schema_name):
         coef = coef.select(coef).to_pandas()
         coef.set_index('Feature',inplace=True)
     else:         
-        coef = pd.read_json(Coefficeints, orient='index')
+        coef = pd.read_json(Coefficients, orient='index')
     feature = list(coef.index.values)
     feature.remove('Intercept')
     return coef, feature

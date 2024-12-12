@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from typing import Optional, Union
 
-Concept_Standard = 'flows/loyalty_score_plugin/external/concept_ls_Standard.csv'
-Coefficeints = 'flows/loyalty_score_plugin/external/coefficients.json'
+Concept_ls_Standard = 'flows/loyalty_score_plugin/external/concept_ls_Standard.csv'
+Coefficients = 'flows/loyalty_score_plugin/external/coefficients.json'
 
 class CalculateConfig(BaseModel):
     schema_name: str
