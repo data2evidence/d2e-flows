@@ -3,6 +3,12 @@ FROM alpcr.azurecr.io/alp-dataflow-gen-base:bump-dask-sql-version as dbsvc-build
 
 FROM dbsvc-build AS final-build
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       libpq-dev \
+       libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --chown=docker:docker ./postgresql-42.3.1.jar ./inst/drivers/
