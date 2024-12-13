@@ -1,7 +1,6 @@
 from flows.ner_extract_plugin.nel import *
 from flows.ner_extract_plugin.types import *
 from shared_utils.dao.DBDao import DBDao
-import sqlalchemy as sql
 
 import pandas as pd
 import spacy
