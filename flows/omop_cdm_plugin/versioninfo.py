@@ -3,14 +3,17 @@ from prefect.logging import get_run_logger
 
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
+from shared_utils.api.PrefectAPI import get_auth_token_from_input
+from shared_utils.types import AuthToken
 
 from flows.omop_cdm_plugin.types import OmopCDMPluginOptions, RELEASE_VERSION_MAPPING
 
 
-def update_dataset_metadata_flow(options: OmopCDMPluginOptions):
+async def update_dataset_metadata_flow(options: OmopCDMPluginOptions):
     logger = get_run_logger()
     dataset_list = options.datasets
-    token = options.token
+    authToken: AuthToken = await get_auth_token_from_input()
+    token = authToken.token
     use_cache_db = options.use_cache_db
     
     if (dataset_list is None) or (len(dataset_list) == 0):

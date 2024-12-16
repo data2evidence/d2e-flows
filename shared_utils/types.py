@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, SecretStr
 
+from prefect.input import RunInput
 
 class DBCredentialsType(BaseModel):
     readUser: str
@@ -96,3 +97,6 @@ class EntityCountDistributionType(BaseModel):
     NOTE_COUNT: str
     EPISODE_COUNT: str
     SPECIMEN_COUNT: str
+
+class AuthToken(RunInput):
+    token: str
