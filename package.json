@@ -18,7 +18,7 @@
   "homepage": "https://github.com/alp-os/d2e-plugins#readme",
   "trex": {
     "flow": {
-      "dockerimage": "ph/flow:latest",
+      "dockerimage": "alpcr.azurecr.io/d2e-flow/base:main",
       "flows": [
         {
           "name": "cohort_generator_plugin",
