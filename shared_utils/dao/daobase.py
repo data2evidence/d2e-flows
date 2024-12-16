@@ -88,7 +88,7 @@ class DaoBase(ABC):
             if (self.schema_name is None and self.vocab_name is None):
                 raise AttributeError(f"Schema name and vocab name needs to be set if 'use_cache_db' is True!")
             if self.connect_to_duckdb == True:
-                database_credentials.dialect = SupportedDatabaseDialects.DUCKDB
+                database_credentials.dialect = SupportedDatabaseDialects.DUCKDB.value
             database_credentials.databaseName = self.__create_cachedb_db_name(database_credentials)
             database_credentials.adminUser = database_credentials.readUser = "Bearer " + OpenIdAPI().getClientCredentialToken()
             database_credentials.adminPassword = database_credentials.readPassword = "Qwerty"
@@ -253,7 +253,7 @@ class DaoBase(ABC):
                                       user: str = None,
                                       host: str = None,
                                       port: int = None) -> str:
-        
+        # postgresql used for all cachedb connections
         base_url = f"postgresql://{user.get_secret_value()}@{host}:{port}/{database_name}"
         return base_url
 

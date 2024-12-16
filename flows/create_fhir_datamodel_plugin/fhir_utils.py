@@ -54,6 +54,11 @@ def get_nested_property(fhir_schema_json: FhirSchemaJsonType,
                         property_path: str, 
                         property_details: PropertyDefinitionType, 
                         heirarchy: str) -> str:
+    
+    # Todo: Add to data types once defined in fhir.schema.json
+    if property_path == "integer64":
+        return "number"
+    
     if property_details.ref and property_path is not None:
         sub_properties = fhir_schema_json.definitions.get(property_path)
         if sub_properties.properties:

@@ -5,9 +5,7 @@ from functools import partial
 from prefect import flow, task
 from prefect.variables import Variable
 from prefect.logging import get_run_logger
-from prefect.logging.loggers import task_run_logger
-from prefect.server.schemas.states import StateType
-
+from prefect.states import Failed, Completed
 
 from flows.create_fhir_datamodel_plugin.types import *
 from flows.create_fhir_datamodel_plugin.fhir_utils import *
@@ -33,77 +31,79 @@ def create_fhir_datamodel_plugin(options: CreateFhirDataModelOptions):
                   vocab_schema_name=vocab_schema,
                   connect_to_duckdb=True)
 
-    # get_fhir_data_types
+    # get fhir data types
     fhir_data_types = get_fhir_data_types(fhir_schema_json)
 
+    # map fhir data types to duckdb data types
     duckdb_data_types = convert_fhir_data_types_to_duckdb(fhir_data_types)
+    
+    created_tables = extract_definition_and_create_table(fhir_schema_json=fhir_schema_json,
+                                                         duckdb_data_types=duckdb_data_types,
+                                                         dbdao=dbdao,
+                                                         schema_name=schema_name,
+                                                         return_state=True)
 
-    # Keep track of created_tables to drop if flow fails
-    created_tables = []
-
-    for index, resource in enumerate(fhir_schema_json.discriminator.mapping):
-        try:
-
-            extract_definition_and_create_table_wo = extract_definition_and_create_table.with_options(
-                on_failure=[partial(drop_tables_hook,
-                                    **dict(dbdao=dbdao, tables_to_drop=created_tables))])
-
-            extract_definition_and_create_table_wo(fhir_schema_json,
-                                                resource,
-                                                duckdb_data_types,
-                                                dbdao,
-                                                schema_name)
-            # # Get fhir definition and nested definitions from fhir.schema.json[definitions]
-            # parsed_fhir_definition = get_fhir_table_structure(fhir_schema_json, resource)
-
-            # # Convert fhir definition into a columns
-            # duckdb_table_structure = get_duckdb_column_string(duckdb_data_types,
-            #                                                   parsed_fhir_definition,
-            #                                                   True)
+    if created_tables.is_failed() is True:
+        flow_error_msg = f"Failed to create fhir data model in '{database_code}.{schema_name}' cachedb file!"
+        logger.error(created_tables.message)
+        return Failed(msg=flow_error_msg)
+    else:
+        flow_success_msg = f"Successfully created fhir data model in '{database_code}.{schema_name}' cachedb file!"
+        return Completed(msg=flow_success_msg)
             
-            # # Execute create table statement in duckdb file
-            # table_name = resource + "Fhir"
-            # create_fhir_table(duckdb_table_structure, dbdao, schema_name, table_name)
-                
-        except Exception as err:
-            error_msg = f"Error occurred while creating table for fhir resource '{resource}'.."
-            logger.error(error_msg)
-            raise err
-        
-        else:
-            created_tables.append(resource)
 
+@task(log_prints=True)
+def drop_tables_hook(dbdao: DBDao, tables_to_drop: list[str]):
+    logger = get_run_logger()
 
-    logger.info(f"Successfully created fhir data model in '{database_code}.{schema_name}' cachedb file!")
+    if len(tables_to_drop) == 0:
+        # No tables were created or fhir tables already exist in duckdb file
+        logger.info("No tables to clean up")
+    else:
+        with dbdao.engine.connect() as connection:
+            for table in tables_to_drop:
+                drop_table_statement = sql.text(f"Drop table if exists {dbdao.schema_name}.{table}")
+                connection.execute(drop_table_statement)
+                connection.commit()
+                logger.info(f"Dropped table '{table}' from '{dbdao.database_code} {dbdao.schema_name}'!")
+
 
 @task(log_prints=True)
 def extract_definition_and_create_table(fhir_schema_json: FhirSchemaJsonType,
-                                        resource: str,
                                         duckdb_data_types: dict[str, DuckDBDataTypes],
                                         dbdao,
                                         schema_name: str):
-    # Get fhir definition and nested definitions from fhir.schema.json[definitions]
-    parsed_fhir_definition = get_fhir_table_structure(fhir_schema_json, resource)
-
-    # Convert fhir definition into a columns
-    duckdb_table_structure = get_duckdb_column_string(duckdb_data_types,
-                                                        parsed_fhir_definition,
-                                                        True)
     
-    # Execute create table statement in duckdb file
-    table_name = resource + "Fhir"
-    create_fhir_table(duckdb_table_structure, dbdao, schema_name, table_name)
+    logger = get_run_logger()
+    created_tables = []
 
+    for index, resource in enumerate(fhir_schema_json.discriminator.mapping):
+        logger.info(f"Handling fhir resource '{resource}'..")
+        try:
+            # Get fhir definition and nested definitions from fhir.schema.json[definitions]
+            parsed_fhir_definition = get_fhir_table_structure(fhir_schema_json, resource)
+            logger.debug(parsed_fhir_definition)
 
+            # Convert fhir definition into a columns
+            duckdb_table_structure = get_duckdb_column_string(duckdb_data_types,
+                                                                parsed_fhir_definition,
+                                                                True)
+            
+            # Execute create table statement in duckdb file
+            table_name = resource + "Fhir"
+            create_fhir_table(duckdb_table_structure, dbdao, schema_name, table_name)
 
-def drop_tables_hook(task, task_run, state, dbdao: DBDao, tables_to_drop: list[str]):
-    logger = task_run_logger(task_run, task)
-    if len(tables_to_drop) == 0:
-        logger.info("No tables to clean up")
-    else:
-        for table in tables_to_drop:
-            dbdao.drop_table(table)
-            logger.info(f"Dropped table '{table}' from '{dbdao.database_code} {dbdao.schema_name}'!")
+        except Exception as err:
+            error_msg = f"Error occurred while creating table for fhir resource '{resource}'!"
+            logger.error(error_msg)
+            drop_tables_hook(dbdao=dbdao, tables_to_drop=created_tables)
+            return Failed(message=error_msg)
+
+        else:
+            created_tables.append(resource)
+
+    return created_tables
+
 
 @task(log_prints=True)
 def get_fhir_data_types(fhir_schema_json: FhirSchemaJsonType) -> dict[str, str]:
@@ -125,7 +125,6 @@ def convert_fhir_data_types_to_duckdb(fhir_data_types: dict[str, str]) -> dict[s
     return duckdb_types
 
 
-@task(log_prints=True)
 def get_fhir_table_structure(fhir_schema_json: FhirSchemaJsonType,
                              fhir_definition_name: str) -> dict:
 
@@ -151,7 +150,6 @@ def get_fhir_table_structure(fhir_schema_json: FhirSchemaJsonType,
         raise ValueError(f"The input resource {fhir_definition_name} is not a FHIR resource")
 
 
-@task(log_prints=True)
 def create_fhir_table(fhir_table_definition: str, 
                       dbdao: DBDao, 
                       schema_name: str,
@@ -159,17 +157,19 @@ def create_fhir_table(fhir_table_definition: str,
     logger = get_run_logger()
     engine = dbdao.engine
     with engine.connect() as connection:
-        trans = connection.begin()
         try:
-            create_fhir_datamodel_table = sql.text(f"create or replace table {schema_name}.{table_name} ({fhir_table_definition})")
+            create_fhir_datamodel_table = sql.text(f"create table {schema_name}.{table_name} ({fhir_table_definition})")
+            logger.debug(create_fhir_datamodel_table)
             connection.execute(create_fhir_datamodel_table)
-            trans.commit()
         except Exception as e:
-            trans.rollback()
             logger.error(f"Failed to create table: '{schema_name}.{table_name}': {e}")
+            logger.info("The sql query to be execute was:\n", create_fhir_datamodel_table)
             raise e
+        else:
+            connection.commit()
+            logger.info(f"Successfully created table: '{schema_name}.{table_name}'!")
         
-@task(log_prints=True)
+
 def get_duckdb_column_string(duckdb_data_types: dict[str, DuckDBDataTypes],
                              data_structure: dict, 
                              concat_columns:bool) -> str:

@@ -57,29 +57,13 @@ class DuckDBDataTypes(str, Enum):
     BOOLEAN = "boolean"
 
 
+# To store referenecs to medplum resources that are not yet defined 
 MEDPLUM_RESOURCES = [
-    "ResourceList",
-    "Resource",
-    "ProjectSetting",
-    "ProjectSite",
-    "ProjectLink",
-    "ProjectMembershipAccess",
-    "AccessPolicyResource",
-    "AccessPolicyIpAccessRule",
-    "UserConfigurationMenu",
-    "UserConfigurationSearch",
-    "UserConfigurationOption",
-    "BulkDataExportOutput",
-    "BulkDataExportDeleted",
-    "BulkDataExportError",
-    "AgentSetting",
-    "AgentChannel",
-    "ViewDefinitionConstant",
-    "ViewDefinitionSelect",
-    "ViewDefinitionWhere"
+    "Resource"
 ]
 
 
+# Maps fhir data type to duckdb data type
 FHIR_TO_DUCKDB = {
     "string": "varchar",
     "number": "integer",
