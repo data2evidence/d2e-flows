@@ -27,12 +27,11 @@ jobs:
         run: jq --arg v "-$(date +%s)-$GITHUB_SHA" '.version+=$v' package.json > tmppkg; mv tmppkg package.json
       - name: Publish
         run: |
-           yarn publish --dry-run
-          #  if [[ $GIT_CI_BRANCH_NAME == 'trex' || $GIT_CI_BRANCH_NAME == 'main' ]]; then 
-          #     yarn publish
-          #  else 
-          #     yarn publish --dry-run
-          #  fi
+           if [[ $GIT_CI_BRANCH_NAME == 'trex' || $GIT_CI_BRANCH_NAME == 'main' ]]; then 
+              npm publish
+           else 
+              npm publish --dry-run
+           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/delete-package-versions@v5
