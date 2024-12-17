@@ -28,9 +28,9 @@ jobs:
       - name: Publish
         run: |
            if [[ $GIT_CI_BRANCH_NAME == 'trex' || $GIT_CI_BRANCH_NAME == 'main' ]]; then 
-              npm publish
+              npm publish --provenance
            else 
-              npm publish --dry-run
+              npm publish --provenance --dry-run
            fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
