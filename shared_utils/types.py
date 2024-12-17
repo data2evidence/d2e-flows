@@ -75,8 +75,6 @@ class InternalPluginType(str, Enum):
     I2B2 = "i2b2_plugin"
     DUCK_DB = "create_cachedb_file_plugin"
     DATAFLOW_UI = "dataflow_ui_plugin"
-    MEILISEARCH = "add_search_index_plugin"
-    MEILISEARCH_EMBEDDINGS = "add_search_index_with_embeddings_plugin"
     R_CDM = "r_cdm_plugin"
     DATA_LOAD = "data_load_plugin"
 

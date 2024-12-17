@@ -1484,53 +1484,6 @@
           }
         },
         {
-          "name": "add_search_index_plugin",
-          "type": "questionnaire",
-          "entrypoint": "flows.add_search_index_plugin.flow.add_search_index_plugin",
-          "tags": [
-            "questionnaire"
-          ],
-          "parameter_openapi_schema": {
-            "title": "Parameters",
-            "type": "object",
-            "properties": {
-              "options": {
-                "$ref": "#/definitions/MeilisearchAddIndexType",
-                "position": 0,
-                "title": "options"
-              }
-            },
-            "required": [
-              "options"
-            ],
-            "definitions": {
-              "MeilisearchAddIndexType": {
-                "properties": {
-                  "databaseCode": {
-                    "title": "Databasecode",
-                    "type": "string"
-                  },
-                  "vocabSchemaName": {
-                    "title": "Vocabschemaname",
-                    "type": "string"
-                  },
-                  "tableName": {
-                    "title": "Tablename",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "databaseCode",
-                  "vocabSchemaName",
-                  "tableName"
-                ],
-                "title": "MeilisearchAddIndexType",
-                "type": "object"
-              }
-            }
-          }
-        },
-        {
           "name": "create_fhir_datamodel_plugin",
           "type": "FHIRDataModel",
           "entrypoint": "flows.create_fhir_datamodel_plugin.flow.create_fhir_datamodel_plugin",
@@ -1581,58 +1534,6 @@
           }
         },
         {
-          "name": "add_search_index_with_embeddings_plugin",
-          "type": "questionnaire",
-          "entrypoint": "flows.add_search_index_with_embeddings_plugin.flow.add_search_index_with_embeddings_plugin",
-          "tags": [
-            "questionnaire"
-          ],
-          "parameter_openapi_schema": {
-            "title": "Parameters",
-            "type": "object",
-            "properties": {
-              "options": {
-                "$ref": "#/definitions/MeilisearchAddIndexWithEmbeddingsType",
-                "position": 0,
-                "title": "options"
-              }
-            },
-            "required": [
-              "options"
-            ],
-            "definitions": {
-              "MeilisearchAddIndexWithEmbeddingsType": {
-                "properties": {
-                  "token": {
-                    "title": "Token",
-                    "type": "string"
-                  },
-                  "databaseCode": {
-                    "title": "Databasecode",
-                    "type": "string"
-                  },
-                  "vocabSchemaName": {
-                    "title": "Vocabschemaname",
-                    "type": "string"
-                  },
-                  "tableName": {
-                    "title": "Tablename",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "token",
-                  "databaseCode",
-                  "vocabSchemaName",
-                  "tableName"
-                ],
-                "title": "MeilisearchAddIndexWithEmbeddingsType",
-                "type": "object"
-              }
-            }
-          }
-        },
-        {
           "name": "phenotype_plugin",
           "type": "phenotype",
           "entrypoint": "flows.phenotype_plugin.flow.phenotype_plugin",
@@ -1642,23 +1543,68 @@
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": {"options": {"title": "options", "position": 0, "allOf": [{"$ref": "#/definitions/PhenotypeOptionsType"}]}},
-            "required": ["options"],
+            "properties": {
+              "options": {
+                "title": "options",
+                "position": 0,
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/PhenotypeOptionsType"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "options"
+            ],
             "definitions": {
               "PhenotypeOptionsType": {
-                  "title": "PhenotypeOptionsType",
-                  "type": "object",
-                  "properties": {
-                      "databaseCode": {"title": "Databasecode", "type": "string"},
-                      "cdmschemaName": {"title": "Cdmschemaname", "type": "string"},
-                      "cohortschemaName": {"title": "Cohortschemaname", "type": "string"},
-                      "cohorttableName": {"title": "Cohorttablename", "type": "string"},
-                      "cohortsId": {"title": "Cohortsid", "type": "string"},
-                      "vocabschemaName": {"title": "Vocabschemaname", "type": "string"},
-                      "description": {"title": "Description", "type": "string"},
-                      "owner": {"title": "Owner", "type": "string"}
+                "title": "PhenotypeOptionsType",
+                "type": "object",
+                "properties": {
+                  "databaseCode": {
+                    "title": "Databasecode",
+                    "type": "string"
                   },
-                  "required": ["databaseCode", "cdmschemaName", "cohortschemaName", "cohorttableName", "cohortsId", "vocabschemaName", "description", "owner"]
+                  "cdmschemaName": {
+                    "title": "Cdmschemaname",
+                    "type": "string"
+                  },
+                  "cohortschemaName": {
+                    "title": "Cohortschemaname",
+                    "type": "string"
+                  },
+                  "cohorttableName": {
+                    "title": "Cohorttablename",
+                    "type": "string"
+                  },
+                  "cohortsId": {
+                    "title": "Cohortsid",
+                    "type": "string"
+                  },
+                  "vocabschemaName": {
+                    "title": "Vocabschemaname",
+                    "type": "string"
+                  },
+                  "description": {
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "owner": {
+                    "title": "Owner",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "databaseCode",
+                  "cdmschemaName",
+                  "cohortschemaName",
+                  "cohorttableName",
+                  "cohortsId",
+                  "vocabschemaName",
+                  "description",
+                  "owner"
+                ]
               }
             }
           }
@@ -1685,7 +1631,6 @@
               "json_graph",
               "options"
             ]
-
           }
         },
         {
@@ -1696,15 +1641,30 @@
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": { "options": {"title": "options", "position": 0, "$ref": "#/definitions/NerExtractOptions"}},
-            "required": ["options"],
+            "properties": {
+              "options": {
+                "title": "options",
+                "position": 0,
+                "$ref": "#/definitions/NerExtractOptions"
+              }
+            },
+            "required": [
+              "options"
+            ],
             "definitions": {
-                "NerExtractOptions": {
-                    "title": "NerExtractOptions",
-                    "type": "object",
-                    "properties": {"doc": {"title": "Doc", "type": "string"}},
-                    "required": ["doc"]
-                }
+              "NerExtractOptions": {
+                "title": "NerExtractOptions",
+                "type": "object",
+                "properties": {
+                  "doc": {
+                    "title": "Doc",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "doc"
+                ]
+              }
             }
           }
         }
