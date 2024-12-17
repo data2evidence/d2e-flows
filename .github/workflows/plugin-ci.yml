@@ -6,7 +6,7 @@ on:
     types: [opened, ready_for_review, reopened, synchronize]
   push:
     branches:
-      - develop
+      - main
       - trex
 
 jobs:
@@ -20,23 +20,15 @@ jobs:
           node-version: '18.x'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@alp-os'
-      # - name: Pack
-      #   run: npm pack
-      # - name: Push
-      #   uses: svenstaro/upload-release-action@v2
-      #   with:
-      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
-      #     file: alp-os-d2e-plugins-1.0.0.tgz
-      #     tag: trex-latest
-      #     target_commit: trex
-      #     prerelease: true
-      #     overwrite: true
-      # - name: Delete Package
-      #   run: 'curl -L -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/orgs/alp-os/packages/npm/d2e-plugins'
       - name: Update version
         run: jq --arg v "-$(date +%s)-$GITHUB_SHA" '.version+=$v' package.json > tmppkg; mv tmppkg package.json
       - name: Publish
-        run: npm publish
+        run: |
+           if [[ $GIT_CI_BRANCH_NAME == 'trex' || $GIT_CI_BRANCH_NAME == 'main' ]]; then 
+              yarn publish
+            else 
+              yarn publish --dry-run
+            fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/delete-package-versions@v5
