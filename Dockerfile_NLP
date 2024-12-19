@@ -1,5 +1,4 @@
-# FROM alpcr.azurecr.io/alp-dataflow-gen-base:develop as dbsvc-build
-FROM alpcr.azurecr.io/alp-dataflow-gen-base:bump-dask-sql-version as dbsvc-build
+FROM alpcr.azurecr.io/alp-dataflow-gen-base:develop as dbsvc-build
 
 FROM dbsvc-build AS final-build
 
