@@ -271,7 +271,7 @@ class IbisDao(SqlAlchemyDao):
                 # gc.collect()
         
         # To check open cursors in pg: SELECT * FROM pg_cursors WHERE name = 'Crsr_IDs
-        
+
         
 
     # --- Static methods ---

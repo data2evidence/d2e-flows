@@ -5,7 +5,7 @@ from prefect import task
 from prefect.logging import get_run_logger
 
 from flows.create_cachedb_file_plugin.utils import resolve_duckdb_file_path, DUCKDB_EXTENSIONS_FILEPATH
-from flows.create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG
+from flows.create_cachedb_file_plugin.config import DUCKDB_FULLTEXT_SEARCH_CONFIG, DUCKDB_FULLTEXT_SEARCH_CONFIG_ENUM
 
 
 
@@ -25,7 +25,7 @@ def get_duckdb_fts_creation_sql(table_name: str, document_identifier: Union[str 
     """
 
 @task(log_prints=True)
-def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_cdw_config_validation: bool):
+def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, tables_to_create_duckdb_fts_index: list[DUCKDB_FULLTEXT_SEARCH_CONFIG_ENUM], create_for_cdw_config_validation: bool):
     '''
     Create duckdb full text search indexes based on columns specified in DUCKDB_FULLTEXT_SEARCH_CONFIG
     '''
@@ -33,7 +33,7 @@ def create_duckdb_fts_index(db_dao: any, duckdb_database_name: str, create_for_c
 
     fts_extension_path = f'{DUCKDB_EXTENSIONS_FILEPATH}/fts.duckdb_extension';
 
-    for vocab_table_name in DUCKDB_FULLTEXT_SEARCH_CONFIG.keys():
+    for vocab_table_name in tables_to_create_duckdb_fts_index:
         logger.info(
             f"Creating duckdb fulltext search index for table:{vocab_table_name}...")
         config_document_identifier = DUCKDB_FULLTEXT_SEARCH_CONFIG[
