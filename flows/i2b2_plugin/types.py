@@ -17,7 +17,6 @@ class i2b2PluginType(BaseModel):
     data_model: str
     load_demo_data: bool = False
     datasets: Optional[List] = None
-    token: Optional[str] = ""
     
     @property
     def tag_name(self) -> str:

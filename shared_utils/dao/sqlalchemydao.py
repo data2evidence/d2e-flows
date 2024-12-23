@@ -41,6 +41,7 @@ class SqlAlchemyDao(DaoBase):
             case _:
                 database_name = configs.databaseName
 
+        # For connecting to cachedb
         if self.connect_to_duckdb:
             connection_string = self.create_cachedb_connection_url(
                 user=configs.adminUser,
@@ -48,16 +49,19 @@ class SqlAlchemyDao(DaoBase):
                 port=configs.port,
                 database_name=database_name
             )
-        else:
-            connection_string = self.create_sqlalchemy_connection_url(
-                dialect=configs.dialect,
-                user=configs.adminUser,
-                password=configs.adminPassword.get_secret_value(),
-                host=configs.host,
-                port=configs.port,
-                database_name=database_name
-            )
-        return sql.create_engine(connection_string)
+            return sql.create_engine(connection_string)
+
+        connection_string, connect_args = self.create_sqlalchemy_connection_url(
+            dialect=configs.dialect,
+            auth_mode=configs.authMode,
+            user=configs.adminUser,
+            password=configs.adminPassword,
+            host=configs.host,
+            port=configs.port,
+            database_name=database_name
+        )
+        return sql.create_engine(connection_string, connect_args=connect_args)
+
     
     @property
     def inspector(self):

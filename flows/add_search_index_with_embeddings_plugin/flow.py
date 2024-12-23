@@ -8,14 +8,12 @@ from prefect.logging import get_run_logger
 
 from flows.add_search_index_with_embeddings_plugin.config import MeilisearchAddIndexWithEmbeddingsType
 
-from shared_utils.types import AuthToken
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.api.MeilisearchSvcAPI import MeilisearchSvcAPI
 from shared_utils.api.TerminologySvcAPI import TerminologySvcAPI
-from shared_utils.api.PrefectAPI import get_auth_token_from_input
     
 @flow(log_prints=True)
-async def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbeddingsType):
+def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWithEmbeddingsType):
     logger = get_run_logger()
     database_code = options.databaseCode
     vocab_schema_name = options.vocabSchemaName
@@ -24,8 +22,6 @@ async def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWi
     CHUNK_SIZE = options.chunk_size
     MEILISEARCH_INDEX_CONFIG = options.meilisearch_index_config
 
-    authToken: AuthToken = await get_auth_token_from_input()
-    token = authToken.token
     
     # Check if vocab_schema_name is valid
     if not re.match(r"^\w+$", vocab_schema_name):
@@ -42,9 +38,9 @@ async def add_search_index_with_embeddings_plugin(options: MeilisearchAddIndexWi
 
     # Initialize helper classes
     meilisearch_svc_api = MeilisearchSvcAPI()
-    terminology_svc_api = TerminologySvcAPI(token)
+    terminology_svc_api = TerminologySvcAPI()
 
-    config = terminology_svc_api.get_hybridSearchConfig()
+    config = terminology_svc_api.get_hybrid_search_config()
     
     hybrid_search_name = f"{config['source'].replace('/', '')}_{config['model'].replace('/', '')}";
     index_name = f"{database_code}_{vocab_schema_name}_{table_name}_{hybrid_search_name}"

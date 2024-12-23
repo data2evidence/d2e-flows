@@ -25,7 +25,6 @@ from shared_utils.update_dataset_metadata import (extract_version,
 
 def get_version_info_tasks(changelog_filepath_list: Dict,
                           plugin_classpath: str,
-                          token: str,
                           dataset_list: List[PortalDatasetType],
                           use_cache_db: bool):
     logger = get_run_logger()
@@ -39,7 +38,7 @@ def get_version_info_tasks(changelog_filepath_list: Dict,
 
         for dataset in dataset_schema_list["datasets_with_schema"]:
             get_and_update_attributes(
-                dataset, token, changelog_filepath_list, plugin_classpath, use_cache_db)
+                dataset, changelog_filepath_list, plugin_classpath, use_cache_db)
 
 
 @task
@@ -64,7 +63,6 @@ def extract_db_schema(dataset_list: List[PortalDatasetType]) -> ExtractDatasetSc
 
 @task
 def get_and_update_attributes(dataset: PortalDatasetType,
-                              token: str,
                               changelog_filepath_list: Dict,
                               plugin_classpath: str,
                               use_cache_db: bool
@@ -85,7 +83,7 @@ def get_and_update_attributes(dataset: PortalDatasetType,
         logger.error(f"Failed to connect to database")
         raise e
     else:
-        portal_server_api = PortalServerAPI(token)
+        portal_server_api = PortalServerAPI()
         
         # handle case where schema does not exist in db
         schema_exists = dataset_dao.check_schema_exists()

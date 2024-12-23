@@ -15,11 +15,9 @@ from shared_utils.dao.DBDao import DBDao
 from shared_utils.dao.MinioDao import MinioDao
 from shared_utils.types import SupportedDatabaseDialects
 from shared_utils.api.PortalServerAPI import PortalServerAPI
-from shared_utils.api.PrefectAPI import get_auth_token_from_input
 
 from shared_utils.create_dataset_tasks import create_schema_task, create_and_assign_roles_task
 from shared_utils.update_dataset_metadata import update_entity_value, update_entity_distinct_count
-from shared_utils.types import AuthToken
 
 @flow(log_prints=True)
 def datamart_plugin(options: CreateDatamartOptions):
@@ -218,11 +216,9 @@ def upload_df_as_parquet(target_schema: str, table_name: str, df: pd.DataFrame, 
             bucket_name}/{file_name}""")
 
 
-async def update_dataset_metadata(options: CreateDatamartOptions):
+def update_dataset_metadata(options: CreateDatamartOptions):
     logger = get_run_logger()
     dataset_list = options.datasets
-    authToken: AuthToken = await get_auth_token_from_input()
-    token = authToken.token
     use_cache_db = options.use_cache_db
     
     if (dataset_list is None) or (len(dataset_list) == 0):
@@ -230,11 +226,11 @@ async def update_dataset_metadata(options: CreateDatamartOptions):
     else:
         logger.info(f"Successfully fetched {len(dataset_list)} datasets from portal")
         for dataset in dataset_list:
-            get_and_update_attributes(use_cache_db, token, dataset)
+            get_and_update_attributes(use_cache_db, dataset)
 
 
 @task(log_prints=True)
-def get_and_update_attributes(use_cache_db: bool, token: str, dataset: dict):
+def get_and_update_attributes(use_cache_db: bool, dataset: dict):
     logger = get_run_logger()
         
     try:
@@ -249,7 +245,7 @@ def get_and_update_attributes(use_cache_db: bool, token: str, dataset: dict):
                       database_code=database_code, 
                       schema_name=schema_name)
     
-        portal_server_api = PortalServerAPI(token)
+        portal_server_api = PortalServerAPI()
         
         # check if schema exists
         schema_exists = dbdao.check_schema_exists()

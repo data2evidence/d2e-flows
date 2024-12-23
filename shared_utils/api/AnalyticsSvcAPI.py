@@ -3,17 +3,11 @@ import requests
 
 from shared_utils.api.BaseAPI import BaseAPI
 
-
 class AnalyticsSvcAPI(BaseAPI):
-    def __init__(self, token):
+    def __init__(self):
         super().__init__()
         self.url = self.get_service_route("analytics")
-        self.token = token
 
-    def getOptions(self):
-        return {
-            "Authorization": self.token
-        }
 
     def create_cohort_definition(self, datasetId: str,
                                  description: str,
@@ -21,7 +15,7 @@ class AnalyticsSvcAPI(BaseAPI):
                                  syntax: str,
                                  name: str) -> int:
         url = f"{self.url}api/services/cohort-definition"
-        headers = self.getOptions()
+        headers = self.get_options()
         data = {
             "studyId": datasetId,
             "name": name,

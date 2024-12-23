@@ -1,16 +1,22 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, SecretStr
 
 from prefect.input import RunInput
 
+
+class AuthMode(str, Enum):
+    JWT = "jwt"
+    PASSWORD = "password"
+
+
 class DBCredentialsType(BaseModel):
-    readUser: str
-    readPassword: SecretStr
-    adminUser: str
-    adminPassword: SecretStr
-    user: str
-    password: SecretStr
+    readUser: Optional[str] = None
+    readPassword: Optional[SecretStr] = None
+    adminUser: Optional[str] = None
+    adminPassword: Optional[SecretStr] = None
+    user: Optional[str] = None
+    password: Optional[SecretStr] = None
     dialect: str
     databaseName: str
     host: str
@@ -22,6 +28,16 @@ class DBCredentialsType(BaseModel):
     enableAuditPolicies: bool = False
     readRole: Optional[str] = ""
 
+    # Todo: align with DATABASE_CREDENTIALS
+    # authMode: Literal[AuthMode.PASSWORD, AuthMode.JWT]
+    @property # Todo: Temporary until authMode is implemented in DATABASE_CREDENTIALS
+    def authMode(self) -> AuthMode:
+        if self.dialect == SupportedDatabaseDialects.HANA and \
+            all(pw is None for pw in [self.password, self.adminPassword, self.readPassword]):
+                return AuthMode.JWT
+        else:
+            return AuthMode.PASSWORD
+
 
 class CacheDBCredentialsType(DBCredentialsType):
     readUser: SecretStr
@@ -29,20 +45,9 @@ class CacheDBCredentialsType(DBCredentialsType):
     user: SecretStr
 
 
-
 class UserType(str, Enum):
     ADMIN_USER = "admin_user"
     READ_USER = "read_user"
-
-
-class HANA_TENANT_USERS(str, Enum):
-    ADMIN_USER = "TENANT_ADMIN_USER",
-    READ_USER = "TENANT_READ_USER",
-
-
-class PG_TENANT_USERS(str, Enum):
-    ADMIN_USER = "postgres_tenant_admin_user",
-    READ_USER = "postgres_tenant_read_user",
 
 
 class SupportedDatabaseDialects(str, Enum):
@@ -101,4 +106,4 @@ class EntityCountDistributionType(BaseModel):
     SPECIMEN_COUNT: str
 
 class AuthToken(RunInput):
-    token: str
+    token: SecretStr

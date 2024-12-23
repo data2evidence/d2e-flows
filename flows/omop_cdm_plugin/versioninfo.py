@@ -3,17 +3,13 @@ from prefect.logging import get_run_logger
 
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
-from shared_utils.api.PrefectAPI import get_auth_token_from_input
-from shared_utils.types import AuthToken
 
 from flows.omop_cdm_plugin.types import OmopCDMPluginOptions, RELEASE_VERSION_MAPPING
 
 
-async def update_dataset_metadata_flow(options: OmopCDMPluginOptions):
+def update_dataset_metadata_flow(options: OmopCDMPluginOptions):
     logger = get_run_logger()
     dataset_list = options.datasets
-    authToken: AuthToken = await get_auth_token_from_input()
-    token = authToken.token
     use_cache_db = options.use_cache_db
     
     if (dataset_list is None) or (len(dataset_list) == 0):
@@ -21,11 +17,11 @@ async def update_dataset_metadata_flow(options: OmopCDMPluginOptions):
     else:
         logger.info(f"Successfully fetched {len(dataset_list)} datasets from portal")
         for dataset in dataset_list:
-            get_and_update_attributes(token, dataset, use_cache_db)
+            get_and_update_attributes(dataset, use_cache_db)
 
 
 @task(log_prints=True)
-def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
+def get_and_update_attributes(dataset: dict, use_cache_db: bool):
     logger = get_run_logger()
 
     try:
@@ -39,7 +35,7 @@ def get_and_update_attributes(token: str, dataset: dict, use_cache_db: bool):
         dbdao = DBDao(use_cache_db=use_cache_db,
                       database_code=database_code, 
                       schema_name=schema_name)
-        portal_server_api = PortalServerAPI(token)
+        portal_server_api = PortalServerAPI()
         
         # check if schema exists
         schema_exists = dbdao.check_schema_exists()
