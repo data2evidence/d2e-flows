@@ -51,10 +51,11 @@ class FhirSchemaJsonType(BaseModel):
 
 
 class DuckDBDataTypes(str, Enum):
-    DECIMAL = "decimal(18,6)"
+    DECIMAL = "decimal"
     INTEGER = "integer"
     VARCHAR = "varchar"
     BOOLEAN = "boolean"
+    JSON = "json"
 
 
 # To store referenecs to medplum resources that are not yet defined 

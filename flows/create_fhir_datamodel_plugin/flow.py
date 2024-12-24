@@ -1,6 +1,5 @@
 import json
 import sqlalchemy as sql
-from functools import partial
 
 from prefect import flow, task
 from prefect.variables import Variable
@@ -23,7 +22,12 @@ def create_fhir_datamodel_plugin(options: CreateFhirDataModelOptions):
     
     schema_path = Variable.get("fhir_schema_file") + '/fhir.schema.json'
     with open(schema_path, "r") as file:
-            fhir_schema_json = FhirSchemaJsonType(**json.load(file))
+
+            # change data type in "decimal" definition to decimal
+            data = json.load(file)
+            data["definitions"]["decimal"]["type"] = "decimal"
+            fhir_schema_json = FhirSchemaJsonType(**data)
+
 
     dbdao = DBDao(use_cache_db=True,
                   database_code=database_code, 
@@ -94,8 +98,8 @@ def extract_definition_and_create_table(fhir_schema_json: FhirSchemaJsonType,
             create_fhir_table(duckdb_table_structure, dbdao, schema_name, table_name)
 
         except Exception as err:
-            error_msg = f"Error occurred while creating table for fhir resource '{resource}'!"
-            logger.error(error_msg)
+            error_msg = f"Error occurred while creating table for fhir resource '{resource}'"
+            logger.error(error_msg + f": {err}")
             drop_tables_hook(dbdao=dbdao, tables_to_drop=created_tables)
             return Failed(message=error_msg)
 
@@ -118,10 +122,6 @@ def get_fhir_data_types(fhir_schema_json: FhirSchemaJsonType) -> dict[str, str]:
 def convert_fhir_data_types_to_duckdb(fhir_data_types: dict[str, str]) -> dict[str, str]:
     basic_data_types = set(fhir_data_types.values())
     duckdb_types = {x: FHIR_TO_DUCKDB[x] for x in basic_data_types}
-
-    # Add special handling based on fhir_data_types key
-    duckdb_types["decimal"] = FHIR_TO_DUCKDB["decimal"]
-
     return duckdb_types
 
 
@@ -145,7 +145,7 @@ def get_fhir_table_structure(fhir_schema_json: FhirSchemaJsonType,
                         fhir_table_definition.parsedProperties[property] = get_nested_property(fhir_schema_json, property, propery_path, fhir_table_definition.properties[property], propery_path)
             return fhir_table_definition.parsedProperties
         else:
-            return ValueError(f"The input FHIR resource {fhir_definition_name} has no properties defined")
+            raise ValueError(f"The input FHIR resource {fhir_definition_name} has no properties defined")
     else:
         raise ValueError(f"The input resource {fhir_definition_name} is not a FHIR resource")
 

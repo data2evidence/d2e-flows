@@ -80,7 +80,7 @@ def get_nested_property(fhir_schema_json: FhirSchemaJsonType,
                             sub_properties.parsedProperties[sub_property] = get_nested_property(fhir_schema_json, sub_property, sub_property_path, sub_property_details, new_heirarchy)
             return sub_properties.parsedProperties
         else:
-            return extract_data_type(property_path, sub_properties) if sub_properties.type else "string"
+            return sub_properties.type if sub_properties.type else "string"
     elif property_details.type and  property_details.type == 'array':
         if 'enum' in property_details.items:
             return ['string']
@@ -113,7 +113,7 @@ def get_nested_property(fhir_schema_json: FhirSchemaJsonType,
     elif not property_details.type:
         return 'string'
     else:
-        return extract_data_type(property_path, property_details)
+        return property_details.type
 
 
 def is_custom_type(property_path: str) -> bool:
@@ -139,16 +139,6 @@ def get_property_path(property_definition: PropertyDefinitionType) -> str | None
     elif property_definition.items and "$ref" in property_definition.items:
         return property_definition.items["$ref"].split("/")[-1]
     return None
-
-
-def extract_data_type(property_path: str, property_details: FhirDefinitionType) -> str:
-    """
-    Handle special cases e.g. decimal based on property_path
-    """
-    if property_path == "decimal":
-        return "decimal"
-    else:
-        return property_details.type
 
 
 def get_fhir_datamodel_for_object(list_of_object_columns: str, is_array: bool) -> str:
