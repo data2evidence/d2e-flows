@@ -1,9 +1,0 @@
-{
-    "name": "dqd_plugin",
-    "type": "dqd",
-    "entrypoint": "dqd_plugin/flow.py",
-    "tags": [
-      "data_quality_dashboard"
-    ]
-  }
-    

@@ -1,8 +1,0 @@
-{
-    "name": "add_search_index_with_embeddings_plugin",
-    "type": "add_search_index_with_embeddings",
-    "entrypoint": "add_search_index_with_embeddings_plugin/flow.py",
-    "tags": [
-      "add_search_index_with_embeddings"
-    ]
-}
