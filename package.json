@@ -1546,23 +1546,68 @@
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": {"options": {"title": "options", "position": 0, "allOf": [{"$ref": "#/definitions/PhenotypeOptionsType"}]}},
-            "required": ["options"],
+            "properties": {
+              "options": {
+                "title": "options",
+                "position": 0,
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/PhenotypeOptionsType"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "options"
+            ],
             "definitions": {
               "PhenotypeOptionsType": {
-                  "title": "PhenotypeOptionsType",
-                  "type": "object",
-                  "properties": {
-                      "databaseCode": {"title": "Databasecode", "type": "string"},
-                      "cdmschemaName": {"title": "Cdmschemaname", "type": "string"},
-                      "cohortschemaName": {"title": "Cohortschemaname", "type": "string"},
-                      "cohorttableName": {"title": "Cohorttablename", "type": "string"},
-                      "cohortsId": {"title": "Cohortsid", "type": "string"},
-                      "vocabschemaName": {"title": "Vocabschemaname", "type": "string"},
-                      "description": {"title": "Description", "type": "string"},
-                      "owner": {"title": "Owner", "type": "string"}
+                "title": "PhenotypeOptionsType",
+                "type": "object",
+                "properties": {
+                  "databaseCode": {
+                    "title": "Databasecode",
+                    "type": "string"
                   },
-                  "required": ["databaseCode", "cdmschemaName", "cohortschemaName", "cohorttableName", "cohortsId", "vocabschemaName", "description", "owner"]
+                  "cdmschemaName": {
+                    "title": "Cdmschemaname",
+                    "type": "string"
+                  },
+                  "cohortschemaName": {
+                    "title": "Cohortschemaname",
+                    "type": "string"
+                  },
+                  "cohorttableName": {
+                    "title": "Cohorttablename",
+                    "type": "string"
+                  },
+                  "cohortsId": {
+                    "title": "Cohortsid",
+                    "type": "string"
+                  },
+                  "vocabschemaName": {
+                    "title": "Vocabschemaname",
+                    "type": "string"
+                  },
+                  "description": {
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "owner": {
+                    "title": "Owner",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "databaseCode",
+                  "cdmschemaName",
+                  "cohortschemaName",
+                  "cohorttableName",
+                  "cohortsId",
+                  "vocabschemaName",
+                  "description",
+                  "owner"
+                ]
               }
             }
           }
@@ -1591,7 +1636,6 @@
               "json_graph",
               "options"
             ]
-
           }
         },
         {
@@ -1604,15 +1648,117 @@
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": { "options": {"title": "options", "position": 0, "$ref": "#/definitions/NerExtractOptions"}},
-            "required": ["options"],
+            "properties": {
+              "options": {
+                "title": "options",
+                "position": 0,
+                "$ref": "#/definitions/NerExtractOptions"
+              }
+            },
+            "required": [
+              "options"
+            ],
             "definitions": {
-                "NerExtractOptions": {
-                    "title": "NerExtractOptions",
-                    "type": "object",
-                    "properties": {"doc": {"title": "Doc", "type": "string"}},
-                    "required": ["doc"]
-                }
+              "NerExtractOptions": {
+                "title": "NerExtractOptions",
+                "type": "object",
+                "properties": {
+                  "doc": {
+                    "title": "Doc",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "doc"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "fhir_to_omop_plugin",
+          "type": "fhir_to_omop",
+          "entrypoint": "flows.fhir_to_omop_plugin.flow.fhir_to_omop_plugin",
+          "tags": [
+            "fhir"
+          ],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+              "options": {
+                "$ref": "#/definitions/FHIRToOMOPOptionsType",
+                "position": 0,
+                "title": "options"
+              }
+            },
+            "required": [
+              "options"
+            ],
+            "definitions": {
+              "FHIRToOMOPOptionsType": {
+                "properties": {
+                  "batchChunksize": {
+                    "title": "Batchchunksize",
+                    "type": "string"
+                  },
+                  "fhirGatewayJdbcCurl": {
+                    "title": "Fhirgatewayjdbccurl",
+                    "type": "string"
+                  },
+                  "fhirGatewayUsername": {
+                    "title": "Fhirgatewayusername",
+                    "type": "string"
+                  },
+                  "fhirGatewayPassword": {
+                    "title": "Fhirgatewaypassword",
+                    "type": "string"
+                  },
+                  "fhirGatewayTable": {
+                    "title": "Fhirgatewaytable",
+                    "type": "string"
+                  },
+                  "omopCDMJdbcCurl": {
+                    "title": "Omopcdmjdbccurl",
+                    "type": "string"
+                  },
+                  "omopCDMUsername": {
+                    "title": "Omopcdmusername",
+                    "type": "string"
+                  },
+                  "omopCDMPassword": {
+                    "title": "Omopcdmpassword",
+                    "type": "string"
+                  },
+                  "omopCDMSchema": {
+                    "title": "Omopcdmschema",
+                    "type": "string"
+                  },
+                  "dataBeginDate": {
+                    "title": "Databegindate",
+                    "type": "string"
+                  },
+                  "dataEndDate": {
+                    "title": "Dataenddate",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "batchChunksize",
+                  "fhirGatewayJdbcCurl",
+                  "fhirGatewayUsername",
+                  "fhirGatewayPassword",
+                  "fhirGatewayTable",
+                  "omopCDMJdbcCurl",
+                  "omopCDMUsername",
+                  "omopCDMPassword",
+                  "omopCDMSchema",
+                  "dataBeginDate",
+                  "dataEndDate"
+                ],
+                "title": "FHIRToOMOPOptionsType",
+                "type": "object"
+              }
             }
           }
         },

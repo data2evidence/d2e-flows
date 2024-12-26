@@ -29,7 +29,6 @@ class CacheDBCredentialsType(DBCredentialsType):
     user: SecretStr
 
 
-
 class UserType(str, Enum):
     ADMIN_USER = "admin_user"
     READ_USER = "read_user"
