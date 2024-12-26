@@ -40,9 +40,6 @@ def cohort_survival_plugin(options: CohortSurvivalOptionsType):
     
     logger = get_run_logger()
     logger.info("Running Cohort Survival")
-
-    
-    dbdao_module = importlib.import_module('dao.DBDao')
     
     database_code = options.databaseCode
     schema_name = options.schemaName
