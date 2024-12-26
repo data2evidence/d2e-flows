@@ -180,8 +180,8 @@ def execute_nodes_flow(graph, sorted_nodes, test):
       result_serializer=JSONSerializer(object_encoder="flows.dataflow_ui_plugin.nodes.serialize_result_to_json"), log_prints=True,
       persist_result=True)
 def execute_node_task(nodename, node_type, node, input, test):
-    # Get task run context    
-    task_run_context = TaskRunContext.get().task_run.dict()
+    # Get task run context
+    task_run_context = TaskRunContext.get().task_run.model_dump()
 
     _node = node
     result = None

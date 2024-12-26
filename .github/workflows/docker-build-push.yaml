@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - trex
+      - main
   pull_request:
     types: [opened, ready_for_review, reopened, synchronize]
     
@@ -12,6 +13,7 @@ jobs:
   build-push-image:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include: 
           - AZ_REGISTRY_REPOSITORY: d2e-flow/base
