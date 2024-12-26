@@ -522,19 +522,3 @@ class SqlAlchemyDao(DaoBase):
                 row_count = connection.execute(
                     select_count_stmt).scalar()   
         return row_count
-    
-    # --- Meilisearch methods ---
-
-    def get_stream_connection(self, yield_per: int) -> Connection:
-        return self.engine.connect().execution_options(yield_per=yield_per)
-
-    def get_stream_result_set(self, connection, table_name: str) -> CursorResult:
-        table = Table(table_name, self.metadata, autoload_with=connection)
-        stmt = sql.select(table)
-        stream_result_set = connection.execute(stmt)
-        return stream_result_set
-
-    def get_stream_result_set_concept_synonym(self, connection, table_name: str) -> CursorResult:
-        stmt = sql.text('''select c.concept_name as concept_name, STRING_AGG (cs.concept_synonym_name , ',') as synonym_name from cdmvocab.concept_synonym cs join cdmvocab.concept c on cs.concept_id = c.concept_id group by concept_name''')
-        stream_result_set = connection.execute(stmt).all()
-        return stream_result_set

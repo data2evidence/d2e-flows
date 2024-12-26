@@ -14,9 +14,11 @@ from prefect.logging import get_run_logger
 from flows.i2b2_plugin.types import *
 from flows.i2b2_plugin.utils import *
 
+from shared_utils.types import AuthToken
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
+from shared_utils.api.PrefectAPI import get_auth_token_from_input
 from shared_utils.create_dataset_tasks import (create_schema_task, 
                                                create_and_assign_roles_task, 
                                                drop_schema_hook)
@@ -75,10 +77,11 @@ def setup_and_create_datamodel(tag_name: str,
         load_demo_i2b2_data(dbdao, logger)
 
 
-def update_dataset_metadata_flow(options: i2b2PluginType):
+async def update_dataset_metadata_flow(options: i2b2PluginType):
     logger = get_run_logger()
     dataset_list = options.datasets
-    token = options.token
+    authToken: AuthToken = await get_auth_token_from_input()
+    token = authToken.token
     use_cache_db = options.use_cache_db
     if (dataset_list is None) or (len(dataset_list) == 0):
         logger.debug("No datasets fetched from portal")

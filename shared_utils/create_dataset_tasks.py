@@ -96,7 +96,7 @@ def create_and_assign_roles_task(dbdao: DaoBase):
         logger.info(f"'{dbdao.read_role}' role does not exist")
         logger.info(
             f"Creating '{dbdao.read_role}' role and assigning to '{dbdao.read_user}' user")
-        dbdao.create_and_assign_read_role(dbdao.read_user, dbdao.read_role)
+        dbdao.create_and_assign_role(dbdao.read_user, dbdao.read_role)
 
     # Grant read role read privileges
     logger.info(f"Granting read privileges to '{dbdao.read_role}' role")
