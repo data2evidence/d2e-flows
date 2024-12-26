@@ -1642,6 +1642,8 @@
           "name": "ner_extract_plugin",
           "type": "NLP",
           "entrypoint": "flows.ner_extract_plugin.flow.ner_extract_plugin",
+          "image": "alpcr.azurecr.io/d2e-flow/nlp:main",
+          "image_pull_policy": "Always",
           "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
@@ -1776,6 +1778,8 @@
           "name": "loyalty_score_plugin",
           "type": "loyaltyscore",
           "entrypoint": "flows.loyalty_score_plugin.flow.loyalty_score_plugin",
+          "image": "alpcr.azurecr.io/d2e-flow/base:main",
+          "image_pull_policy": "Always",
           "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
