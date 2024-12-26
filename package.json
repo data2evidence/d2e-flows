@@ -1649,31 +1649,43 @@
             "title": "Parameters",
             "type": "object",
             "properties": {
-              "options": {
-                "title": "options",
-                "position": 0,
-                "$ref": "#/definitions/NerExtractOptions"
-              }
+                "options": {
+                    "title": "options",
+                    "position": 0,
+                    "allOf": [
+                        {"$ref": "#/definitions/NerExtractOptions"}
+                    ]
+                }
             },
-            "required": [
-              "options"
-            ],
+            "required": ["options"],
             "definitions": {
               "NerExtractOptions": {
-                "title": "NerExtractOptions",
-                "type": "object",
-                "properties": {
-                  "doc": {
-                    "title": "Doc",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "doc"
-                ]
+                  "title": "NerExtractOptions",
+                  "type": "object",
+                  "properties": {
+                      "database_code": {
+                          "title": "Database Code",
+                          "type": "string"
+                      },
+                      "schema_name": {
+                          "title": "Schema Name",
+                          "type": "string"
+                      },
+                      "note_table": {
+                          "title": "Note Table",
+                          "default": "note",
+                          "type": "string"
+                      },
+                      "note_nlp_table": {
+                        "title": "Note NLP Table",
+                        "default": "note_nlp",
+                        "type": "string"
+                    }
+                  },
+                  "required": ["database_code", "schema_name"]
               }
             }
-          }
+         }
         },
         {
           "name": "fhir_to_omop_plugin",

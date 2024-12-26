@@ -1,5 +1,6 @@
 FROM alpcr.azurecr.io/alp-dataflow-gen-base:develop as dbsvc-build
 
+RUN apt-get install libpq5 libpq-dev -y --no-install-recommends && apt-get clean
 
 FROM dbsvc-build AS final-build
 
@@ -62,6 +63,8 @@ WORKDIR /app
 
 COPY --chown=docker:docker --chmod=711 ./requirements_NLP.txt .
 RUN pip install -r requirements_NLP.txt
+
+COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
 
 RUN mkdir -p ./flows
 RUN chown -R docker:docker ./flows
