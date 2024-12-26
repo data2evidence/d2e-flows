@@ -45,7 +45,7 @@ def create_datamart(options: CreateDatamartOptions):
             target_schema = options.schema_name.lower() # schema to copy to            
         case _:
             raise ValueError(f"Database dialect {options.dialect} not supported for this plugin")
-    
+
     source_dbdao = DBDao(use_cache_db=use_cache_db,
                          database_code=database_code, 
                          schema_name=source_schema)
