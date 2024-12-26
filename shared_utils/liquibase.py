@@ -8,9 +8,11 @@ from prefect.variables import Variable
 from flows.data_management_plugin.const import *
 from flows.data_characterization_plugin.types import CHARACTERIZATION_DATA_MODEL
 
-from shared_utils.types import (LiquibaseAction,
-                                DBCredentialsType,
-                                SupportedDatabaseDialects)
+from shared_utils.dao.daobase import DaoBase
+from shared_utils.api.PrefectAPI import get_auth_token_from_input, get_token_value
+from shared_utils.types import (AuthMode, AuthToken, LiquibaseAction,
+                                DBCredentialsType, SupportedDatabaseDialects)
+
 
 class Liquibase:
     def __init__(self,
@@ -46,10 +48,18 @@ class Liquibase:
         database_name = self.tenant_configs.databaseName
         ssl_trust_store = self.tenant_configs.sslTrustStore
         host_name_in_cert = self.tenant_configs.hostnameInCertificate
-        admin_user = self.tenant_configs.adminUser
-        admin_password = self.tenant_configs.adminPassword.get_secret_value()
+
+        if self.dialect == SupportedDatabaseDialects.HANA and self.tenant_configs.authMode == AuthMode.JWT:
+            # jwt authentication
+            auth_token: AuthToken = get_auth_token_from_input()
+            admin_password = get_token_value(auth_token)
+        else:
+            # password authentication
+            admin_user = self.tenant_configs.adminUser
+            admin_password = self.tenant_configs.adminPassword.get_secret_value()
 
         liquibase_path = Variable.get("liquibase_path") if Variable.get("liquibase_path") else "/app/liquibase/liquibase"
+        
         hana_driver_class_path = Variable.get("hana_driver_class_path") if Variable.get("hana_driver_class_path") else "/app/liquibase/lib/ngdbc-latest.jar"
         postgres_driver_class_path = Variable.get("postgres_driver_class_path") if Variable.get("postgres_driver_class_path") else "/app/inst/drivers/postgresql-42.3.1.jar"
         match self.dialect:
@@ -70,13 +80,16 @@ class Liquibase:
             f"--changeLogFile={changeLogFile}",
             f"--url={connection_base_url}{connection_properties}",
             f"--classpath={classpath}",
-            f"--username={admin_user}",
+            #f"--username={admin_user}",
             f"--password={admin_password}",
             f"--driver={driver}",
             f"--logLevel={Variable.get('lb_log_level') if Variable.get('lb_log_level') else 'INFO'}",
             f"--defaultSchemaName={self.schema_name}",
             f"--liquibaseSchemaName={self.schema_name}"
         ]
+
+        if self.tenant_configs.authMode != AuthMode.JWT:
+            params.append(f"--username={admin_user}")
 
         match self.action:
             case LiquibaseAction.STATUS:

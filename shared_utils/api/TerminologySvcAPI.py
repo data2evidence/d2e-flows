@@ -1,22 +1,19 @@
 import requests
 
+from shared_utils.types import AuthToken
 from shared_utils.api.BaseAPI import BaseAPI
+from shared_utils.api.PrefectAPI import get_auth_token_from_input
 
 
 class TerminologySvcAPI(BaseAPI):
-    def __init__(self, token):
+    def __init__(self):
         super().__init__()
         self.url = self.get_service_route("terminology")
-        self.token = token
 
-    def getOptions(self):
-        return {
-            "Authorization": self.token
-        }
 
-    def get_hybridSearchConfig(self):
+    def get_hybrid_search_config(self):
         url = f"{self.url}hybrid-search-config"
-        headers = self.getOptions()
+        headers = self.get_options()
         result = requests.get(
             url,
             headers=headers,
@@ -26,5 +23,5 @@ class TerminologySvcAPI(BaseAPI):
             raise Exception(
                 f"TerminologySvcAPI Failed to get hybrid search config, {result.content}")
         else:
-            hybridSearchConfig = result.json()
-            return hybridSearchConfig
+            hybrid_search_config = result.json()
+            return hybrid_search_config

@@ -4,21 +4,15 @@ from shared_utils.api.BaseAPI import BaseAPI
 
 
 class PortalServerAPI(BaseAPI):
-    def __init__(self, token):
+    def __init__(self):
         super().__init__()
         self.url = self.get_service_route("portalServer")
         self.datasets_url = self.url + 'dataset/list?role=systemAdmin'
         self.dataset_attributes_url = self.url + 'dataset/attribute'
-        self.token = token
-    
 
-    def getOptions(self):
-        return {
-            "Authorization": self.token
-        }
 
     def get_datasets_from_portal(self):
-        headers = self.getOptions()
+        headers = self.get_options()
         result = requests.get(
             self.datasets_url,
             headers=headers,
@@ -32,7 +26,7 @@ class PortalServerAPI(BaseAPI):
             return datasets_list
 
     def update_dataset_attributes_table(self, study_id: str, attribute_id: str, attribute_value: str):
-        headers = self.getOptions()
+        headers = self.get_options()
         result = requests.put(
             self.dataset_attributes_url,
             headers=headers,

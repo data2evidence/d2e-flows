@@ -27,7 +27,6 @@ class OmopCDMPluginOptions(BaseModel):
     schema_name: Optional[str]
     vocab_schema: Optional[str]
     datasets: Optional[List] = None
-    token: Optional[str] = ""
 
     @property
     def use_cache_db(self) -> str:

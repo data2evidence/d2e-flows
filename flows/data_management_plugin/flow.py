@@ -7,9 +7,7 @@ from flows.data_management_plugin.versioninfo import *
 from flows.data_management_plugin.const import get_db_dialect
 from flows.data_management_plugin.types import DataModelType, FlowActionType
 
-from shared_utils.api.PrefectAPI import get_auth_token_from_input
 from shared_utils.create_dataset_tasks import get_plugin_classpath
-from shared_utils.types import AuthToken
 
 
 @flow(log_prints=True, timeout_seconds=3600)
@@ -93,14 +91,11 @@ def update_datamodel_flow(options: UpdateDataModelType, logger):
         raise e
 
 
-async def get_version_info_flow(options: GetVersionInfoType, logger):
+def get_version_info_flow(options: GetVersionInfoType, logger):
     try:
-        authToken:AuthToken = await get_auth_token_from_input()
-        token = authToken.token
         get_version_info_tasks(
             changelog_filepath_list=options.changelog_filepath_list,
             plugin_classpath=get_plugin_classpath(options.flow_name),
-            token=token,
             dataset_list=options.datasets,
             use_cache_db=options.use_cache_db,
         )

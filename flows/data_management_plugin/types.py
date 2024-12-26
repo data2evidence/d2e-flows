@@ -30,7 +30,6 @@ class DataModelType(BaseModel):
     rollback_count: Optional[int]
     rollback_tag: Optional[str]
     update_count: Optional[int]
-    token: Optional[str]
     datasets: Optional[List]
 
     @property
@@ -117,7 +116,6 @@ class PortalDatasetType(BaseModel):
 
 
 class GetVersionInfoType(DataModelBase):
-    token: str
     datasets: List
 
 

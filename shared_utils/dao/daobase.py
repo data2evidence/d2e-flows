@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional, Tuple
 from datetime import datetime
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
@@ -7,9 +7,11 @@ from sqlalchemy import text
 
 from prefect.variables import Variable
 from prefect.blocks.system import Secret
+from shared_utils.types import UserType, AuthToken
+from shared_utils.api.PrefectAPI import get_auth_token_from_input, get_token_value
 
 from shared_utils.api.OpenIdAPI import OpenIdAPI
-from shared_utils.types import SupportedDatabaseDialects, UserType, DBCredentialsType, CacheDBCredentialsType
+from shared_utils.types import SupportedDatabaseDialects, UserType, DBCredentialsType, CacheDBCredentialsType, AuthMode
 
 class DialectDrivers(BaseModel):
     class jdbc:
@@ -230,6 +232,8 @@ class DaoBase(ABC):
             case SupportedDatabaseDialects.DUCKDB:
                 # "duckdb://" will connect to in-memory ephemeral database
                 base_url = f"{getattr(DialectDrivers.ibis, dialect)}://{database_name}"
+            case SupportedDatabaseDialects.HANA:
+                raise ValueError(f"'{SupportedDatabaseDialects.HANA}' database dialect not supported!")
             case _:
                 base_url = f"{getattr(DialectDrivers.ibis, dialect)}://{user}:{password}@{host}:{port}/{database_name}"
         return base_url
@@ -237,16 +241,24 @@ class DaoBase(ABC):
     @staticmethod
     def create_sqlalchemy_connection_url(dialect: SupportedDatabaseDialects, 
                                          database_name: str = None,
+                                         auth_mode: AuthMode = AuthMode.PASSWORD,
                                          user: str = None,
                                          password: str = None,
                                          host: str = None,
-                                         port: int = None) -> str:
+                                         port: int = None) -> Tuple[str, dict]:
+        
         match dialect:
             case SupportedDatabaseDialects.DUCKDB:
                 base_url = f"{getattr(DialectDrivers.sqlalchemy, dialect)}://{database_name}"
             case _:
-                base_url = f"{getattr(DialectDrivers.sqlalchemy, dialect)}://{user}:{password}@{host}:{port}/{database_name}"
-        return base_url
+                base_url = f"{getattr(DialectDrivers.sqlalchemy, dialect)}://{host}:{port}/{database_name}"
+        
+        if auth_mode == AuthMode.JWT and dialect == SupportedDatabaseDialects.HANA:
+            # Prefect task to fetch token
+            auth_token: AuthToken = get_auth_token_from_input()
+            return base_url, {"password": get_token_value(auth_token)}
+
+        return base_url, {"user": user, "password": password.get_secret_value()}
 
     def create_cachedb_connection_url(self,
                                       database_name: str = None,
@@ -288,14 +300,6 @@ class DaoBase(ABC):
         database_credentials = self.tenant_configs
         database_connector_dialect = getattr(DialectDrivers.database_connector, database_credentials.dialect)
 
-        match user_type:
-            case UserType.ADMIN_USER:
-                user = database_credentials.adminUser
-                password = database_credentials.adminPassword.get_secret_value()
-            case UserType.READ_USER:
-                user = database_credentials.readUser
-                password = database_credentials.readPassword.get_secret_value()
-
         dialect = database_credentials.dialect
         host = database_credentials.host
         port = database_credentials.port
@@ -307,11 +311,25 @@ class DaoBase(ABC):
             case SupportedDatabaseDialects.HANA:
                 conn_url = f"{getattr(DialectDrivers.jdbc, dialect)}://{host}:{port}?{database_name}"
                 extra_config = f"&sessionVariable:TEMPORAL_SYSTEM_TIME_AS_OF={release_date}" if release_date else None
-                conn_url.append(extra_config)
+                conn_url += extra_config
 
-        connection_string = f"""connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = '{database_connector_dialect}', connectionString = '{conn_url}', user = '{user}', password = '{password}', pathToDriver = '{DaoBase.path_to_driver}')"""
+        if database_credentials.authMode == AuthMode.JWT and dialect == SupportedDatabaseDialects.HANA:
+            user = "" # Todo: Confirm if can be left blank
+            # Prefect task to fetch token
+            auth_token: AuthToken = get_auth_token_from_input()
+            return f"""connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = '{database_connector_dialect}', connectionString = '{conn_url}', user = '{user}', password = '{get_token_value(auth_token)}', pathToDriver = '{DaoBase.path_to_driver}')"""
+        
+        else:
+            match user_type:
+                case UserType.ADMIN_USER:
+                    user = database_credentials.adminUser
+                    password = database_credentials.adminPassword
+                case UserType.READ_USER:
+                    user = database_credentials.readUser
+                    password = database_credentials.readPassword
 
-        return connection_string
+            return f"""connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = '{database_connector_dialect}', connectionString = '{conn_url}', user = '{user}', password = '{password.get_secret_value()}', pathToDriver = '{DaoBase.path_to_driver}')"""
+
 
     @staticmethod
     def set_db_driver_env() -> str:

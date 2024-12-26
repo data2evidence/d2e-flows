@@ -26,7 +26,6 @@ class QuestionnaireOptionsType(BaseModel):
     schema_name: Optional[str]
     questionnaire_definition: Optional[Dict]
     questionnaire_id: Optional[str]
-    token: Optional[str]
     
     @property
     def use_cache_db(self) -> str:

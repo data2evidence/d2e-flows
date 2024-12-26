@@ -34,7 +34,6 @@ class CreateDatamartOptions(BaseModel):
     database_code: Optional[str]
     snapshot_copy_config: Optional[DatamartCopyConfig]
     datasets: Optional[List] = None
-    token: Optional[str] = ""
 
     @property
     def use_cache_db(self) -> str:

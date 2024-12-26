@@ -12,8 +12,9 @@ from prefect.filesystems import RemoteFileSystem as RFS
 
 from flows.dqd_plugin.types import DqdOptionsType, DQD_THREAD_COUNT
 
-from shared_utils.dao.DBDao import DBDao
 from shared_utils.types import UserType
+from shared_utils.dao.DBDao import DBDao
+
 
 @task
 def setup_plugin():
@@ -121,7 +122,6 @@ def execute_dqd(
                     cohortTableName: {cohort_table_name}
                 '''
                 )
-    # raise Exception("test stop")
 
     with robjects.conversion.localconverter(robjects.default_converter):
         robjects.r(f'''

@@ -8,8 +8,7 @@ from prefect.logging import get_run_logger
 
 from flows.cohort_generator_plugin.types import CohortGeneratorOptionsType
 
-from shared_utils.api.PrefectAPI import get_auth_token_from_input
-from shared_utils.types import AuthToken, UserType
+from shared_utils.types import UserType
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.api.AnalyticsSvcAPI import AnalyticsSvcAPI
 
@@ -28,7 +27,7 @@ def setup_plugin():
 
 
 @flow(log_prints=True, persist_result=True)
-async def cohort_generator_plugin(options: CohortGeneratorOptionsType):
+def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     logger = get_run_logger()
     logger.info('Running Cohort Generator')
         
@@ -39,16 +38,13 @@ async def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     dataset_id = options.datasetId
     description = options.description
     owner = options.owner
-    authToken: AuthToken = await get_auth_token_from_input()
-    token = authToken.token
     use_cache_db = options.use_cache_db
-    
 
     dbdao = DBDao(use_cache_db=use_cache_db,
                   database_code=database_code, 
                   schema_name=schema_name)
     
-    analytics_svc_api = AnalyticsSvcAPI(token)
+    analytics_svc_api = AnalyticsSvcAPI()
     
     cohort_json_expression = json.dumps(cohort_json.expression)
     cohort_name = cohort_json.name

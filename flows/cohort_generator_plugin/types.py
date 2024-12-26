@@ -18,7 +18,6 @@ class CohortGeneratorOptionsType(BaseModel):
     datasetId: str
     description: str
     owner: str
-    token: str
     
     @property
     def use_cache_db(self) -> str:
