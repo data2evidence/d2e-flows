@@ -107,7 +107,13 @@ class SqlAlchemyDao(DaoBase):
         return tables + views
 
     def get_indexes_for_table(self, table: str) -> list[dict]:
+        # Doesn't return indexes created on primary key
         return self.inspector.get_indexes(schema=self.schema_name, table_name=table)
+        
+    def get_indexes_for_pk(self, table: str) -> dict:
+        # To get indexes created on primary key
+        # returns { "constrained_columns": [str], "name": str, comment: str|None }
+        return self.inspector.get_pk_constraint(schema=self.schema_name, table_name=table)
     
     def get_columns(self, table: str) -> list[str]:
         all_columns = self.inspector.get_columns(schema=self.schema_name, table_name=table)

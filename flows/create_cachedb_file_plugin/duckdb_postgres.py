@@ -56,6 +56,15 @@ def copy_postgres_to_duckdb(db_dao: any, duckdb_database_name: str, create_for_c
                     logger.info(f"Running query: {index_query}") 
                     con.execute(index_query)
 
+                pk_index = db_dao.get_indexes_for_pk(table)
+                pk_index_name = pk_index.get("name")
+                pk_index_columns = pk_index.get("constrained_columns")
+                
+                if pk_index_name is not None and pk_index_columns != []:
+                    pk_index_query = f"CREATE UNIQUE INDEX {pk_index_name} ON {table} ({', '.join(pk_index_columns)})"
+                    logger.info(f"Running query: {pk_index_query}") 
+                    con.execute(pk_index_query)
+
         except Exception as err:
             logger.error(f"Table and index creation for table '{table}' failed with error: {err}f")
             raise (err)
