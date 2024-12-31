@@ -46,7 +46,7 @@ jobs:
               npm pack
       - name: Push
         uses: svenstaro/upload-release-action@v2
-        if: ${{ $GIT_CI_BRANCH_NAME == 'main' }}
+        if: ${{ env.GIT_CI_BRANCH_NAME == 'main' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: alp-os-d2e-plugins-0.0.99.tgz
