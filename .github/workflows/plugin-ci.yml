@@ -42,8 +42,9 @@ jobs:
           delete-only-pre-release-versions: 'true'
       - name: Pack
         run: |
-           if [[ $GIT_CI_BRANCH_NAME == 'main' ]]; then 
-              npm pack
+          if [[ $GIT_CI_BRANCH_NAME == 'main' ]]; then
+            npm pack
+          fi
       - name: Push
         uses: svenstaro/upload-release-action@v2
         if: ${{ env.GIT_CI_BRANCH_NAME == 'main' }}
