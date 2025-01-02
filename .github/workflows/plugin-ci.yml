@@ -55,4 +55,5 @@ jobs:
           target_commit: main
           prerelease: true
           overwrite: true
+          asset_name: d2e-plugins.tgz
       
