@@ -42,4 +42,4 @@ class OmopCDMPluginOptions(BaseModel):
     def release_version(self) -> str | None:
         if self.cdm_version:
             return RELEASE_VERSION_MAPPING.get(self.cdm_version)
-        return Non
+        return None
