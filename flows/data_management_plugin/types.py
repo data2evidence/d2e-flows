@@ -1,7 +1,7 @@
 from enum import Enum
 from datetime import datetime
 from typing import List, Dict, Optional
-from pydantic import BaseModel, Field, UUID4, root_validator
+from pydantic import BaseModel, Field, UUID4, model_validator
 
 FLOW_NAME = "data_management_plugin"
 
@@ -50,7 +50,7 @@ class DataModelType(BaseModel):
     def changelog_filepath_list(self) -> Dict:
         return DATAMODEL_CHANGELOG_MAPPING
     
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def set_default_vocab_schema(cls, values):
         if values.get('vocab_schema') is None:
             values['vocab_schema'] = values.get('schema_name')
