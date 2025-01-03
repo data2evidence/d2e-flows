@@ -90,6 +90,3 @@ def ner_extract_plugin(options: NerExtractOptions):
                     index = False,
                     chunksize = 32,
                    )
-
-if __name__ == "__main__":
-    ner_extract_plugin.serve(name="first_deployment")
