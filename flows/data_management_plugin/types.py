@@ -23,14 +23,14 @@ class FlowActionType(str, Enum):
 class DataModelType(BaseModel):
     flow_action_type: FlowActionType
     database_code: str
-    data_model: str
-    schema_name: Optional[str]
-    cleansed_schema_option: Optional[bool]
-    vocab_schema: Optional[str]
-    rollback_count: Optional[int]
-    rollback_tag: Optional[str]
-    update_count: Optional[int]
-    datasets: Optional[List]
+    data_model: Optional[str] = None
+    schema_name: Optional[str] = None
+    cleansed_schema_option: Optional[bool] = False
+    vocab_schema: Optional[str] = None
+    rollback_count: Optional[int] = None
+    rollback_tag: Optional[str] = None
+    update_count: Optional[int] = None
+    datasets: Optional[List] = None
 
     @property
     def use_cache_db(self) -> str:
@@ -41,8 +41,10 @@ class DataModelType(BaseModel):
         return FLOW_NAME
 
     @property
-    def changelog_filepath(self) -> str:
-        return DATAMODEL_CHANGELOG_MAPPING.get(self.data_model, None)
+    def changelog_filepath(self) -> str | None:
+        if self.data_model:
+            return DATAMODEL_CHANGELOG_MAPPING.get(self.data_model, None)
+        return None
     
     @property
     def changelog_filepath_list(self) -> Dict:
