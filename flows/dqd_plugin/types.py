@@ -3,19 +3,20 @@ from typing import Optional, List, Dict
 
 DQD_THREAD_COUNT = 1
 
-class DqdBaseOptionsType(BaseModel):
+class DqdOptionsType(BaseModel):
     schemaName: str
     databaseCode: str
     cdmVersionNumber: str
     vocabSchemaName: str
     releaseDate: str
-
-
-class DqdOptionsType(DqdBaseOptionsType):
-    cohortDefinitionId: Optional[str]
-    checkNames: Optional[List[str]]
-    cohortDatabaseSchema: Optional[str]
-    cohortTableName: Optional[str]
+    cohortDefinitionId: Optional[str] = None
+    checkNames: Optional[List[str]] = None
+    cohortDatabaseSchema: Optional[str] = None
+    cohortTableName: Optional[str] = None
+    
+    @property
+    def use_cache_db(self) -> str:
+        return False
     
     @property
     def use_cache_db(self) -> str:
