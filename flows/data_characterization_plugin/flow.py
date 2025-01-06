@@ -3,7 +3,6 @@ from functools import partial
 
 from prefect import flow, task
 from prefect.variables import Variable
-from prefect_shell import ShellOperation
 from prefect.context import FlowRunContext
 from prefect.logging import get_run_logger
 from prefect.serializers import JSONSerializer
@@ -97,12 +96,12 @@ def data_characterization_plugin(options: DCOptionsType):
             raise Exception(f"An error occurred while executing data characterization: {msg}")
 
         execute_export_to_ares(schema_name=schema_name, 
-                            vocab_schema_name=vocab_schema_name,
-                            results_schema_dao=results_schema_dao,
-                            output_folder=output_folder,
-                            r_libs_user_directory=r_libs_user_directory,
-                            set_connection_string=set_read_connection_string,
-                            flow_run_id=flow_run_id)
+                               vocab_schema_name=vocab_schema_name,
+                               results_schema_dao=results_schema_dao,
+                               output_folder=output_folder,
+                               r_libs_user_directory=r_libs_user_directory,
+                               set_connection_string=set_read_connection_string,
+                               flow_run_id=flow_run_id)
 
 
 def create_data_characterization_schema(vocab_schema_name: str,
@@ -171,11 +170,9 @@ def execute_data_characterization(schema_name: str,
         logger = get_run_logger()
         threads = ACHILLES_THREAD_COUNT
         logger.info('Running achilles')
-        
         with robjects.conversion.localconverter(robjects.default_converter):
             robjects.r(f'''
-                    .libPaths(c('{r_libs_user_directory}',.libPaths()))
-                    library('Achilles', lib.loc = '{r_libs_user_directory}')
+                    library('Achilles')
                     {results_schema_dao.set_db_driver_env()}
                     {set_connection_string}
                     cdmVersion <- '{cdm_version_number}'
@@ -244,7 +241,7 @@ def execute_export_to_ares(schema_name: str,
                         reports = c()
                     )
             ''')
-            return get_export_to_ares_results_from_file(output_folder, schema_name)
+            return get_export_to_ares_results_from_file(output_folder, schema_name, results_schema_dao)
     except Exception as e:
         logger.error(f"execute_export_to_ares task failed")
         error_message = get_export_to_ares_execute_error_message_from_file(output_folder, schema_name)
