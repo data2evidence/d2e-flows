@@ -1062,103 +1062,27 @@
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": {
-              "options": {
-                "$ref": "#/definitions/DqdOptionsType",
-                "position": 0,
-                "title": "options"
-              }
-            },
-            "required": [
-              "options"
-            ],
+            "properties": {"options": {"$ref": "#/definitions/DqdOptionsType", "position": 0, "title": "options"}},
+            "required": ["options"],
             "definitions": {
-              "DqdOptionsType": {
-                "properties": {
-                  "schemaName": {
-                    "title": "Schemaname",
-                    "type": "string"
-                  },
-                  "databaseCode": {
-                    "title": "Databasecode",
-                    "type": "string"
-                  },
-                  "cdmVersionNumber": {
-                    "title": "Cdmversionnumber",
-                    "type": "string"
-                  },
-                  "vocabSchemaName": {
-                    "title": "Vocabschemaname",
-                    "type": "string"
-                  },
-                  "releaseDate": {
-                    "title": "Releasedate",
-                    "type": "string"
-                  },
-                  "cohortDefinitionId": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "title": "Cohortdefinitionid"
-                  },
-                  "checkNames": {
-                    "anyOf": [
-                      {
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "title": "Checknames"
-                  },
-                  "cohortDatabaseSchema": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "title": "Cohortdatabaseschema"
-                  },
-                  "cohortTableName": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "title": "Cohorttablename"
-                  }
-                },
-                "required": [
-                  "schemaName",
-                  "databaseCode",
-                  "cdmVersionNumber",
-                  "vocabSchemaName",
-                  "releaseDate",
-                  "cohortDefinitionId",
-                  "checkNames",
-                  "cohortDatabaseSchema",
-                  "cohortTableName"
-                ],
-                "title": "DqdOptionsType",
-                "type": "object"
-              }
+                "DqdOptionsType": {
+                    "properties": {
+                        "schemaName": {"title": "Schemaname", "type": "string"},
+                        "databaseCode": {"title": "Databasecode", "type": "string"},
+                        "cdmVersionNumber": {"title": "Cdmversionnumber", "type": "string"},
+                        "vocabSchemaName": {"title": "Vocabschemaname", "type": "string"},
+                        "releaseDate": {"title": "Releasedate", "type": "string"},
+                        "cohortDefinitionId": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Cohortdefinitionid"},
+                        "checkNames": {"anyOf": [{"items": {"type": "string"}, "type": "array"}, {"type": "null"}], "default": null, "title": "Checknames"},
+                        "cohortDatabaseSchema": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Cohortdatabaseschema"},
+                        "cohortTableName": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Cohorttablename"}
+                    },
+                    "required": ["schemaName", "databaseCode", "cdmVersionNumber", "vocabSchemaName", "releaseDate"],
+                    "title": "DqdOptionsType",
+                    "type": "object"
+                }
             }
-          }
+        }
         },
         {
           "name": "i2b2_plugin",
