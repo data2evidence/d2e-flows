@@ -176,7 +176,7 @@ def execute_nodes_flow(graph, sorted_nodes, test):
 
 @task(task_run_name="execute-nodes-taskrun-{nodename}",
       result_storage=RFS.load(Variable.get("flows_results_sb_name")),
-      result_storage_key="{flow_run.id}_{parameters[nodename]}.json",
+      result_storage_key="{flow_run.parent_flow_run_id}_{parameters[nodename]}.json",
       result_serializer=JSONSerializer(object_encoder="flows.dataflow_ui_plugin.nodes.serialize_result_to_json"), log_prints=True,
       persist_result=True)
 def execute_node_task(nodename, node_type, node, input, test):
