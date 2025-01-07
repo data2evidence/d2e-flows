@@ -68,7 +68,7 @@ MEDPLUM_RESOURCES = [
 FHIR_TO_DUCKDB = {
     "string": "varchar",
     "number": "integer",
-    "decimal": "decimal(18,6)",
+    "decimal": "double",
     "boolean": "boolean",
     "json": "json",
 }
