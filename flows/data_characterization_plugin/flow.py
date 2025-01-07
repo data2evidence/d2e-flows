@@ -222,15 +222,24 @@ def execute_export_to_ares(schema_name: str,
     try:
         logger = get_run_logger()
         logger.info('Running exportToAres')
+
+        results_schema_name = results_schema_dao.schema_name 
+        results_schema_dao.schema_name = schema_name
+        cdm_source_abbreviation = results_schema_dao.get_value(table_name="cdm_source", 
+                                                               column_name="cdm_source_abbreviation")
+        
+        # Get name of folder created by at {outputFolder/cdm_source_abbreviation}
+        ares_path = os.path.join(output_folder, cdm_source_abbreviation[:25] if len(cdm_source_abbreviation) > 25 \
+                                 else cdm_source_abbreviation)
+
         with robjects.conversion.localconverter(robjects.default_converter):
             robjects.r(f'''
-                    .libPaths(c('{r_libs_user_directory}',.libPaths()))
-                    library('Achilles', lib.loc = '{r_libs_user_directory}')
+                    library('Achilles')
                     {results_schema_dao.set_db_driver_env()}
                     {set_connection_string}
                     cdmDatabaseSchema <- '{schema_name}'
                     vocabDatabaseSchema <- '{vocab_schema_name}'
-                    resultsDatabaseSchema <- '{results_schema_dao.schema_name}'
+                    resultsDatabaseSchema <- '{results_schema_name}'
                     outputPath <- '{output_folder}'
                     Achilles::exportToAres(
                         connectionDetails = connectionDetails,
@@ -241,13 +250,13 @@ def execute_export_to_ares(schema_name: str,
                         reports = c()
                     )
             ''')
-            return get_export_to_ares_results_from_file(output_folder, schema_name, results_schema_dao)
+            return get_export_to_ares_results_from_file(ares_path)
     except Exception as e:
         logger.error(f"execute_export_to_ares task failed")
-        error_message = get_export_to_ares_execute_error_message_from_file(output_folder, schema_name)
+        error_message = get_export_to_ares_execute_error_message_from_file(ares_path)
         logger.error(error_message)
         
-        logger.info(f"Dropping Data Characterization results schema '{results_schema_dao.schema_name}'..")
+        logger.info(f"Dropping Data Characterization results schema '{results_schema_name}'..")
         results_schema_dao.drop_schema()
         
         raise Exception(f"An error occurred while executing export to ares: {error_message}") 

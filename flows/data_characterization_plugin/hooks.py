@@ -2,24 +2,14 @@ import os
 import pandas as pd
 
 
-def get_export_to_ares_execute_error_message_from_file(outputFolder: str, schema_name):
-    ares_path = os.path.join(outputFolder, schema_name[:25] if len(schema_name) > 25 else schema_name)
-    # Get name of folder created by at {outputFolder/schema_name}
-
+def get_export_to_ares_execute_error_message_from_file(ares_path: str):
     cdm_release_date = os.listdir(ares_path)[0]
     with open(os.path.join(ares_path, cdm_release_date, "errorReportSql.txt"), 'rt') as f:
         error_message = f.read()
     return error_message
 
 
-def get_export_to_ares_results_from_file(outputFolder: str, schema_name: str, dbdao):
-    dbdao.schema_name = schema_name
-    cdm_source_abbreviation = dbdao.get_value(table_name="cdm_source", column_name="cdm_source_abbreviation")
-    
-    ares_path = os.path.join(outputFolder, cdm_source_abbreviation[:25] if len(cdm_source_abbreviation) > 25 \
-                              else cdm_source_abbreviation)
-
-    # Get name of folder created by at {outputFolder/cdm_source_abbreviation}
+def get_export_to_ares_results_from_file(ares_path: str):
     cdm_release_date = os.listdir(ares_path)[0]
 
     # export_to_ares creates many csv files, but now we are only interested in saving results from records-by-domain.csv
