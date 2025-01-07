@@ -311,16 +311,32 @@
                     "type": "string"
                   },
                   "releaseDate": {
-                    "title": "Releasedate",
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Releasedate"
                   },
                   "resultsSchema": {
                     "title": "Resultsschema",
                     "type": "string"
                   },
                   "excludeAnalysisIds": {
-                    "title": "Excludeanalysisids",
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Excludeanalysisids"
                   }
                 },
                 "required": [
@@ -328,9 +344,7 @@
                   "databaseCode",
                   "cdmVersionNumber",
                   "vocabSchemaName",
-                  "releaseDate",
-                  "resultsSchema",
-                  "excludeAnalysisIds"
+                  "resultsSchema"
                 ],
                 "title": "DCOptionsType",
                 "type": "object"
@@ -529,8 +543,16 @@
                     "type": "string"
                   },
                   "data_model": {
-                    "title": "Data Model",
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Data Model"
                   },
                   "schema_name": {
                     "anyOf": [
@@ -541,6 +563,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Schema Name"
                   },
                   "cleansed_schema_option": {
@@ -552,6 +575,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": false,
                     "title": "Cleansed Schema Option"
                   },
                   "vocab_schema": {
@@ -563,6 +587,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Vocab Schema"
                   },
                   "rollback_count": {
@@ -574,6 +599,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Rollback Count"
                   },
                   "rollback_tag": {
@@ -585,6 +611,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Rollback Tag"
                   },
                   "update_count": {
@@ -596,18 +623,8 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Update Count"
-                  },
-                  "token": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "title": "Token"
                   },
                   "datasets": {
                     "anyOf": [
@@ -619,21 +636,13 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Datasets"
                   }
                 },
                 "required": [
                   "flow_action_type",
-                  "database_code",
-                  "data_model",
-                  "schema_name",
-                  "cleansed_schema_option",
-                  "vocab_schema",
-                  "rollback_count",
-                  "rollback_tag",
-                  "update_count",
-                  "token",
-                  "datasets"
+                  "database_code"
                 ],
                 "title": "DataModelType",
                 "type": "object"
@@ -717,6 +726,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Dialect"
                   },
                   "schema_name": {
@@ -728,6 +738,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Schema Name"
                   },
                   "source_schema": {
@@ -739,6 +750,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Source Schema"
                   },
                   "database_code": {
@@ -750,6 +762,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Database Code"
                   },
                   "snapshot_copy_config": {
@@ -760,7 +773,8 @@
                       {
                         "type": "null"
                       }
-                    ]
+                    ],
+                    "default": null
                   },
                   "datasets": {
                     "anyOf": [
@@ -774,27 +788,10 @@
                     ],
                     "default": null,
                     "title": "Datasets"
-                  },
-                  "token": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "default": "",
-                    "title": "Token"
                   }
                 },
                 "required": [
-                  "flow_action_type",
-                  "dialect",
-                  "schema_name",
-                  "source_schema",
-                  "database_code",
-                  "snapshot_copy_config"
+                  "flow_action_type"
                 ],
                 "title": "CreateDatamartOptions",
                 "type": "object"
@@ -1062,27 +1059,103 @@
           "parameter_openapi_schema": {
             "title": "Parameters",
             "type": "object",
-            "properties": {"options": {"$ref": "#/definitions/DqdOptionsType", "position": 0, "title": "options"}},
-            "required": ["options"],
+            "properties": {
+              "options": {
+                "$ref": "#/definitions/DqdOptionsType",
+                "position": 0,
+                "title": "options"
+              }
+            },
+            "required": [
+              "options"
+            ],
             "definitions": {
-                "DqdOptionsType": {
-                    "properties": {
-                        "schemaName": {"title": "Schemaname", "type": "string"},
-                        "databaseCode": {"title": "Databasecode", "type": "string"},
-                        "cdmVersionNumber": {"title": "Cdmversionnumber", "type": "string"},
-                        "vocabSchemaName": {"title": "Vocabschemaname", "type": "string"},
-                        "releaseDate": {"title": "Releasedate", "type": "string"},
-                        "cohortDefinitionId": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Cohortdefinitionid"},
-                        "checkNames": {"anyOf": [{"items": {"type": "string"}, "type": "array"}, {"type": "null"}], "default": null, "title": "Checknames"},
-                        "cohortDatabaseSchema": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Cohortdatabaseschema"},
-                        "cohortTableName": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Cohorttablename"}
-                    },
-                    "required": ["schemaName", "databaseCode", "cdmVersionNumber", "vocabSchemaName", "releaseDate"],
-                    "title": "DqdOptionsType",
-                    "type": "object"
-                }
+              "DqdOptionsType": {
+                "properties": {
+                  "schemaName": {
+                    "title": "Schemaname",
+                    "type": "string"
+                  },
+                  "databaseCode": {
+                    "title": "Databasecode",
+                    "type": "string"
+                  },
+                  "cdmVersionNumber": {
+                    "title": "Cdmversionnumber",
+                    "type": "string"
+                  },
+                  "vocabSchemaName": {
+                    "title": "Vocabschemaname",
+                    "type": "string"
+                  },
+                  "releaseDate": {
+                    "title": "Releasedate",
+                    "type": "string"
+                  },
+                  "cohortDefinitionId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Cohortdefinitionid"
+                  },
+                  "checkNames": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Checknames"
+                  },
+                  "cohortDatabaseSchema": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Cohortdatabaseschema"
+                  },
+                  "cohortTableName": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Cohorttablename"
+                  }
+                },
+                "required": [
+                  "schemaName",
+                  "databaseCode",
+                  "cdmVersionNumber",
+                  "vocabSchemaName",
+                  "releaseDate"
+                ],
+                "title": "DqdOptionsType",
+                "type": "object"
+              }
             }
-        }
+          }
         },
         {
           "name": "i2b2_plugin",
@@ -1137,16 +1210,32 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Schema Name"
                   },
                   "data_model": {
-                    "title": "Data Model",
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "title": "Data Model"
                   },
                   "load_demo_data": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
                     "default": false,
-                    "title": "Load Demo Data",
-                    "type": "boolean"
+                    "title": "Load Demo Data"
                   },
                   "datasets": {
                     "anyOf": [
@@ -1160,24 +1249,10 @@
                     ],
                     "default": null,
                     "title": "Datasets"
-                  },
-                  "token": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "default": "",
-                    "title": "Token"
                   }
                 },
                 "required": [
-                  "flow_action_type",
-                  "schema_name",
-                  "data_model"
+                  "flow_action_type"
                 ],
                 "title": "i2b2PluginType",
                 "type": "object"
@@ -1220,7 +1295,7 @@
                   "create_datamodel",
                   "get_version_info",
                   "update_datamodel",
-                  "create_cdm_schema"
+                  "create_seed_schemas"
                 ],
                 "title": "FlowActionType",
                 "type": "string"
@@ -1243,7 +1318,7 @@
                         "type": "null"
                       }
                     ],
-                    "default": "omop5-4",
+                    "default": null,
                     "title": "Data Model"
                   },
                   "schema_name": {
@@ -1255,6 +1330,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Schema Name"
                   },
                   "vocab_schema": {
@@ -1266,6 +1342,7 @@
                         "type": "null"
                       }
                     ],
+                    "default": null,
                     "title": "Vocab Schema"
                   },
                   "datasets": {
@@ -1280,26 +1357,11 @@
                     ],
                     "default": null,
                     "title": "Datasets"
-                  },
-                  "token": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "default": "",
-                    "title": "Token"
                   }
                 },
                 "required": [
                   "flow_action_type",
-                  "database_code",
-                  "data_model",
-                  "schema_name",
-                  "vocab_schema"
+                  "database_code"
                 ],
                 "title": "OmopCDMPluginOptions",
                 "type": "object"
@@ -1573,43 +1635,50 @@
             "title": "Parameters",
             "type": "object",
             "properties": {
-                "options": {
-                    "title": "options",
-                    "position": 0,
-                    "allOf": [
-                        {"$ref": "#/definitions/NerExtractOptions"}
-                    ]
-                }
+              "options": {
+                "title": "options",
+                "position": 0,
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/NerExtractOptions"
+                  }
+                ]
+              }
             },
-            "required": ["options"],
+            "required": [
+              "options"
+            ],
             "definitions": {
               "NerExtractOptions": {
-                  "title": "NerExtractOptions",
-                  "type": "object",
-                  "properties": {
-                      "database_code": {
-                          "title": "Database Code",
-                          "type": "string"
-                      },
-                      "schema_name": {
-                          "title": "Schema Name",
-                          "type": "string"
-                      },
-                      "note_table": {
-                          "title": "Note Table",
-                          "default": "note",
-                          "type": "string"
-                      },
-                      "note_nlp_table": {
-                        "title": "Note NLP Table",
-                        "default": "note_nlp",
-                        "type": "string"
-                    }
+                "title": "NerExtractOptions",
+                "type": "object",
+                "properties": {
+                  "database_code": {
+                    "title": "Database Code",
+                    "type": "string"
                   },
-                  "required": ["database_code", "schema_name"]
+                  "schema_name": {
+                    "title": "Schema Name",
+                    "type": "string"
+                  },
+                  "note_table": {
+                    "title": "Note Table",
+                    "default": "note",
+                    "type": "string"
+                  },
+                  "note_nlp_table": {
+                    "title": "Note NLP Table",
+                    "default": "note_nlp",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "database_code",
+                  "schema_name"
+                ]
               }
             }
-         }
+          }
         },
         {
           "name": "fhir_to_omop_plugin",
@@ -1709,63 +1778,126 @@
             "title": "Parameters",
             "type": "object",
             "properties": {
-                "options": {"$ref": "#/definitions/LoyaltyPluginType", "position": 0, "title": "options"}
+              "options": {
+                "$ref": "#/definitions/LoyaltyPluginType",
+                "position": 0,
+                "title": "options"
+              }
             },
-            "required": ["options"],
+            "required": [
+              "options"
+            ],
             "definitions": {
-                "CalculateConfig": {
-                    "properties": {
-                        "schema_name": {"title": "Schema Name", "type": "string"},
-                        "database_code": {"title": "Database Code", "type": "string"},
-                        "index_date": {"title": "Index Date", "type": "string"},
-                        "lookback_years": {"title": "Lookback Years", "type": "integer"},
-                        "coeff_table_name": {
-                            "anyOf": [{"type": "string"}, {"type": "null"}],
-                            "title": "Coeff Table Name"
-                        },
-                        "loyalty_cohort_table_name": {"title": "Loyalty Cohort Table Name", "type": "string"}
-                    },
-                    "required": [
-                        "schema_name",
-                        "database_code",
-                        "index_date",
-                        "lookback_years",
-                        "coeff_table_name",
-                        "loyalty_cohort_table_name"
+              "CalculateConfig": {
+                "properties": {
+                  "schema_name": {
+                    "title": "Schema Name",
+                    "type": "string"
+                  },
+                  "database_code": {
+                    "title": "Database Code",
+                    "type": "string"
+                  },
+                  "index_date": {
+                    "title": "Index Date",
+                    "type": "string"
+                  },
+                  "lookback_years": {
+                    "title": "Lookback Years",
+                    "type": "integer"
+                  },
+                  "coeff_table_name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
                     ],
-                    "title": "CalculateConfig",
-                    "type": "object"
+                    "title": "Coeff Table Name"
+                  },
+                  "loyalty_cohort_table_name": {
+                    "title": "Loyalty Cohort Table Name",
+                    "type": "string"
+                  }
                 },
-                "LoyaltyPluginType": {
-                    "properties": {
-                        "config": {
-                            "anyOf": [
-                                {"$ref": "#/definitions/CalculateConfig"},
-                                {"$ref": "#/definitions/RetrainConfig"}
-                            ],
-                            "title": "Config"
-                        }
-                    },
-                    "required": ["config"],
-                    "title": "LoyaltyPluginType",
-                    "type": "object"
+                "required": [
+                  "schema_name",
+                  "database_code",
+                  "index_date",
+                  "lookback_years",
+                  "coeff_table_name",
+                  "loyalty_cohort_table_name"
+                ],
+                "title": "CalculateConfig",
+                "type": "object"
+              },
+              "LoyaltyPluginType": {
+                "properties": {
+                  "config": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/CalculateConfig"
+                      },
+                      {
+                        "$ref": "#/definitions/RetrainConfig"
+                      }
+                    ],
+                    "title": "Config"
+                  }
                 },
-                "RetrainConfig": {
-                    "properties": {
-                        "schema_name": {"title": "Schema Name", "type": "string"},
-                        "database_code": {"title": "Database Code", "type": "string"},
-                        "index_date": {"title": "Index Date", "type": "string"},
-                        "train_years": {"default": 2, "title": "Train Years", "type": "integer"},
-                        "return_years": {"default": 1, "title": "Return Years", "type": "integer"},
-                        "test_ratio": {"default": 0.2, "title": "Test Ratio", "type": "number"},
-                        "retraincoeff_table_name": {"title": "Retraincoeff Table Name", "type": "string"}
-                    },
-                    "required": ["schema_name", "database_code", "index_date", "retraincoeff_table_name"],
-                    "title": "RetrainConfig",
-                    "type": "object"
-                }
+                "required": [
+                  "config"
+                ],
+                "title": "LoyaltyPluginType",
+                "type": "object"
+              },
+              "RetrainConfig": {
+                "properties": {
+                  "schema_name": {
+                    "title": "Schema Name",
+                    "type": "string"
+                  },
+                  "database_code": {
+                    "title": "Database Code",
+                    "type": "string"
+                  },
+                  "index_date": {
+                    "title": "Index Date",
+                    "type": "string"
+                  },
+                  "train_years": {
+                    "default": 2,
+                    "title": "Train Years",
+                    "type": "integer"
+                  },
+                  "return_years": {
+                    "default": 1,
+                    "title": "Return Years",
+                    "type": "integer"
+                  },
+                  "test_ratio": {
+                    "default": 0.2,
+                    "title": "Test Ratio",
+                    "type": "number"
+                  },
+                  "retraincoeff_table_name": {
+                    "title": "Retraincoeff Table Name",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "schema_name",
+                  "database_code",
+                  "index_date",
+                  "retraincoeff_table_name"
+                ],
+                "title": "RetrainConfig",
+                "type": "object"
+              }
             }
-          }   
+          }
         }
       ]
     }

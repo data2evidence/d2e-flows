@@ -1,7 +1,7 @@
 from enum import Enum
 from datetime import datetime
 from typing import List, Dict, Optional
-from pydantic import BaseModel, Field, UUID4, root_validator
+from pydantic import BaseModel, Field, UUID4, model_validator
 
 FLOW_NAME = "data_management_plugin"
 
@@ -23,14 +23,14 @@ class FlowActionType(str, Enum):
 class DataModelType(BaseModel):
     flow_action_type: FlowActionType
     database_code: str
-    data_model: str
-    schema_name: Optional[str]
-    cleansed_schema_option: Optional[bool]
-    vocab_schema: Optional[str]
-    rollback_count: Optional[int]
-    rollback_tag: Optional[str]
-    update_count: Optional[int]
-    datasets: Optional[List]
+    data_model: Optional[str] = None
+    schema_name: Optional[str] = None
+    cleansed_schema_option: Optional[bool] = False
+    vocab_schema: Optional[str] = None
+    rollback_count: Optional[int] = None
+    rollback_tag: Optional[str] = None
+    update_count: Optional[int] = None
+    datasets: Optional[List] = None
 
     @property
     def use_cache_db(self) -> str:
@@ -41,14 +41,16 @@ class DataModelType(BaseModel):
         return FLOW_NAME
 
     @property
-    def changelog_filepath(self) -> str:
-        return DATAMODEL_CHANGELOG_MAPPING.get(self.data_model, None)
+    def changelog_filepath(self) -> str | None:
+        if self.data_model:
+            return DATAMODEL_CHANGELOG_MAPPING.get(self.data_model, None)
+        return None
     
     @property
     def changelog_filepath_list(self) -> Dict:
         return DATAMODEL_CHANGELOG_MAPPING
     
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def set_default_vocab_schema(cls, values):
         if values.get('vocab_schema') is None:
             values['vocab_schema'] = values.get('schema_name')
