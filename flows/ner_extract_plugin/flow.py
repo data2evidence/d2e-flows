@@ -11,7 +11,6 @@ from prefect.logging import get_run_logger
 
 @flow(log_prints=True)
 def ner_extract_plugin(options: NerExtractOptions):
-    
     logger = get_run_logger()
     model_info = spacy.info()['pipelines']
     logger.info(f"The following spacy models are available: {model_info}")
