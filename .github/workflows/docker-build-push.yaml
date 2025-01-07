@@ -48,7 +48,7 @@ jobs:
         run: |
           DOCKER_IMG_TAG_NAME=$(echo $(git rev-parse --short HEAD))
           GIT_BRANCH_NAME=$(echo ${{ github.ref }} )
-          ACR_IMAGE_PUSH=false
+          ACR_IMAGE_PUSH=true
           if [[ ${{ github.event_name }} == "push" ]]; then 
             ACR_IMAGE_PUSH=true
           fi 
