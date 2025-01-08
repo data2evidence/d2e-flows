@@ -23,9 +23,9 @@ class CDMVersion(str, Enum):
 class OmopCDMPluginOptions(BaseModel):
     flow_action_type: FlowActionType
     database_code: str
-    data_model: Optional[str] = "omop5-4" # omop5-3, omop5-4
-    schema_name: Optional[str]
-    vocab_schema: Optional[str]
+    data_model: Optional[str] = None # omop5-3, omop5-4
+    schema_name: Optional[str] = None
+    vocab_schema: Optional[str] = None
     datasets: Optional[List] = None
 
     @property
@@ -33,9 +33,13 @@ class OmopCDMPluginOptions(BaseModel):
         return False
 
     @property
-    def cdm_version(self) -> str:
-        return self.data_model[-3:].replace("-", ".")
+    def cdm_version(self) -> str | None:
+        if self.data_model:
+            return self.data_model[-3:].replace("-", ".")
+        return None
     
     @property
-    def release_version(self) -> str:
-        return RELEASE_VERSION_MAPPING.get(self.cdm_version)
+    def release_version(self) -> str | None:
+        if self.cdm_version:
+            return RELEASE_VERSION_MAPPING.get(self.cdm_version)
+        return None

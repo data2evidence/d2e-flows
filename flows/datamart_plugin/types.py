@@ -28,11 +28,11 @@ class DatamartFlowAction(str, Enum):
 
 class CreateDatamartOptions(BaseModel):
     flow_action_type: DatamartFlowAction
-    dialect: Optional[str]
-    schema_name: Optional[str]
-    source_schema: Optional[str]
-    database_code: Optional[str]
-    snapshot_copy_config: Optional[DatamartCopyConfig]
+    dialect: Optional[str] = None
+    schema_name: Optional[str] = None
+    source_schema: Optional[str] = None
+    database_code: Optional[str] = None
+    snapshot_copy_config: Optional[DatamartCopyConfig] = None
     datasets: Optional[List] = None
 
     @property
