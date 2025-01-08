@@ -43,14 +43,15 @@ jobs:
       - name: Pack
         run: |
           if [[ $GIT_CI_BRANCH_NAME == 'main' ]]; then
-            npm pack
+            NPM_FILENAME=$(npm pack)
+            echo "NPM_FILENAME=$NPM_FILENAME" >> $GITHUB_ENV
           fi
       - name: Push
         uses: svenstaro/upload-release-action@v2
         if: ${{ env.GIT_CI_BRANCH_NAME == 'main' }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: alp-os-d2e-plugins-0.0.99.tgz
+          file: ${{ env.NPM_FILENAME }}
           tag: latest
           target_commit: main
           prerelease: true
