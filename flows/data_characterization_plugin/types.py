@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 from pydantic import BaseModel
 
 FLOW_NAME = "data_characterization_plugin"
@@ -11,9 +12,9 @@ class DCOptionsType(BaseModel):
     databaseCode: str
     cdmVersionNumber: str
     vocabSchemaName: str
-    releaseDate: str
+    releaseDate: Optional[str] = None
     resultsSchema: str
-    excludeAnalysisIds: str
+    excludeAnalysisIds: Optional[str] = None
 
     @property
     def use_cache_db(self) -> str:
