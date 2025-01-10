@@ -168,6 +168,7 @@ def execute_data_characterization(schema_name: str,
     try:
         logger = get_run_logger()
         threads = int(Variable.get("achilles_thread_count"))
+        logger.info(f"Thread count: {threads}")
         logger.info('Running achilles')
         with robjects.conversion.localconverter(robjects.default_converter):
             robjects.r(f'''
