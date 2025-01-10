@@ -1,0 +1,143 @@
+name: Docker Build dataflow-gen-base
+run-name: ${{ github.head_ref || github.ref_name }}
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+  push:
+    branches:
+      - main
+
+jobs:
+  bld:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1440
+    env:
+      AZ_REG_FQDN: ${{ vars.AZ_REGISTRY_NAME }}.azurecr.io
+      AZ_REG_NAME: ${{ vars.AZ_REGISTRY_NAME }}
+      AZ_REG_PASSWORD: ${{ secrets.AZ_REGISTRY_PASSWORD }}
+      AZ_REG_PRUNE_DAYS: ${{ vars.AZ_REG_PRUNE_DAYS || '20' }}
+      AZ_REG_PRUNE_ENABLE_DELETE: ${{ vars.AZ_REG_PRUNE_ENABLE_DELETE || 'false' }}
+      AZ_REG_PRUNE_FORCE_ANALYZE: ${{ vars.AZ_REG_PRUNE_FORCE_ANALYZE || 'false' }}
+      AZ_REG_PRUNE_KEEP_REGEX: ${{ vars.AZ_REG_PRUNE_KEEP_REGEX }}
+      AZ_REG_USERNAME: ${{ vars.AZ_REGISTRY_USERNAME }}
+      DOCKER_BUILD_ARG1: GITHUB_PAT=${{ secrets.CI_PAT }}
+      DOCKER_BUILD_DISABLE: ${{ vars.DOCKER_BUILD_DISABLE || 'false' }}
+      DOCKER_BUILD_PUSH_BOOL_OVERRIDE: ${{ vars.DOCKER_BUILD_PUSH_BOOL_OVERRIDE || 'false' }}
+      GIT_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - AZ_REG_REPOSITORY: alp-dataflow-gen-base
+            DOCKER_BUILD_CONTEXT_PATH: ./dataflow-gen-base
+            DOCKER_BUILD_FILE_PATH: ./dataflow-gen-base/Dockerfile
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - uses: 1password/load-secrets-action@v2
+        if: env.DOCKER_BUILD_DISABLE == 'false'
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          GIT_SSH_PRIVATE_KEY1: "op://${{ secrets.OP_VAULT_NAME }}/github-deploy_ssh-private-key_alp-SqlRender/alp-os_alp-SqlRender"
+          GIT_SSH_PRIVATE_KEY2: "op://${{ secrets.OP_VAULT_NAME }}/github-deploy_ssh-private-key_alp-DatabaseConnector/alp-os_alp-DatabaseConnector"
+
+      - name: Setup
+        id: setup
+        run: |
+          DOCKER_BUILD_PUSH_BOOL_STR=false
+          if [[ $GITHUB_EVENT_NAME == "push" ]] || [ $GITHUB_EVENT_NAME = "workflow_dispatch" ] || [ $DOCKER_BUILD_PUSH_BOOL_OVERRIDE = true]; then
+            DOCKER_BUILD_PUSH_BOOL_STR=true
+          fi
+
+          echo "DOCKER_BUILD_PLATFORMS=linux/amd64" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo "DOCKER_BUILD_PUSH_BOOL_STR=$DOCKER_BUILD_PUSH_BOOL_STR" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
+          echo AZ_REG_REPOSITORY=${{ matrix.AZ_REG_REPOSITORY }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo DOCKER_BUILD_CONTEXT_PATH=${{ matrix.DOCKER_BUILD_CONTEXT_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo DOCKER_BUILD_FILE_PATH=${{ matrix.DOCKER_BUILD_FILE_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
+          echo -n GIT_SSH_PRIVATE_KEY1: | tee -a $GITHUB_STEP_SUMMARY
+          echo "${GIT_SSH_PRIVATE_KEY1}" | wc -l | tee -a $GITHUB_STEP_SUMMARY
+          echo -n GIT_SSH_PRIVATE_KEY2: | tee -a $GITHUB_STEP_SUMMARY
+          echo "${GIT_SSH_PRIVATE_KEY2}" | wc -l | tee -a $GITHUB_STEP_SUMMARY
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        if: env.DOCKER_BUILD_DISABLE == 'false'
+        with:
+          ssh-private-key: |
+            ${{ env.GIT_SSH_PRIVATE_KEY1 }}
+            ${{ env.GIT_SSH_PRIVATE_KEY2 }}
+
+      - name: Process Git & SSH config for Docker build context
+        if: env.DOCKER_BUILD_DISABLE == 'false'
+        run: |
+          cp -r ~/.gitconfig  ~/.ssh .github/
+          cd .github/
+          sed "s|$HOME|/root|g" -i.bak .ssh/config
+
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.AZ_REG_FQDN }}
+          username: ${{ env.AZ_REG_USERNAME }}
+          password: ${{ env.AZ_REG_PASSWORD }}
+
+      - uses: docker/setup-qemu-action@v3
+        if: env.DOCKER_BUILD_DISABLE == 'false'
+
+      - name: Set up Docker Buildx
+        if: env.DOCKER_BUILD_DISABLE == 'false'
+        uses: docker/setup-buildx-action@v3
+        id: builder
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        if: env.DOCKER_BUILD_DISABLE == 'false'
+        id: build_push
+        continue-on-error: false
+        with:
+          builder: ${{ steps.builder.outputs.name }}
+          context: ${{ env.DOCKER_BUILD_CONTEXT_PATH }}
+          file: ${{ env.DOCKER_BUILD_FILE_PATH }}
+          platforms: ${{ env.DOCKER_BUILD_PLATFORMS }}
+          push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR }}
+          tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ github.head_ref || github.ref_name }}
+          ssh: |
+            default=${{ env.SSH_AUTH_SOCK }}
+          build-args: |
+            GIT_COMMIT_ARG=${{ github.sha }}
+            ${{ env.DOCKER_BUILD_ARG1 }}
+
+      - name: Prune ACR Images created before vars.AZ_REG_PRUNE_DAYS_TAGGED
+        if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'develop'
+        id: prune
+        continue-on-error: true
+        run: |
+          npx --suppess-warnings zx scripts/analyze-acr.mjs
+          if [ $AZ_REG_PRUNE_ENABLE_DELETE = true ]; then
+            echo "INFO . manifests delete ..."
+            sh "private-acr-manifests-delete.sh"
+          else
+            echo "INFO . manifests delete skipped"
+          fi
+          echo AZ_REG_ARTIFACTS_NAME=${AZ_REG_REPOSITORY/\//--} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+
+      - name: Upload ACR manifests artifacts
+        if: steps.prune.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.AZ_REG_ARTIFACTS_NAME }}
+          retention-days: 30
+          path: |
+            private*manifests*
