@@ -22,7 +22,6 @@ from shared_utils.types import UserType, SupportedDatabaseDialects, LiquibaseAct
       )
 def data_characterization_plugin(options: DCOptionsType):
     logger = get_run_logger()
-
     schema_name = options.schemaName
     database_code = options.databaseCode
     cdm_version_number = options.cdmVersionNumber
@@ -168,7 +167,7 @@ def execute_data_characterization(schema_name: str,
                                   flow_run_id: str):
     try:
         logger = get_run_logger()
-        threads = ACHILLES_THREAD_COUNT
+        threads = int(Variable.get("achilles_thread_count"))
         logger.info('Running achilles')
         with robjects.conversion.localconverter(robjects.default_converter):
             robjects.r(f'''
