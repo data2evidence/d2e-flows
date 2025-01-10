@@ -62,8 +62,8 @@ RUN apt-get update && \
 # GitHub setup & test
 RUN mkdir -p -m 700 ~/.ssh/ && ssh-keyscan github.com | tee -a ~/.ssh/known_hosts
 RUN --mount=type=ssh ssh-add -l # debug only
-RUN --mount=type=ssh git ls-remote git@github.com:alp-os/alp-DatabaseConnector | grep HEAD || exit 1
-RUN --mount=type=ssh git ls-remote git@github.com:alp-os/alp-SqlRender | grep HEAD || exit 1
+RUN --mount=type=ssh git ls-remote git@github.com:data2evidence/d2e-DatabaseConnector | grep HEAD || exit 1
+RUN --mount=type=ssh git ls-remote git@github.com:data2evidence/d2e-SqlRender | grep HEAD || exit 1
 RUN git config --global advice.detachedHead false
 
 # Python Library Setup
@@ -133,8 +133,8 @@ RUN --mount=type=ssh Rscript -e 'remotes::install_github("OHDSI/Strategus@v0.2.1
 RUN --mount=type=ssh Rscript -e 'devtools::install_github("OHDSI/CommonDataModel@v5.4.1", upgrade = "never", verbose = "true")' # https://github.com/OHDSI/CommonDataModel
 
 # D2E packages
-RUN --mount=type=ssh Rscript -e 'remotes::install_git("git@github.com:alp-os/alp-SqlRender@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
-RUN --mount=type=ssh Rscript -e 'remotes::install_git("git@github.com:alp-os/alp-DatabaseConnector@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
+RUN --mount=type=ssh Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-SqlRender@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
+RUN --mount=type=ssh Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-DatabaseConnector@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
 
 # OHDSI packages and versions - final
 RUN Rscript -e 'as.data.frame(installed.packages())[,c("Package", "Version")]' | awk '{print $1,$NF}' | grep -E "$(grep -l -i ohdsi /usr/local/lib/R/site-library/*/DESCRIPTION | awk -F/ '{print $(NF-1)}' | paste -sd '|')"
