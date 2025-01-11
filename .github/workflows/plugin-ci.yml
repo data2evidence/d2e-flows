@@ -36,7 +36,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/delete-package-versions@v5
         with: 
-          package-name: 'd2e-plugins'
+          package-name: 'd2e-flows'
           package-type: 'npm'
           min-versions-to-keep: 3
           delete-only-pre-release-versions: 'true'
@@ -56,5 +56,5 @@ jobs:
           target_commit: main
           prerelease: true
           overwrite: true
-          asset_name: d2e-plugins.tgz
+          asset_name: d2e-flows.tgz
       
