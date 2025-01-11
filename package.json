@@ -1,5 +1,5 @@
 {
-  "name": "@alp-os/d2e-plugins",
+  "name": "@data2evidence/d2e-flows",
   "version": "0.0.99",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/alp-os/internal.git"
+    "url": "https://github.com/data2evidence/d2e-flows.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/alp-os/d2e-plugins/issues"
+    "url": "https://github.com/data2evidence/d2e-flows/issues"
   },
-  "homepage": "https://github.com/alp-os/d2e-plugins#readme",
+  "homepage": "https://github.com/data2evidence/d2e-flows#readme",
   "trex": {
     "flow": {
       "flows": [
