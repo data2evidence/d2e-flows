@@ -71,7 +71,7 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 20
 RUN python3 -m venv /usr/src/app
 # Enable venv
 ENV PATH="/usr/src/app/bin:$PATH"
-RUN pip3 install -r /app/dataflow-gen-base/requirements.txt
+RUN pip3 install -r /app/requirements.txt
 
 # Set environment variables
 ENV JAVA_HOME_11=/usr/lib/jvm/openjdk-11
@@ -133,8 +133,8 @@ RUN Rscript -e 'remotes::install_github("OHDSI/Strategus@v0.2.1", upgrade = "nev
 RUN Rscript -e 'devtools::install_github("OHDSI/CommonDataModel@v5.4.1", upgrade = "never", verbose = "true")' # https://github.com/OHDSI/CommonDataModel
 
 # D2E packages
-RUN Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-SqlRender@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
-RUN Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-DatabaseConnector@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
+RUN Rscript -e 'remotes::install_git("https://github.com/data2evidence/d2e-SqlRender.git", ref="alp-dqd", force = TRUE)' # overwrite existing from OHDSI
+RUN Rscript -e 'remotes::install_git("https://github.com/data2evidence/d2e-DatabaseConnector.git", ref="alp-dqd", force = TRUE)' # overwrite existing from OHDSI
 
 # OHDSI packages and versions - final
 RUN Rscript -e 'as.data.frame(installed.packages())[,c("Package", "Version")]' | awk '{print $1,$NF}' | grep -E "$(grep -l -i ohdsi /usr/local/lib/R/site-library/*/DESCRIPTION | awk -F/ '{print $(NF-1)}' | paste -sd '|')"
