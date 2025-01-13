@@ -11,6 +11,7 @@ from flows.data_management_plugin.types import (PortalDatasetType,
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.liquibase import Liquibase
 from shared_utils.api.PortalServerAPI import PortalServerAPI
+from shared_utils.api.PrefectAPI import get_auth_token_from_input
 from shared_utils.types import (UserType, 
                                 LiquibaseAction,
                                 EntityCountDistributionType)
@@ -29,10 +30,13 @@ def get_version_info_tasks(changelog_filepath_list: Dict,
                           use_cache_db: bool):
     logger = get_run_logger()
     if (dataset_list is None) or (len(dataset_list) == 0):
-        logger.debug("No datasets fetched from portal")
+        logger.info("No datasets fetched from portal")
     else:
         logger.info(
             f"Successfully fetched {len(dataset_list)} datasets from portal")
+
+        # Store token in cache
+        get_auth_token_from_input()
 
         dataset_schema_list = extract_db_schema(dataset_list)
 
@@ -41,7 +45,7 @@ def get_version_info_tasks(changelog_filepath_list: Dict,
                 dataset, changelog_filepath_list, plugin_classpath, use_cache_db)
 
 
-@task
+@task(log_prints=True)
 def extract_db_schema(dataset_list: List[PortalDatasetType]) -> ExtractDatasetSchemaType:
     datasets_with_schema = []
     datasets_without_schema = []
@@ -61,7 +65,7 @@ def extract_db_schema(dataset_list: List[PortalDatasetType]) -> ExtractDatasetSc
             "datasets_without_schema": datasets_without_schema}
 
 
-@task
+@task(log_prints=True)
 def get_and_update_attributes(dataset: PortalDatasetType,
                               changelog_filepath_list: Dict,
                               plugin_classpath: str,
@@ -176,7 +180,7 @@ def get_and_update_attributes(dataset: PortalDatasetType,
                     dbdao=dataset_dao,
                     table_name=convert_case("cdm_source", is_lower_case),
                     column_name=convert_case("cdm_version", is_lower_case),
-                    entity_name="cdm_version",
+                    entity_name="version",
                     logger=logger
                     )
             try:
@@ -191,13 +195,13 @@ def get_and_update_attributes(dataset: PortalDatasetType,
                                                                                vocab_schema=vocab_schema,
                                                                                tenant_configs=tenant_configs,
                                                                                plugin_classpath=plugin_classpath)
-                portal_server_api.update_dataset_attributes_table(dataset_id, "latest_available_schema_version", latest_available_schema_version)
+                portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", latest_available_schema_version)
             except Exception as e:
                 logger.error(
-                    f"Failed to update attribute 'latest_available_schema_version' for dataset id '{dataset_id}' with value '{latest_available_schema_version}' : {e}")
+                    f"Failed to update attribute 'latest_schema_version' for dataset id '{dataset_id}' with value '{latest_available_schema_version}' : {e}")
             else:
                 logger.info(
-                    f"Updated attribute 'latest_available_schema_version' for dataset id '{dataset_id}'  with value '{latest_available_schema_version}'")
+                    f"Updated attribute 'latest_schema_version' for dataset id '{dataset_id}'  with value '{latest_available_schema_version}'")
 
 
 def get_latest_available_version(**kwargs) -> str:

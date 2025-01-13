@@ -3,6 +3,7 @@ from prefect.logging import get_run_logger
 
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
+from shared_utils.api.PrefectAPI import get_auth_token_from_input
 
 from flows.omop_cdm_plugin.types import OmopCDMPluginOptions, RELEASE_VERSION_MAPPING
 
@@ -13,9 +14,13 @@ def update_dataset_metadata_flow(options: OmopCDMPluginOptions):
     use_cache_db = options.use_cache_db
     
     if (dataset_list is None) or (len(dataset_list) == 0):
-        logger.debug("No datasets fetched from portal")
+        logger.info("No datasets fetched from portal")
     else:
         logger.info(f"Successfully fetched {len(dataset_list)} datasets from portal")
+
+      # Store token in cache
+        get_auth_token_from_input()
+
         for dataset in dataset_list:
             get_and_update_attributes(dataset, use_cache_db)
 
@@ -103,13 +108,16 @@ def get_and_update_attributes(dataset: dict, use_cache_db: bool):
                 dbdao=dbdao,
                 table_name="cdm_source",
                 column_name="cdm_version",
-                entity_name="cdm_version",
+                entity_name="version",
                 logger=logger
                 )
 
             try:
                 # update schema version or error msg
-                schema_version = RELEASE_VERSION_MAPPING.get(cdm_version)
+                if cdm_version[0] in ["v", "V"]: # for broadsea atlas i.e. v5.3.1
+                    schema_version = cdm_version
+                else:
+                    schema_version = RELEASE_VERSION_MAPPING.get(cdm_version)
                 portal_server_api.update_dataset_attributes_table(dataset_id, "schema_version", schema_version)
             except Exception as e:
                 logger.error(f"Failed to update attribute 'schema_version' for dataset '{dataset_id}' with value '{schema_version}': {e}")
@@ -119,8 +127,10 @@ def get_and_update_attributes(dataset: dict, use_cache_db: bool):
 
             try:
                 # update latest schema version or error msg
-                schema_version = RELEASE_VERSION_MAPPING.get(cdm_version)
-                latest_schema_version = RELEASE_VERSION_MAPPING.get("5.4")
+                if cdm_version[0] in ["v", "V"]: # for broadsea atlas i.e. v5.3.1
+                    latest_schema_version = cdm_version
+                else:
+                    latest_schema_version = RELEASE_VERSION_MAPPING.get("5.4")
                 portal_server_api.update_dataset_attributes_table(dataset_id, "latest_schema_version", latest_schema_version)
             except Exception as e:
                 logger.error(f"Failed to update attribute 'latest_schema_version' for dataset '{dataset_id}' with value '{latest_schema_version}': {e}")
