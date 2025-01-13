@@ -51,9 +51,22 @@ jobs:
             DOCKER_BUILD_PUSH_BOOL_STR=true
           fi
 
+          if [ $GIT_BRANCH_NAME == "develop" ]; then
+            DOCKER_IMG_TAG_NAME=develop
+          elif [ $DOCKER_BUILD_PUSH_BOOL_STR = true ]; then
+            DOCKER_IMG_TAG_NAME=$GIT_BRANCH_NAME
+            if [[ $GIT_BRANCH_NAME = */* ]]; then
+              DOCKER_IMG_TAG_NAME=$(printf "%s" "$GIT_BRANCH_NAME" | awk -F '/' '{print $2}')
+            fi 
+          else
+            DOCKER_IMG_TAG_NAME=$(echo ${{ github.sha }} | cut -c1-8)
+          fi
+
           echo "DOCKER_BUILD_PLATFORMS=linux/amd64" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           echo "DOCKER_BUILD_PUSH_BOOL_STR=$DOCKER_BUILD_PUSH_BOOL_STR" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-
+          echo DOCKER_IMG_TAG_NAME=$DOCKER_IMG_TAG_NAME | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          echo GIT_BRANCH_NAME="${GIT_BRANCH_NAME}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
+          
           echo AZ_REG_REPOSITORY=${{ matrix.AZ_REG_REPOSITORY }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           echo DOCKER_BUILD_CONTEXT_PATH=${{ matrix.DOCKER_BUILD_CONTEXT_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           echo DOCKER_BUILD_FILE_PATH=${{ matrix.DOCKER_BUILD_FILE_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
@@ -84,7 +97,7 @@ jobs:
           file: ${{ env.DOCKER_BUILD_FILE_PATH }}
           platforms: ${{ env.DOCKER_BUILD_PLATFORMS }}
           push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR }}
-          tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ github.head_ref || github.ref_name }}
+          tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ env.DOCKER_IMG_TAG_NAME }}
           build-args: |
             GIT_COMMIT_ARG=${{ github.sha }}
             ${{ env.DOCKER_BUILD_ARG1 }}
