@@ -14,7 +14,7 @@ WORKDIR /app
 COPY --from=builder .Renviron .
 
 # GitHub deploy key ssh-config authentication for OHDSI remotes::install_github. host ssh-agent supplies private keys
-COPY .github /root/
+# COPY .github /root/
 
 # installs
 RUN apt-get update && \
@@ -61,9 +61,9 @@ RUN apt-get update && \
 
 # GitHub setup & test
 RUN mkdir -p -m 700 ~/.ssh/ && ssh-keyscan github.com | tee -a ~/.ssh/known_hosts
-RUN --mount=type=ssh ssh-add -l # debug only
-RUN --mount=type=ssh git ls-remote git@github.com:data2evidence/d2e-DatabaseConnector | grep HEAD || exit 1
-RUN --mount=type=ssh git ls-remote git@github.com:data2evidence/d2e-SqlRender | grep HEAD || exit 1
+# RUN ssh-add -l # debug only
+RUN git ls-remote https://github.com/data2evidence/d2e-DatabaseConnector.git | grep HEAD || exit 1
+RUN git ls-remote https://github.com/data2evidence/d2e-SqlRender.git | grep HEAD || exit 1
 RUN git config --global advice.detachedHead false
 
 # Python Library Setup
@@ -119,9 +119,9 @@ RUN Rscript -e 'remotes::install_github("rstudio/reticulate@v1.35.0")' # https:/
 # OHDSI HADES
 # private d2e repo auth - ssh key
 # public HADES repo auth - .Renviron:GITHUB_PAT - https://ohdsi.github.io/Hades/rSetup.html#GitHub_Personal_Access_Token
-RUN --mount=type=ssh Rscript -e 'remotes::install_github("OHDSI/Hades@v1.13.0")' # https://github.com/OHDSI/Hades https://ohdsi.github.io/Hades/installingHades.html
-RUN --mount=type=ssh Rscript -e 'remotes::install_github("OHDSI/CohortMethod@v5.2.0")'
-RUN --mount=type=ssh Rscript -e 'remotes::install_github("OHDSI/CohortIncidence@v3.3.0")'
+RUN Rscript -e 'remotes::install_github("OHDSI/Hades@v1.13.0")' # https://github.com/OHDSI/Hades https://ohdsi.github.io/Hades/installingHades.html
+RUN Rscript -e 'remotes::install_github("OHDSI/CohortMethod@v5.2.0")'
+RUN Rscript -e 'remotes::install_github("OHDSI/CohortIncidence@v3.3.0")'
 
 # OHDSI packages and versions - after HADES
 RUN Rscript -e 'as.data.frame(installed.packages())[,c("Package", "Version")]' | awk '{print $1,$NF}' | grep -E "$(grep -l -i ohdsi /usr/local/lib/R/site-library/*/DESCRIPTION | awk -F/ '{print $(NF-1)}' | paste -sd '|')"
@@ -129,17 +129,17 @@ RUN Rscript -e 'as.data.frame(installed.packages())[,c("Package", "Version")]' |
 # OHDSI packages and versions - after D2E
 RUN Rscript -e 'as.data.frame(installed.packages())[,c("Package", "Version")]' | awk '{print $1,$NF}' | grep -E "$(grep -l -i ohdsi /usr/local/lib/R/site-library/*/DESCRIPTION | awk -F/ '{print $(NF-1)}' | paste -sd '|')"
 
-RUN --mount=type=ssh Rscript -e 'remotes::install_github("OHDSI/Strategus@v0.2.1", upgrade = "never")' # Requires latest DatabaseConnector https://github.com/OHDSI/Strategus
-RUN --mount=type=ssh Rscript -e 'devtools::install_github("OHDSI/CommonDataModel@v5.4.1", upgrade = "never", verbose = "true")' # https://github.com/OHDSI/CommonDataModel
+RUN Rscript -e 'remotes::install_github("OHDSI/Strategus@v0.2.1", upgrade = "never")' # Requires latest DatabaseConnector https://github.com/OHDSI/Strategus
+RUN Rscript -e 'devtools::install_github("OHDSI/CommonDataModel@v5.4.1", upgrade = "never", verbose = "true")' # https://github.com/OHDSI/CommonDataModel
 
 # D2E packages
-RUN --mount=type=ssh Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-SqlRender@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
-RUN --mount=type=ssh Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-DatabaseConnector@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
+RUN Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-SqlRender@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
+RUN Rscript -e 'remotes::install_git("git@github.com:data2evidence/d2e-DatabaseConnector@alp-dqd", force = TRUE)' # overwrite existing from OHDSI
 
 # OHDSI packages and versions - final
 RUN Rscript -e 'as.data.frame(installed.packages())[,c("Package", "Version")]' | awk '{print $1,$NF}' | grep -E "$(grep -l -i ohdsi /usr/local/lib/R/site-library/*/DESCRIPTION | awk -F/ '{print $(NF-1)}' | paste -sd '|')"
 
-RUN rm -rf .Renviron /app/.github/.ssh
+# RUN rm -rf .Renviron /app/.github/.ssh
 
 RUN useradd docker -u 1001 \
   && groupadd alp \
