@@ -51,7 +51,7 @@ jobs:
             DOCKER_BUILD_PUSH_BOOL_STR=true
           fi
 
-          if [ $GIT_BRANCH_NAME == "develop" ]; then
+          if [ $GIT_BRANCH_NAME == "main" ]; then
             DOCKER_IMG_TAG_NAME=develop
           elif [ $DOCKER_BUILD_PUSH_BOOL_STR = true ]; then
             DOCKER_IMG_TAG_NAME=$GIT_BRANCH_NAME
@@ -103,7 +103,7 @@ jobs:
             ${{ env.DOCKER_BUILD_ARG1 }}
 
       - name: Prune ACR Images created before vars.AZ_REG_PRUNE_DAYS_TAGGED
-        if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'develop'
+        if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'main'
         id: prune
         continue-on-error: true
         run: |
