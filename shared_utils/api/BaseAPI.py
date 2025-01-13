@@ -31,5 +31,5 @@ class BaseAPI:
         auth_token: AuthToken = get_auth_token_from_input()
         return {
             "Content-Type": "application/json",
-            "Authorization": auth_token.token
+            "Authorization": auth_token.token.get_secret_value()
         }
