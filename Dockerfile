@@ -28,9 +28,6 @@ RUN chown -R docker:docker /app/synpuf1k
 RUN mkdir -p /app/vocab
 RUN chown -R docker:docker /app/vocab
 
-# Create folder to store R packages installed during runtime for plugins which require custom R packages
-RUN mkdir -p /home/docker/plugins/R/site-library
-RUN chown -R docker:docker /home/docker/plugins/R/site-library
 
 # Create folder to store duckdb extensions for offline plugins
 # version must match duckdb in requirements.txt
