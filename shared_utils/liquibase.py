@@ -58,7 +58,10 @@ class Liquibase:
             admin_user = self.tenant_configs.adminUser
             admin_password = self.tenant_configs.adminPassword.get_secret_value()
 
+        # path to liquibase executable
         liquibase_path = Variable.get("liquibase_path") if Variable.get("liquibase_path") else "/app/liquibase/liquibase"
+        liquibase_dir = os.path.dirname(liquibase_path)
+        liquibase_properties = os.path.join(liquibase_dir, 'liquibase.properties')
         
         hana_driver_class_path = Variable.get("hana_driver_class_path") if Variable.get("hana_driver_class_path") else "/app/liquibase/lib/ngdbc-latest.jar"
         postgres_driver_class_path = Variable.get("postgres_driver_class_path") if Variable.get("postgres_driver_class_path") else "/app/inst/drivers/postgresql-42.3.1.jar"
@@ -82,7 +85,8 @@ class Liquibase:
             f"--driver={driver}",
             f"--logLevel={Variable.get('lb_log_level') if Variable.get('lb_log_level') else 'INFO'}",
             f"--defaultSchemaName={self.schema_name}",
-            f"--liquibaseSchemaName={self.schema_name}"
+            f"--liquibaseSchemaName={self.schema_name}",
+            f"--defaults-file={liquibase_properties}"
         ]
 
         if self.tenant_configs.authMode != AuthMode.JWT:
@@ -90,7 +94,7 @@ class Liquibase:
 
         # Temporarily create liquibase.properties for sensitive values
         # Won't be logged in traceback
-        with open('liquibase.properties', 'w') as file:
+        with open(liquibase_properties, 'w') as file:
             file.write(f'''
                 url: {connection_base_url}{connection_properties}
                 password: {admin_password}
