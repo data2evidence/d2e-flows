@@ -26,7 +26,7 @@ jobs:
       AZ_REG_PRUNE_FORCE_ANALYZE: ${{ vars.AZ_REG_PRUNE_FORCE_ANALYZE || 'false' }}
       AZ_REG_PRUNE_KEEP_REGEX: ${{ vars.AZ_REG_PRUNE_KEEP_REGEX }}
       AZ_REG_USERNAME: ${{ vars.AZ_REGISTRY_USERNAME }}
-      DOCKER_BUILD_ARG1: GITHUB_PAT=${{ secrets.CI_PAT }}
+      DOCKER_BUILD_ARG1: GITHUB_PAT=${{ secrets.GH_TOKEN }}
       DOCKER_BUILD_DISABLE: ${{ vars.DOCKER_BUILD_DISABLE || 'false' }}
       DOCKER_BUILD_PUSH_BOOL_OVERRIDE: ${{ vars.DOCKER_BUILD_PUSH_BOOL_OVERRIDE || 'false' }}
       GIT_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -43,15 +43,6 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - uses: 1password/load-secrets-action@v2
-        if: env.DOCKER_BUILD_DISABLE == 'false'
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          GIT_SSH_PRIVATE_KEY1: "op://${{ secrets.OP_VAULT_NAME }}/github-deploy_ssh-private-key_alp-SqlRender/alp-os_alp-SqlRender"
-          GIT_SSH_PRIVATE_KEY2: "op://${{ secrets.OP_VAULT_NAME }}/github-deploy_ssh-private-key_alp-DatabaseConnector/alp-os_alp-DatabaseConnector"
-
       - name: Setup
         id: setup
         run: |
@@ -66,25 +57,6 @@ jobs:
           echo AZ_REG_REPOSITORY=${{ matrix.AZ_REG_REPOSITORY }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           echo DOCKER_BUILD_CONTEXT_PATH=${{ matrix.DOCKER_BUILD_CONTEXT_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
           echo DOCKER_BUILD_FILE_PATH=${{ matrix.DOCKER_BUILD_FILE_PATH }} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-
-          echo -n GIT_SSH_PRIVATE_KEY1: | tee -a $GITHUB_STEP_SUMMARY
-          echo "${GIT_SSH_PRIVATE_KEY1}" | wc -l | tee -a $GITHUB_STEP_SUMMARY
-          echo -n GIT_SSH_PRIVATE_KEY2: | tee -a $GITHUB_STEP_SUMMARY
-          echo "${GIT_SSH_PRIVATE_KEY2}" | wc -l | tee -a $GITHUB_STEP_SUMMARY
-
-      - uses: webfactory/ssh-agent@v0.9.0
-        if: env.DOCKER_BUILD_DISABLE == 'false'
-        with:
-          ssh-private-key: |
-            ${{ env.GIT_SSH_PRIVATE_KEY1 }}
-            ${{ env.GIT_SSH_PRIVATE_KEY2 }}
-
-      - name: Process Git & SSH config for Docker build context
-        if: env.DOCKER_BUILD_DISABLE == 'false'
-        run: |
-          cp -r ~/.gitconfig  ~/.ssh .github/
-          cd .github/
-          sed "s|$HOME|/root|g" -i.bak .ssh/config
 
       - name: Login to ACR
         uses: docker/login-action@v3
@@ -113,8 +85,6 @@ jobs:
           platforms: ${{ env.DOCKER_BUILD_PLATFORMS }}
           push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR }}
           tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ github.head_ref || github.ref_name }}
-          ssh: |
-            default=${{ env.SSH_AUTH_SOCK }}
           build-args: |
             GIT_COMMIT_ARG=${{ github.sha }}
             ${{ env.DOCKER_BUILD_ARG1 }}
