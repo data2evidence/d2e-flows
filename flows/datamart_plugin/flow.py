@@ -10,11 +10,12 @@ from flows.datamart_plugin.types import *
 from flows.datamart_plugin.const import *
 from flows.datamart_plugin.utils import *
 
-from shared_utils.update_dataset_metadata import *
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.dao.MinioDao import MinioDao
+from shared_utils.update_dataset_metadata import *
 from shared_utils.types import SupportedDatabaseDialects
 from shared_utils.api.PortalServerAPI import PortalServerAPI
+from shared_utils.api.PrefectAPI import get_auth_token_from_input
 
 from shared_utils.create_dataset_tasks import create_schema_task, create_and_assign_roles_task
 from shared_utils.update_dataset_metadata import update_entity_value, update_entity_distinct_count
@@ -222,8 +223,12 @@ def update_dataset_metadata(options: CreateDatamartOptions):
     use_cache_db = options.use_cache_db
     
     if (dataset_list is None) or (len(dataset_list) == 0):
-        logger.debug("No datasets fetched from portal")
+        logger.info("No datasets fetched from portal")
     else:
+        
+        # Store token in cache
+        get_auth_token_from_input()
+
         logger.info(f"Successfully fetched {len(dataset_list)} datasets from portal")
         for dataset in dataset_list:
             get_and_update_attributes(use_cache_db, dataset)
@@ -313,7 +318,7 @@ def get_and_update_attributes(use_cache_db: bool, dataset: dict):
                 dbdao=dbdao,
                 table_name="cdm_source",
                 column_name="cdm_version",
-                entity_name="cdm_version",
+                entity_name="version",
                 logger=logger
                 )
 

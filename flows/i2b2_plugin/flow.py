@@ -17,6 +17,7 @@ from flows.i2b2_plugin.utils import *
 from shared_utils.dao.DBDao import DBDao
 from shared_utils.update_dataset_metadata import *
 from shared_utils.api.PortalServerAPI import PortalServerAPI
+from shared_utils.api.PrefectAPI import get_auth_token_from_input
 from shared_utils.create_dataset_tasks import (create_schema_task, 
                                                create_and_assign_roles_task, 
                                                drop_schema_hook)
@@ -81,9 +82,13 @@ def update_dataset_metadata_flow(options: i2b2PluginType):
     use_cache_db = options.use_cache_db
 
     if (dataset_list is None) or (len(dataset_list) == 0):
-        logger.debug("No datasets fetched from portal")
+        logger.info("No datasets fetched from portal")
     else:
         logger.info(f"Successfully fetched {len(dataset_list)} datasets from portal")
+
+        # Store token in cache
+        get_auth_token_from_input()
+        
         for dataset in dataset_list:
             get_and_update_attributes(dataset, use_cache_db)
 
