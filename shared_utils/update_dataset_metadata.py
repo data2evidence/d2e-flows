@@ -57,6 +57,8 @@ def update_entity_value(portal_server_api,
                         logger) -> str:
     try:
         entity_value = get_entity_value_str(dbdao, table_name, column_name, entity_name, logger)
+        if entity_name == "version" and entity_value[0] in ["v", "V"]: # for broadsea atlas i.e. v5.3.1
+            entity_value = entity_value[1:]
         portal_server_api.update_dataset_attributes_table(dataset_id, entity_name, entity_value)
     except Exception as e:
         logger.error(f"Failed to update attribute '{entity_name}' for dataset id '{dataset_id}' with value '{entity_value}' : {e}")
@@ -100,11 +102,11 @@ def update_total_entity_count(portal_server_api,
                               logger) -> str:
     try:
         total_entity_count = get_total_entity_count(entity_count_distribution, logger)
-        portal_server_api.update_dataset_attributes_table(dataset_id, "total_entity_count", total_entity_count)
+        portal_server_api.update_dataset_attributes_table(dataset_id, "entity_count", total_entity_count)
     except Exception as e:
-        logger.error(f"Failed to update attribute 'total_entity_count' for dataset '{dataset_id}' with value '{total_entity_count}': {e}")
+        logger.error(f"Failed to update attribute 'entity_count' for dataset '{dataset_id}' with value '{total_entity_count}': {e}")
     else:
-        logger.info(f"Updated attribute 'total_entity_count' for dataset '{dataset_id}' with value '{total_entity_count}'")
+        logger.info(f"Updated attribute 'entity_count' for dataset '{dataset_id}' with value '{total_entity_count}'")
     return total_entity_count
 
 
