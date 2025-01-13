@@ -124,3 +124,34 @@ jobs:
           retention-days: 30
           path: |
             private*manifests*
+            - name: 'Login to GitHub Container Registry'
+      
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+          
+      - name: Build and Push
+        id: build-push2
+        if: env.DOCKER_BUILD_DISABLE == 'false'
+        uses: docker/build-push-action@v6
+        continue-on-error: false
+        with:
+          builder: ${{ steps.builder.outputs.name }}
+          context: ${{ env.DOCKER_BUILD_CONTEXT_PATH }}
+          file: ${{ env.DOCKER_BUILD_FILE_PATH }}
+          platforms: ${{ env.DOCKER_BUILD_PLATFORMS }}
+          push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR }}
+          tags: ghcr.io/data2evidence/${{ env.AZ_REG_REPOSITORY }}:${{ env.DOCKER_IMG_TAG_NAME }}
+          build-args: |
+            GIT_COMMIT_ARG=${{ github.sha }}
+            ${{ env.DOCKER_BUILD_ARG1 }}
+          
+      - name: delete-untagged-images
+        uses: actions/delete-package-versions@v5
+        with: 
+          package-name: ${{ env.AZ_REG_REPOSITORY }}
+          package-type: 'container'
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: "true"
