@@ -34,12 +34,9 @@ def create_schema_task(dbdao: DaoBase):
 
 @task(log_prints=True)
 def run_liquibase_update_task(**kwargs):
-    try:
-        liquibase = Liquibase(**kwargs)
-        liquibase.update_schema()
-    except Exception as e:
-        get_run_logger().error(e)
-        raise e
+    liquibase = Liquibase(**kwargs)
+    liquibase.update_schema()
+
 
 
     
