@@ -23,8 +23,8 @@
           "name": "cohort_generator_plugin",
           "type": "cohort_generator",
           "entrypoint": "flows.cohort_generator_plugin.flow.cohort_generator_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "cohort_generator"
           ],
@@ -148,8 +148,8 @@
           "name": "cohort_survival_plugin",
           "type": "cohort_survival",
           "entrypoint": "flows.cohort_survival_plugin.flow.cohort_survival_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "cohort_survival"
           ],
@@ -210,8 +210,8 @@
           "name": "create_cachedb_file_plugin",
           "type": "create_cachedb_file",
           "entrypoint": "flows.create_cachedb_file_plugin.flow.create_cachedb_file_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "create_cachedb_file"
           ],
@@ -270,8 +270,8 @@
           "name": "data_characterization_plugin",
           "type": "data_characterization",
           "entrypoint": "flows.data_characterization_plugin.flow.data_characterization_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "data_characterization"
           ],
@@ -356,8 +356,8 @@
           "name": "data_load_plugin",
           "type": "data_load",
           "entrypoint": "flows.data_load_plugin.flow.data_load_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "data",
             "load",
@@ -516,8 +516,8 @@
             "medical-imaging"
           ],
           "entrypoint": "flows.data_management_plugin.flow.data_management_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
@@ -667,8 +667,8 @@
           "name": "dataflow_ui_plugin",
           "type": "dataflow_ui",
           "entrypoint": "flows.dataflow_ui_plugin.flow.dataflow_ui_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
@@ -693,8 +693,8 @@
           "name": "datamart_plugin",
           "type": "datamart",
           "entrypoint": "flows.datamart_plugin.flow.datamart_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "datamart"
           ],
@@ -883,8 +883,8 @@
           "name": "dicom_etl_plugin",
           "type": "dicom_etl",
           "entrypoint": "flows.dicom_etl_plugin.flow.dicom_etl_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "data",
             "data_load",
@@ -1048,8 +1048,8 @@
           "name": "dqd_plugin",
           "type": "dqd",
           "entrypoint": "flows.dqd_plugin.flow.dqd_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "data_quality_dashboard"
           ],
@@ -1164,8 +1164,8 @@
             "v1.8.1"
           ],
           "entrypoint": "flows.i2b2_plugin.flow.i2b2_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "i2b2"
           ],
@@ -1271,8 +1271,8 @@
           "volumes": [
             "r-libs:/home/docker/plugins/R/site-library"
           ],
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "omop_cdm"
           ],
@@ -1373,8 +1373,8 @@
           "name": "questionnaire_plugin",
           "type": "questionnaire",
           "entrypoint": "flows.questionnaire_plugin.flow.questionnaire_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "questionnaire"
           ],
@@ -1472,8 +1472,8 @@
           "name": "create_fhir_datamodel_plugin",
           "type": "FHIRDataModel",
           "entrypoint": "flows.create_fhir_datamodel_plugin.flow.create_fhir_datamodel_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "FHIRDataModel"
           ],
@@ -1524,8 +1524,8 @@
           "name": "phenotype_plugin",
           "type": "phenotype",
           "entrypoint": "flows.phenotype_plugin.flow.phenotype_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "phenotype"
           ],
@@ -1602,8 +1602,8 @@
           "name": "strategus_plugin",
           "type": "strategus",
           "entrypoint": "flows.strategus_plugin.flow.strategus_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
@@ -1628,8 +1628,8 @@
           "name": "ner_extract_plugin",
           "type": "NLP",
           "entrypoint": "flows.ner_extract_plugin.flow.ner_extract_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/nlp:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/nlp:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
@@ -1771,8 +1771,8 @@
           "name": "loyalty_score_plugin",
           "type": "loyaltyscore",
           "entrypoint": "flows.loyalty_score_plugin.flow.loyalty_score_plugin",
-          "image": "alpcr.azurecr.io/d2e-flow/base:main",
-          "image_pull_policy": "Always",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [],
           "parameter_openapi_schema": {
             "title": "Parameters",
