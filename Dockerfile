@@ -7,7 +7,7 @@ RUN apt-get install libpq5 libpq-dev -y --no-install-recommends && apt-get clean
 ADD https://github.com/liquibase/liquibase/releases/download/v4.5.0/liquibase-4.5.0.tar.gz .
 RUN mkdir -p ./liquibase/
 RUN tar xvf liquibase-4.5.0.tar.gz -C ./liquibase/
-
+RUN chown -R docker:docker ./liquibase/
 
 FROM dbsvc-build AS final-build
 
@@ -28,9 +28,6 @@ RUN chown -R docker:docker /app/synpuf1k
 RUN mkdir -p /app/vocab
 RUN chown -R docker:docker /app/vocab
 
-# Create folder to store R packages installed during runtime for plugins which require custom R packages
-RUN mkdir -p /home/docker/plugins/R/site-library
-RUN chown -R docker:docker /home/docker/plugins/R/site-library
 
 # Create folder to store duckdb extensions for offline plugins
 # version must match duckdb in requirements.txt
@@ -50,9 +47,6 @@ RUN chown -R docker:docker $R_LIBS_USER_DIR
 
 # Common Data Model
 RUN Rscript -e "remotes::install_github('OHDSI/CommonDataModel@v5.4.1', quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, lib='$R_LIBS_USER_DIR')"
-
-# Data Characterization
-RUN Rscript -e "remotes::install_github('OHDSI/Achilles@v1.7.2',quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, lib='$R_LIBS_USER_DIR')"
 
 # Add Apache Ant for i2b2 data model creation
 WORKDIR /app

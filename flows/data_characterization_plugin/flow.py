@@ -3,7 +3,6 @@ from functools import partial
 
 from prefect import flow, task
 from prefect.variables import Variable
-from prefect_shell import ShellOperation
 from prefect.context import FlowRunContext
 from prefect.logging import get_run_logger
 from prefect.serializers import JSONSerializer
@@ -23,7 +22,6 @@ from shared_utils.types import UserType, SupportedDatabaseDialects, LiquibaseAct
       )
 def data_characterization_plugin(options: DCOptionsType):
     logger = get_run_logger()
-
     schema_name = options.schemaName
     database_code = options.databaseCode
     cdm_version_number = options.cdmVersionNumber
@@ -97,12 +95,12 @@ def data_characterization_plugin(options: DCOptionsType):
             raise Exception(f"An error occurred while executing data characterization: {msg}")
 
         execute_export_to_ares(schema_name=schema_name, 
-                            vocab_schema_name=vocab_schema_name,
-                            results_schema_dao=results_schema_dao,
-                            output_folder=output_folder,
-                            r_libs_user_directory=r_libs_user_directory,
-                            set_connection_string=set_read_connection_string,
-                            flow_run_id=flow_run_id)
+                               vocab_schema_name=vocab_schema_name,
+                               results_schema_dao=results_schema_dao,
+                               output_folder=output_folder,
+                               r_libs_user_directory=r_libs_user_directory,
+                               set_connection_string=set_read_connection_string,
+                               flow_run_id=flow_run_id)
 
 
 def create_data_characterization_schema(vocab_schema_name: str,
@@ -169,13 +167,11 @@ def execute_data_characterization(schema_name: str,
                                   flow_run_id: str):
     try:
         logger = get_run_logger()
-        threads = ACHILLES_THREAD_COUNT
-        logger.info('Running achilles')
-        
+        threads = int(Variable.get("achilles_thread_count"))
+        logger.info(f'Running achilles on thread count: {threads}')
         with robjects.conversion.localconverter(robjects.default_converter):
             robjects.r(f'''
-                    .libPaths(c('{r_libs_user_directory}',.libPaths()))
-                    library('Achilles', lib.loc = '{r_libs_user_directory}')
+                    library('Achilles')
                     {results_schema_dao.set_db_driver_env()}
                     {set_connection_string}
                     cdmVersion <- '{cdm_version_number}'
@@ -225,15 +221,24 @@ def execute_export_to_ares(schema_name: str,
     try:
         logger = get_run_logger()
         logger.info('Running exportToAres')
+
+        results_schema_name = results_schema_dao.schema_name 
+        results_schema_dao.schema_name = schema_name
+        cdm_source_abbreviation = results_schema_dao.get_value(table_name="cdm_source", 
+                                                               column_name="cdm_source_abbreviation")
+        
+        # Get name of folder created by at {outputFolder/cdm_source_abbreviation}
+        ares_path = os.path.join(output_folder, cdm_source_abbreviation[:25] if len(cdm_source_abbreviation) > 25 \
+                                 else cdm_source_abbreviation)
+
         with robjects.conversion.localconverter(robjects.default_converter):
             robjects.r(f'''
-                    .libPaths(c('{r_libs_user_directory}',.libPaths()))
-                    library('Achilles', lib.loc = '{r_libs_user_directory}')
+                    library('Achilles')
                     {results_schema_dao.set_db_driver_env()}
                     {set_connection_string}
                     cdmDatabaseSchema <- '{schema_name}'
                     vocabDatabaseSchema <- '{vocab_schema_name}'
-                    resultsDatabaseSchema <- '{results_schema_dao.schema_name}'
+                    resultsDatabaseSchema <- '{results_schema_name}'
                     outputPath <- '{output_folder}'
                     Achilles::exportToAres(
                         connectionDetails = connectionDetails,
@@ -244,13 +249,13 @@ def execute_export_to_ares(schema_name: str,
                         reports = c()
                     )
             ''')
-            return get_export_to_ares_results_from_file(output_folder, schema_name)
+            return get_export_to_ares_results_from_file(ares_path)
     except Exception as e:
         logger.error(f"execute_export_to_ares task failed")
-        error_message = get_export_to_ares_execute_error_message_from_file(output_folder, schema_name)
+        error_message = get_export_to_ares_execute_error_message_from_file(ares_path)
         logger.error(error_message)
         
-        logger.info(f"Dropping Data Characterization results schema '{results_schema_dao.schema_name}'..")
+        logger.info(f"Dropping Data Characterization results schema '{results_schema_name}'..")
         results_schema_dao.drop_schema()
         
         raise Exception(f"An error occurred while executing export to ares: {error_message}") 

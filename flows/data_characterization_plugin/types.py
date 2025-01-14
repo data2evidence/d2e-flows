@@ -5,7 +5,6 @@ from pydantic import BaseModel
 FLOW_NAME = "data_characterization_plugin"
 CHARACTERIZATION_DATA_MODEL = "characterization"
 CHANGELOG_FILE = "liquibase-characterization.xml"
-ACHILLES_THREAD_COUNT = 5
 
 class DCOptionsType(BaseModel):
     schemaName: str

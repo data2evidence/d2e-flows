@@ -58,7 +58,10 @@ class Liquibase:
             admin_user = self.tenant_configs.adminUser
             admin_password = self.tenant_configs.adminPassword.get_secret_value()
 
+        # path to liquibase executable
         liquibase_path = Variable.get("liquibase_path") if Variable.get("liquibase_path") else "/app/liquibase/liquibase"
+        liquibase_dir = os.path.dirname(liquibase_path)
+        liquibase_properties = os.path.join(liquibase_dir, 'liquibase.properties')
         
         hana_driver_class_path = Variable.get("hana_driver_class_path") if Variable.get("hana_driver_class_path") else "/app/liquibase/lib/ngdbc-latest.jar"
         postgres_driver_class_path = Variable.get("postgres_driver_class_path") if Variable.get("postgres_driver_class_path") else "/app/inst/drivers/postgresql-42.3.1.jar"
@@ -78,19 +81,25 @@ class Liquibase:
             liquibase_path,
             self.action,
             f"--changeLogFile={changeLogFile}",
-            f"--url={connection_base_url}{connection_properties}",
             f"--classpath={classpath}",
-            #f"--username={admin_user}",
-            f"--password={admin_password}",
             f"--driver={driver}",
             f"--logLevel={Variable.get('lb_log_level') if Variable.get('lb_log_level') else 'INFO'}",
             f"--defaultSchemaName={self.schema_name}",
-            f"--liquibaseSchemaName={self.schema_name}"
+            f"--liquibaseSchemaName={self.schema_name}",
+            f"--defaults-file={liquibase_properties}"
         ]
 
         if self.tenant_configs.authMode != AuthMode.JWT:
             params.append(f"--username={admin_user}")
 
+        # Temporarily create liquibase.properties for sensitive values
+        # Won't be logged in traceback
+        with open(liquibase_properties, 'w') as file:
+            file.write(f'''
+                url: {connection_base_url}{connection_properties}
+                password: {admin_password}
+                ''')
+            
         match self.action:
             case LiquibaseAction.STATUS:
                 params.append("--verbose")
@@ -115,10 +124,12 @@ class Liquibase:
             params = self.create_params()
             result = run(params, check=True, stderr=STDOUT,
                          stdout=PIPE, text=True)
-            print(self._mask_secrets(result.stdout, "***"))  # print logs
+            masked_output = "\n".join([self._mask_secrets(line, "***") for line in result.stdout.splitlines()])
+            print(masked_output)
         except CalledProcessError as cpe:  # catches non-0 return code exception
             # print(f"Command ran: '{cpe.cmd}'")  # for debugging
-            print(self._mask_secrets(cpe.output, "***"))  # print logs
+            masked_output = "\n".join([self._mask_secrets(line, "***") for line in cpe.output.splitlines()])
+            print(masked_output)
             liquibase_msg_list = cpe.output.split("\n")
             liquibase_error_message = self._mask_secrets(self._find_error_message(
                 liquibase_msg_list), "***")
@@ -133,9 +144,11 @@ class Liquibase:
             result = run(params, check=True, stderr=STDOUT,
                          stdout=PIPE, text=True)
             liquibase_msg_masked = self._mask_secrets(result.stdout, "***")
-            print(liquibase_msg_masked)
+            masked_output = "\n".join([self._mask_secrets(line, "***") for line in result.stdout.splitlines()])
+            print(masked_output)
         except CalledProcessError as cpe:
-            print(self._mask_secrets(cpe.output, "***"))  # print logs
+            masked_output = "\n".join([self._mask_secrets(line, "***") for line in cpe.output.splitlines()])
+            print(masked_output)
             liquibase_msg_list = cpe.output.split("\n")
             liquibase_error_message = self._mask_secrets(self._find_error_message(
                 liquibase_msg_list), "***")
@@ -161,7 +174,6 @@ class Liquibase:
                 return output
 
     def _mask_secrets(self, text, replacement):
-
         text = sub(PASSWORD_REGEX, replacement, text)  # mask password
         text = sub(SSL_TRUST_STORE_REGEX, replacement,
                    text)  # mask sslTrustStore
