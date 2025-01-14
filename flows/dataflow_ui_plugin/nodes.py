@@ -23,7 +23,6 @@ class Node:
         self.name = name
         self.type = node["type"]
         self.use_cache_db = False
-        self.name = node["name"]
 
 
 class Flow(Node):
