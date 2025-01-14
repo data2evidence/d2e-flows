@@ -22,6 +22,7 @@ class Node:
         self.id = node["id"]
         self.type = node["type"]
         self.use_cache_db = False
+        self.name = node["name"]
 
 
 class Flow(Node):
@@ -45,7 +46,7 @@ class Result:
             "result": data,
             "error": self.error,
             "errorMessage": data if self.error else None,
-            "nodeName": self.node.id
+            "nodeName": self.node.name
         }
 
 
@@ -149,7 +150,6 @@ class CsvNode(Node):
     def __init__(self, _node):
         super().__init__(_node)
         self.file = _node["file"]
-        self.name = _node["name"]
         self.delimiter = _node["delimiter"]
         self.names = _node["columns"]
         self.hasheader = _node["hasheader"]
