@@ -2,6 +2,19 @@ name: build plugin
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Enter tag for release
+        required: true
+        type: string
+      prerelease:
+        type: boolean
+        default: true
+        required: true
+      overwrite:
+        type: boolean
+        default: true
+        required: true
   pull_request:
     types: [opened, ready_for_review, reopened, synchronize]
   push:
@@ -19,31 +32,52 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18.x"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@data2evidence"
+          node-version: '18.x'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@data2evidence'
       - name: Update version
-        run: jq --arg v "-$(date +%s)-$GITHUB_SHA" '.version+=$v' package.json > tmppkg; mv tmppkg package.json
-      - name: Publish
         run: |
-          if [[ $GIT_CI_BRANCH_NAME == 'trex' || $GIT_CI_BRANCH_NAME == 'main' ]]; then 
-             npm publish
-          else 
-             npm publish --dry-run
+          if [[ ${{ contains('release/', github.ref_name) }} = true || $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
+            RELEASE_VERSION=${{ github.event.inputs.tag }}
+            jq --arg v $RELEASE_VERSION '.version=$v' package.json > tmppkg; mv tmppkg package.json
+          else
+            jq --arg v "-$(date +%s)-$GITHUB_SHA" '.version+=$v' package.json > tmppkg; mv tmppkg package.json
           fi
+      - name: Publish
         env:
+          SHOULD_PUBLISH: ${{ github.ref_name == 'main' || github.event_name == 'workflow_dispatch' || contains('release/', github.ref_name) }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+           if [[ $SHOULD_PUBLISH == true ]]; then 
+              npm publish
+           else 
+              npm publish --dry-run
+           fi
       - uses: actions/delete-package-versions@v5
-        with:
-          package-name: "d2e-flows"
-          package-type: "npm"
+        with: 
+          package-name: 'd2e-flows'
+          package-type: 'npm'
           min-versions-to-keep: 3
-          delete-only-pre-release-versions: "true"
+          delete-only-pre-release-versions: 'true'
       - name: Pack
         run: |
           if [[ $GIT_CI_BRANCH_NAME == 'main' ]]; then
             NPM_FILENAME=$(npm pack)
             echo "NPM_FILENAME=$NPM_FILENAME" >> $GITHUB_ENV
+          fi
+      - name: Prepare
+        if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch' || contains('release/', github.ref_name)
+        run: |
+          if [[ $GIT_CI_BRANCH_NAME == 'main' || ${{ contains('release/', github.ref_name) }} == true ]]; then
+            echo "PRELEASE=true" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            echo "OVERWRITE=true" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            echo "TAG=latest" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            echo "ASSET_NAME=d2e-flows-${{ env.TAG }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+          else
+            echo "PRELEASE=${{ github.event.inputs.prerelease }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            echo "OVERWRITE=${{ github.event.inputs.overwrite }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            echo "TAG=${{ github.event.inputs.tag }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            echo "ASSET_NAME=d2e-flows-${{ env.TAG }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
           fi
       - name: Push
         uses: svenstaro/upload-release-action@v2
@@ -51,8 +85,8 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.NPM_FILENAME }}
-          tag: latest
-          target_commit: main
-          prerelease: true
-          overwrite: true
-          asset_name: d2e-flows.tgz
+          tag: ${{ env.TAG }}
+          target_commit: ${{ github.ref_name }}
+          prerelease: ${{ env.PRELEASE }}
+          overwrite: ${{ env.OVERWRITE }}
+          asset_name: ${{ env.ASSET_NAME }}.tgz
