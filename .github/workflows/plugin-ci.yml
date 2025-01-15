@@ -56,14 +56,14 @@ jobs:
       - uses: actions/delete-package-versions@v5
         with: 
           package-name: 'd2e-flows'
-          package-type: 'npm'
+          package-type: "npm"
           min-versions-to-keep: 3
           delete-only-pre-release-versions: 'true'
       - name: Pack
         if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch'
         run: |
-            NPM_FILENAME=$(npm pack)
-            echo "NPM_FILENAME=$NPM_FILENAME" >> $GITHUB_ENV
+          NPM_FILENAME=$(npm pack)
+          echo "NPM_FILENAME=$NPM_FILENAME" >> $GITHUB_ENV
       - name: Prepare
         if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch'
         run: |

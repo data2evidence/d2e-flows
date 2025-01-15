@@ -84,17 +84,21 @@ jobs:
         env:
           DOCKER_BUILD_PUSH_BOOL_OVERRIDE: ${{ vars.DOCKER_BUILD_PUSH_BOOL_OVERRIDE || false }}
         run: |
-          GITHUB_SHA_SHORT=$(git rev-parse --short HEAD)
           
-          if [ $GITHUB_EVENT_NAME = "workflow_dispatch" ]; then
-            DOCKER_IMG_TAG_NAME=${{ github.event.inputs.DOCKER_IMAGE_TAG_NAME }}
-          else
-            DOCKER_IMG_TAG_NAME=$GITHUB_SHA_SHORT
-          fi
-
           DOCKER_BUILD_PUSH_BOOL_STR=false
           if [[ $GITHUB_EVENT_NAME == "push" ]] || [ $GITHUB_EVENT_NAME = "workflow_dispatch" ] || [ $DOCKER_BUILD_PUSH_BOOL_OVERRIDE = true]; then
             DOCKER_BUILD_PUSH_BOOL_STR=true
+          fi
+
+          if [[ ${{ github.event_name }} == "workflow_dispatch" ]]; then
+            DOCKER_IMG_TAG_NAME=${{ github.event.inputs.tag }}
+          elif [[ ${{ github.event_name }} == "push" ]]; then
+            DOCKER_IMG_TAG_NAME=${{ github.ref_name }}
+            if [[ $DOCKER_IMG_TAG_NAME = */* ]]; then
+              DOCKER_IMG_TAG_NAME=$(printf "%s" "$DOCKER_IMG_TAG_NAME" | awk -F '/' '{print $2}')
+            fi 
+          else
+            DOCKER_IMG_TAG_NAME=$(echo $(git rev-parse --short HEAD))
           fi
 
           echo DOCKER_BUILD_PUSH_BOOL_STR=$DOCKER_BUILD_PUSH_BOOL_STR | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
@@ -131,7 +135,7 @@ jobs:
         uses: actions/delete-package-versions@v5
         with: 
           package-name: ${{ env.AZ_REG_REPOSITORY }}
-          package-type: 'container'
+          package-type: "container"
           min-versions-to-keep: 3
           delete-only-untagged-versions: "true"
           
@@ -151,7 +155,7 @@ jobs:
           file: ${{ env.DOCKER_BUILD_FILE_PATH }}
           platforms: "linux/amd64"
           push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR == 'true' }}
-          tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ env.DOCKER_IMG_TAG_NAME }}, ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:main
+          tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ env.DOCKER_IMG_TAG_NAME }}
 
       - name: Prune ACR Images created before vars.AZ_REG_PRUNE_DAYS_TAGGED
         if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'main'
