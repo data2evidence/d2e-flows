@@ -5,8 +5,10 @@
 ## build command
 
 ```bash
-GIT_BRANCH_NAME=$(git symbolic-ref --short HEAD) && GITHUB_SHA=$(git rev-parse HEAD) && docker buildx build --build-arg GIT_COMMIT_ARG=${GITHUB_SHA} --ssh default --build-arg GITHUB_PAT=$GITHUB_PAT_NOSCOPE --file ./dataflow-gen-base/Dockerfile --platform linux/amd64 --tag alpcr.azurecr.io/alp-dataflow-gen-base:${GIT_BRANCH_NAME} .
+GIT_BRANCH_NAME=$(git symbolic-ref --short HEAD) && GITHUB_SHA=$(git rev-parse HEAD) && docker buildx build --build-arg GIT_COMMIT_ARG=${GITHUB_SHA} --ssh default --build-arg GITHUB_PAT=$GITHUB_PAT_NOSCOPE --file ./dataflow-gen-base/Dockerfile --platform linux/amd64 --tag ghcr.io/data2evidence/alp-dataflow-gen-base:${GIT_BRANCH_NAME} .
 ```
+
+- Update base image `Dockerfile` at `line 1`
 
 notes:
 
