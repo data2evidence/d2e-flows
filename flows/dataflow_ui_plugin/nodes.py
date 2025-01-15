@@ -18,11 +18,11 @@ from shared_utils.dao.DBDao import DBDao
 
 
 class Node:
-    def __init__(self, node):
+    def __init__(self, name, node):
         self.id = node["id"]
+        self.name = name
         self.type = node["type"]
         self.use_cache_db = False
-        self.name = node["name"]
 
 
 class Flow(Node):
@@ -58,8 +58,8 @@ class SqlNode(Node):
         tables: A dictionary mapping of a user input table name to a dataframe from an incoming node. 
         sql: The sql query to execute.
     """
-    def __init__(self, _node):
-        super().__init__(_node)
+    def __init__(self, name, _node):
+        super().__init__(name, _node)
         self.tables = _node["tables"]
         self.sql = _node["sql"]
         
@@ -92,8 +92,8 @@ class SqlNode(Node):
 
 
 class PythonNode(Node):
-    def __init__(self, _node):
-        super().__init__(_node)
+    def __init__(self, name, _node):
+        super().__init__(name, _node)
         self.source_code = _node["python_code"] + '\noutput = exec(myinput)'
         self.test_source_code = _node["python_code"]+'\noutput = test_exec(myinput)'
         
@@ -114,8 +114,8 @@ class PythonNode(Node):
 
 
 class RNode(Node):
-    def __init__(self, _node):
-        super().__init__(_node)
+    def __init__(self, name, _node):
+        super().__init__(name, _node)
         self.r_code = ''''''+_node["r_code"]+''''''
 
     def test(self, _input: dict[str, Result], task_run_context):
@@ -147,8 +147,8 @@ class RNode(Node):
 
 
 class CsvNode(Node):
-    def __init__(self, _node):
-        super().__init__(_node)
+    def __init__(self, name, _node):
+        super().__init__(name, _node)
         self.file = _node["file"]
         self.delimiter = _node["delimiter"]
         self.names = _node["columns"]
@@ -181,8 +181,8 @@ class CsvNode(Node):
 
 
 class DbWriter(Node):
-    def __init__(self, _node):
-        super().__init__(_node)
+    def __init__(self, name, _node):
+        super().__init__(name, _node)
         self.tablename = _node["dbtablename"]
         self.database = _node["database"] 
         self.dataframe = _node["dataframe"]
@@ -222,8 +222,8 @@ class SqlQueryNode(Node):
         schema: The name of a default schema to use.
         use_cache_db: Boolean flag to use cache db. 
     """
-    def __init__(self, _node):
-        super().__init__(_node)
+    def __init__(self, name, _node):
+        super().__init__(name, _node)
         self.sqlquery = _node["sqlquery"]
         if "testsqlquery" in _node:
             self.testsqlquery = _node["testsqlquery"]
@@ -292,8 +292,8 @@ class DataMappingNode(Node):
         table_joins: A dictionary specifying how a left table should be joined to a right table.
         data_mapping: A dictionary mapping the columns from a source table to a columns of a target table. 
     """
-    def __init__(self, _node):
-        super().__init__(_node)
+    def __init__(self, name, _node):
+        super().__init__(name, _node)
         self.data_mapping = _node["data_mapping"]
         self.table_joins = _node["table_joins"]
         self.source_node_dfs = _node["tables"]
@@ -449,19 +449,19 @@ def generate_node_task(nodename, node, nodetype):
     # TODO: nodetype to make global variable
     match nodetype:
         case "csv_node":
-            nodeobj = CsvNode(node)
+            nodeobj = CsvNode(nodename, node)
         case "sql_node":
-            nodeobj = SqlNode(node)
+            nodeobj = SqlNode(nodename, node)
         case "python_node":
-            nodeobj = PythonNode(node)
+            nodeobj = PythonNode(nodename, node)
         case "r_node":
-            nodeobj = RNode(node)
+            nodeobj = RNode(nodename, node)
         case "db_writer_node":
-            nodeobj = DbWriter(node)
+            nodeobj = DbWriter(nodename, node)
         case "sql_query_node":
-            nodeobj = SqlQueryNode(node)
+            nodeobj = SqlQueryNode(nodename, node)
         case "data_mapping_node":
-            nodeobj = DataMappingNode(node)
+            nodeobj = DataMappingNode(nodename, node)
         case _:
             logging.error("ERR: Unknown Node "+node["type"])
             logging.error(tb.StackSummary())
