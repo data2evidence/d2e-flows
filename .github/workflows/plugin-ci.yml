@@ -37,7 +37,7 @@ jobs:
           scope: '@data2evidence'
       - name: Update version
         run: |
-          if [[ ${{ contains('release/', github.ref_name) }} = true || $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
+          if [[ $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
             RELEASE_VERSION=${{ github.event.inputs.tag }}
             jq --arg v $RELEASE_VERSION '.version=$v' package.json > tmppkg; mv tmppkg package.json
           else
@@ -45,7 +45,7 @@ jobs:
           fi
       - name: Publish
         env:
-          SHOULD_PUBLISH: ${{ github.ref_name == 'main' || github.event_name == 'workflow_dispatch' || contains('release/', github.ref_name) }}
+          SHOULD_PUBLISH: ${{ github.ref_name == 'develop' || github.event_name == 'workflow_dispatch' }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
            if [[ $SHOULD_PUBLISH == true ]]; then 
@@ -60,15 +60,14 @@ jobs:
           min-versions-to-keep: 3
           delete-only-pre-release-versions: 'true'
       - name: Pack
+        if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch'
         run: |
-          if [[ $GIT_CI_BRANCH_NAME == 'main' ]]; then
             NPM_FILENAME=$(npm pack)
             echo "NPM_FILENAME=$NPM_FILENAME" >> $GITHUB_ENV
-          fi
       - name: Prepare
-        if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch' || contains('release/', github.ref_name)
+        if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch'
         run: |
-          if [[ $GIT_CI_BRANCH_NAME == 'main' || ${{ contains('release/', github.ref_name) }} == true ]]; then
+          if [[ $GIT_CI_BRANCH_NAME == 'main' ]]; then
             echo "PRELEASE=true" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
             echo "OVERWRITE=true" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
             TAG=latest
