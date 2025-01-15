@@ -12,12 +12,13 @@ FROM dbsvc-build AS final-build
 
 WORKDIR /app
 
+USER root
 COPY --chown=docker:docker ./postgresql-42.3.1.jar ./inst/drivers/
 COPY --chown=docker:docker  ./__init__.py .
 COPY --chown=docker:docker ./init.R .
 
 # Grant docker ownership to create properties file
-RUN chown -R docker:docker ./liquibase
+RUN chown -R docker:docker ./liquibase/
 
 RUN mkdir /output
 RUN chown -R docker:docker /output
@@ -77,12 +78,10 @@ RUN chown docker:alp ./duckdb_data
 RUN mkdir -p ./cdw-config/duckdb_data
 RUN chown -R docker:alp ./cdw-config
 
+USER docker
 
 COPY --chown=docker:docker --chmod=711 ./requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
 COPY --chown=docker:docker --chmod=711 ./flows flows
-
-
-USER docker
