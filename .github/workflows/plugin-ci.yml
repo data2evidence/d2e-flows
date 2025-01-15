@@ -84,7 +84,7 @@ jobs:
           fi
       - name: Push
         uses: svenstaro/upload-release-action@v2
-        if: ${{ env.GIT_CI_BRANCH_NAME == 'main' }}
+        if: github.ref_name == 'main' || github.event_name == 'workflow_dispatch'
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.NPM_FILENAME }}
