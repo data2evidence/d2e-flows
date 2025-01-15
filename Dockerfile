@@ -17,7 +17,7 @@ COPY --chown=docker:docker  ./__init__.py .
 COPY --chown=docker:docker ./init.R .
 
 # Grant docker ownership to create properties file
-RUN chown -R docker:docker ./liquibase/
+RUN chown -R docker:docker ./liquibase
 
 RUN mkdir /output
 RUN chown -R docker:docker /output
