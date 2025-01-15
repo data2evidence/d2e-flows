@@ -70,10 +70,6 @@
                     "title": "Description",
                     "type": "string"
                   },
-                  "owner": {
-                    "title": "Owner",
-                    "type": "string"
-                  },
                   "token": {
                     "title": "Token",
                     "type": "string"
@@ -86,7 +82,6 @@
                   "cohortJson",
                   "datasetId",
                   "description",
-                  "owner",
                   "token"
                 ],
                 "title": "CohortGeneratorOptionsType",
@@ -1578,10 +1573,6 @@
                   "description": {
                     "title": "Description",
                     "type": "string"
-                  },
-                  "owner": {
-                    "title": "Owner",
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -1591,8 +1582,7 @@
                   "cohorttableName",
                   "cohortsId",
                   "vocabschemaName",
-                  "description",
-                  "owner"
+                  "description"
                 ]
               }
             }
