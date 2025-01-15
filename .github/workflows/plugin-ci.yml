@@ -71,14 +71,16 @@ jobs:
           if [[ $GIT_CI_BRANCH_NAME == 'main' || ${{ contains('release/', github.ref_name) }} == true ]]; then
             echo "PRELEASE=true" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
             echo "OVERWRITE=true" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
-            echo "TAG=latest" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
-            ASSET_NAME=d2e-flows-$TAG
+            TAG=latest
+            echo "TAG=$TAG" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            ASSET_NAME=d2e-flows-${TAG}
             echo "ASSET_NAME=$ASSET_NAME" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
           else
             echo "PRELEASE=${{ github.event.inputs.prerelease }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
             echo "OVERWRITE=${{ github.event.inputs.overwrite }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
-            echo "TAG=${{ github.event.inputs.tag }}" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
-            ASSET_NAME=d2e-flows-$TAG
+            TAG=${{ github.event.inputs.tag }}
+            echo "TAG=$TAG" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
+            ASSET_NAME=d2e-flows-${TAG}
             echo "ASSET_NAME=$ASSET_NAME" | tee -a $GITHUB_ENV | tee -a $GITHUB_STEP_SUMMARY
           fi
       - name: Push
