@@ -117,6 +117,7 @@ jobs:
 
       - name: delete-untagged-images
         uses: actions/delete-package-versions@v5
+        if: env.GIT_BRANCH_NAME == 'main'
         with:
           package-name: ${{ env.AZ_REG_REPOSITORY }}
           package-type: "container"
