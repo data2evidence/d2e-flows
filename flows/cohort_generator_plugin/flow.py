@@ -37,7 +37,6 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     cohort_json = options.cohortJson
     dataset_id = options.datasetId
     description = options.description
-    owner = options.owner
     use_cache_db = options.use_cache_db
 
     dbdao = DBDao(use_cache_db=use_cache_db,
@@ -52,7 +51,6 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
     cohort_definition_id = create_cohort_definition(analytics_svc_api,
                                                     dataset_id,
                                                     description,
-                                                    owner,
                                                     cohort_json_expression,
                                                     cohort_name)
 
@@ -65,13 +63,12 @@ def cohort_generator_plugin(options: CohortGeneratorOptionsType):
                   vocab_schema_name)
     
 @task(log_prints=True)
-def create_cohort_definition(analytics_svc_api, dataset_id: str, description: str, owner: str, 
+def create_cohort_definition(analytics_svc_api, dataset_id: str, description: str, 
                              cohort_json_expression: str, cohort_name: str):
 
     result = analytics_svc_api.create_cohort_definition(
         datasetId=dataset_id,
         description=description,
-        owner=owner,
         syntax=cohort_json_expression,
         name=cohort_name
     )
