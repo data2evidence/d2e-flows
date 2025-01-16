@@ -10,7 +10,7 @@ on:
   push:
     branches:
       - main
-      - satish-a0/fix-ci
+      - satish-a0/fix-d2e-flow-build
 
 jobs:
   bld:
