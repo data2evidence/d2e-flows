@@ -50,9 +50,6 @@ RUN chown -R docker:docker $R_LIBS_USER_DIR
 # Common Data Model
 RUN Rscript -e "remotes::install_github('OHDSI/CommonDataModel@v5.4.1', quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, lib='$R_LIBS_USER_DIR')"
 
-# Data Characterization
-RUN Rscript -e "remotes::install_github('OHDSI/Achilles@v1.7.2',quiet=FALSE, upgrade='never', force=TRUE, dependencies=FALSE, lib='$R_LIBS_USER_DIR')"
-
 # Uncomment for installation of i2b2 source code
 # # Add Apache Ant for i2b2 data model creation
 # WORKDIR /app
