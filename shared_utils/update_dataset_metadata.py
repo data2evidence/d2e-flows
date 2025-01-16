@@ -57,9 +57,12 @@ def update_entity_value(portal_server_api,
                         logger) -> str:
     try:
         entity_value = get_entity_value_str(dbdao, table_name, column_name, entity_name, logger)
-        if entity_name == "version" and entity_value[0] in ["v", "V"]: # for broadsea atlas i.e. v5.3.1
-            entity_value = entity_value[1:]
-        portal_server_api.update_dataset_attributes_table(dataset_id, entity_name, entity_value)
+
+        if entity_name == "version" and entity_value[0] in ["v", "V"]: # for cdm versions with a prefix v
+            portal_server_api.update_dataset_attributes_table(dataset_id, entity_name, entity_value[1:])
+        else:
+            portal_server_api.update_dataset_attributes_table(dataset_id, entity_name, entity_value)
+
     except Exception as e:
         logger.error(f"Failed to update attribute '{entity_name}' for dataset id '{dataset_id}' with value '{entity_value}' : {e}")
     else:

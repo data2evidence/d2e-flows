@@ -114,7 +114,7 @@ def get_and_update_attributes(dataset: dict, use_cache_db: bool):
 
             try:
                 # update schema version or error msg
-                if cdm_version[0] in ["v", "V"]: # for broadsea atlas i.e. v5.3.1
+                if cdm_version[0] in ["v", "V"]: # for cdm version with a prefix 'V'
                     schema_version = cdm_version
                 else:
                     schema_version = RELEASE_VERSION_MAPPING.get(cdm_version)

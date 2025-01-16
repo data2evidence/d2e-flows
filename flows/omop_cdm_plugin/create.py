@@ -51,9 +51,14 @@ def create_datamodel_parent_task(cdm_version: str,
         )
         
     else:
-        # If newly created schema is also the vocab schema
+        # If creating schemas without vocab data
         # Todo: Add insertion of cdm version to update flow
-        logger.info(f"Skipping insertion of CDM Version '{cdm_version}'. Please load vocabulary data first.")
+        logger.info(f"Inserting dummy CDM Version '{cdm_version}'. Please update after loading vocabulary data.")
+        insert_cdm_version(
+            cdm_version=cdm_version,
+            dbdao=schema_dao,
+            use_placeholder_values=True
+        )
 
      
 @task(log_prints=True,
@@ -111,17 +116,23 @@ def grant_cohort_write_privileges(userdao: DaoBase, logger):
     userdao.grant_cohort_write_privileges(userdao.read_role)
 
 @task(log_prints=True)
-def insert_cdm_version(cdm_version: str, dbdao: DaoBase):  
+def insert_cdm_version(cdm_version: str, dbdao: DaoBase, use_placeholder_values=False):  
     logger = get_run_logger() 
     
     # Populate 'cdm_version_concept_id' and 'vocabulary_version' values from vocab
     # https://ohdsi.github.io/CommonDataModel/cdm54.html#cdm_source
 
     cdm_concept_code = "CDM " + RELEASE_VERSION_MAPPING.get(cdm_version)
-    cdm_version_concept_id = dbdao.get_cdm_version_concept_id(cdm_concept_code)
-    logger.info(f"Retrieved cdm_version_concept_id '{cdm_version_concept_id}' from vocab schema '{dbdao.vocab_schema_name}' with cdm_concept_code '{cdm_concept_code}'..")
-    vocabulary_version = dbdao.get_vocabulary_version()
-    logger.info(f"Retrieved vocabulary_version '{vocabulary_version}' from vocab schema '{dbdao.vocab_schema_name}' with cdm_concept_code '{cdm_concept_code}'..")
+    
+    if not use_placeholder_values:
+            cdm_version_concept_id = dbdao.get_cdm_version_concept_id(cdm_concept_code)
+            logger.info(f"Retrieved cdm_version_concept_id '{cdm_version_concept_id}' from vocab schema '{dbdao.vocab_schema_name}' with cdm_concept_code '{cdm_concept_code}'..")
+            vocabulary_version = dbdao.get_vocabulary_version()
+            logger.info(f"Retrieved vocabulary_version '{vocabulary_version}' from vocab schema '{dbdao.vocab_schema_name}' with cdm_concept_code '{cdm_concept_code}'..")
+    else:
+        # Scenario where vocab schema is empty and seeding with omop5-4 as default
+        cdm_version_concept_id = "798878"
+        vocabulary_version = "v5.0 30-AUG-24"
 
     values_to_insert = {
         "cdm_source_name": dbdao.schema_name,
