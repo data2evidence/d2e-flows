@@ -10,8 +10,6 @@ on:
   push:
     branches:
       - main
-      - develop
-      - trex
 
 jobs:
   bld:
@@ -83,39 +81,13 @@ jobs:
 
           echo GITHUB_SHA=$GITHUB_SHA | tee -a $GITHUB_STEP_SUMMARY
           echo GITHUB_SHA_SHORT=$GITHUB_SHA_SHORT | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-      
-      - name: 'Login to GitHub Container Registry'
+
+      - name: "Login to GitHub Container Registry"
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
-          
-      - name: Build and Push
-        id: build-push2
-        if: env.DOCKER_BUILD_DISABLE == 'false'
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ env.DOCKER_BUILD_CONTEXT_PATH }}
-          file: Dockerfile_ghcr
-          platforms: "linux/amd64"
-          push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR == 'true' }}
-          tags: ghcr.io/data2evidence/${{ env.AZ_REG_REPOSITORY }}:develop
-          
-      - name: delete-untagged-images
-        uses: actions/delete-package-versions@v5
-        with: 
-          package-name: ${{ env.AZ_REG_REPOSITORY }}
-          package-type: 'container'
-          min-versions-to-keep: 3
-          delete-only-untagged-versions: "true"
-          
-      - name: Login to ACR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.AZ_REG_FQDN }}
-          username: ${{ env.AZ_REG_USERNAME }}
-          password: ${{ env.AZ_REG_PASSWORD }}
 
       - name: Build and Push
         id: build-push
@@ -126,27 +98,15 @@ jobs:
           file: ${{ env.DOCKER_BUILD_FILE_PATH }}
           platforms: "linux/amd64"
           push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR == 'true' }}
-          tags: ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:${{ env.DOCKER_IMG_TAG_NAME }}, ${{ env.AZ_REG_FQDN }}/${{ env.AZ_REG_REPOSITORY }}:main
+          pull: true
+          tags: ghcr.io/data2evidence/${{ env.AZ_REG_REPOSITORY }}:develop
 
-      - name: Prune ACR Images created before vars.AZ_REG_PRUNE_DAYS_TAGGED
-        if: env.AZ_REG_PRUNE_FORCE_ANALYZE == 'true' || env.GIT_BRANCH_NAME == 'develop'
-        id: prune
+      - name: delete-untagged-images
+        uses: actions/delete-package-versions@v5
+        if: env.GIT_BRANCH_NAME == 'main'
         continue-on-error: true
-        run: |
-          npx --suppess-warnings zx scripts/analyze-acr.mjs
-          if [ $AZ_REG_PRUNE_ENABLE_DELETE = true ]; then
-            echo "INFO . manifests delete ..."
-            sh "private-acr-manifests-delete.sh"
-          else
-            echo "INFO . manifests delete skipped"
-          fi
-          echo AZ_REG_ARTIFACTS_NAME=${AZ_REG_REPOSITORY/\//--} | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_STEP_SUMMARY
-
-      - name: Upload ACR manifests artifacts
-        if: steps.prune.outcome == 'success'
-        uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.AZ_REG_ARTIFACTS_NAME }}
-          retention-days: 30
-          path: |
-            private*manifests*
+          package-name: ${{ env.AZ_REG_REPOSITORY }}
+          package-type: "container"
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: "true"

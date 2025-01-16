@@ -8,11 +8,11 @@ ADD https://github.com/liquibase/liquibase/releases/download/v4.5.0/liquibase-4.
 RUN mkdir -p ./liquibase/
 RUN tar xvf liquibase-4.5.0.tar.gz -C ./liquibase/
 
+
 FROM dbsvc-build AS final-build
 
 WORKDIR /app
 
-USER root
 COPY --chown=docker:docker ./postgresql-42.3.1.jar ./inst/drivers/
 COPY --chown=docker:docker  ./__init__.py .
 COPY --chown=docker:docker ./init.R .
@@ -30,7 +30,6 @@ RUN chown -R docker:docker /app/synpuf1k
 # Create folder to store vocab CSVs
 RUN mkdir -p /app/vocab
 RUN chown -R docker:docker /app/vocab
-
 
 # Create folder to store duckdb extensions for offline plugins
 # version must match duckdb in requirements.txt
@@ -78,10 +77,12 @@ RUN chown docker:alp ./duckdb_data
 RUN mkdir -p ./cdw-config/duckdb_data
 RUN chown -R docker:alp ./cdw-config
 
+
 COPY --chown=docker:docker --chmod=711 ./requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
 COPY --chown=docker:docker --chmod=711 ./flows flows
+
 
 USER docker
