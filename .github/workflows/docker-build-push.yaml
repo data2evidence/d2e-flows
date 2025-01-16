@@ -91,10 +91,7 @@ jobs:
           if [[ ${{ github.event_name }} == "workflow_dispatch" ]]; then
             DOCKER_IMG_TAG_NAME=${{ github.event.inputs.tag }}
           elif [[ ${{ github.event_name }} == "push" ]]; then
-            DOCKER_IMG_TAG_NAME=${{ github.ref_name }}
-            if [[ $DOCKER_IMG_TAG_NAME = */* ]]; then
-              DOCKER_IMG_TAG_NAME=$(printf "%s" "$DOCKER_IMG_TAG_NAME" | awk -F '/' '{print $2}')
-            fi 
+            DOCKER_IMG_TAG_NAME=develop
           else
             DOCKER_IMG_TAG_NAME=$(echo $(git rev-parse --short HEAD))
           fi
@@ -127,7 +124,7 @@ jobs:
           file: Dockerfile_ghcr
           platforms: "linux/amd64"
           push: ${{ env.DOCKER_BUILD_PUSH_BOOL_STR == 'true' }}
-          tags: ghcr.io/data2evidence/${{ env.AZ_REG_REPOSITORY }}:develop
+          tags: ghcr.io/data2evidence/${{ env.AZ_REG_REPOSITORY }}:${{ env.DOCKER_IMG_TAG_NAME }}
 
       - name: delete-untagged-images
         uses: actions/delete-package-versions@v5
