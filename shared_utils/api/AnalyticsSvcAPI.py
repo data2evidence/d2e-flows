@@ -11,7 +11,6 @@ class AnalyticsSvcAPI(BaseAPI):
 
     def create_cohort_definition(self, datasetId: str,
                                  description: str,
-                                 owner: str,
                                  syntax: str,
                                  name: str) -> int:
         url = f"{self.url}api/services/cohort-definition"
@@ -19,7 +18,6 @@ class AnalyticsSvcAPI(BaseAPI):
             "studyId": datasetId,
             "name": name,
             "description": description,
-            "owner": owner,
             "syntax": syntax
         }
         result = requests.post(

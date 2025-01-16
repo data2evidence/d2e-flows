@@ -4,7 +4,6 @@
 ```
 {
   "options": {
-    "owner": "testowner",
     "token": "testtoken",
     "datasetId": "67f4015c-04f0-4a92-939b-20c361c2e50a",
     "cohortJson": {

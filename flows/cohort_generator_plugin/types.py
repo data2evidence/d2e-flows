@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class CohortJsonType(BaseModel):
     id: int
     name: str
@@ -10,6 +11,7 @@ class CohortJsonType(BaseModel):
     expressionType: str
     expression: dict
 
+
 class CohortGeneratorOptionsType(BaseModel):
     databaseCode: str
     schemaName: str
@@ -17,8 +19,7 @@ class CohortGeneratorOptionsType(BaseModel):
     cohortJson: CohortJsonType
     datasetId: str
     description: str
-    owner: str
-    
+
     @property
     def use_cache_db(self) -> str:
         return False
