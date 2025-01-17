@@ -1,5 +1,6 @@
 # D2E Plugins
 
+[![Docker Build](https://github.com/data2evidence/d2e-flows/actions/workflows/docker-build-push.yaml/badge.svg)](https://github.com/data2evidence/d2e-flows/actions/workflows/docker-build-push.yaml) &nbsp;&nbsp; [![build plugin](https://github.com/data2evidence/d2e-flows/actions/workflows/plugin-ci.yml/badge.svg)](https://github.com/data2evidence/d2e-flows/actions/workflows/plugin-ci.yml)
 
 ## How to modify package.json for local development
 
