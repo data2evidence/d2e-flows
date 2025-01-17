@@ -67,7 +67,7 @@ jobs:
           GITHUB_SHA_SHORT=$(git rev-parse --short HEAD)
           DOCKER_IMG_TAG_NAME=$GITHUB_SHA_SHORT
 
-          DOCKER_BUILD_PUSH_BOOL_STR=true
+          DOCKER_BUILD_PUSH_BOOL_STR=false
           if [[ $GITHUB_EVENT_NAME == "push" ]] || [ $GITHUB_EVENT_NAME = "workflow_dispatch" ] || [ $DOCKER_BUILD_PUSH_BOOL_OVERRIDE = true]; then
             DOCKER_BUILD_PUSH_BOOL_STR=true
           fi
