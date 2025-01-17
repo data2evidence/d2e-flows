@@ -9,7 +9,7 @@ on:
       - synchronize
   push:
     branches:
-      - main
+      - develop
 
   workflow_dispatch:
     inputs:
@@ -20,7 +20,7 @@ on:
         options:
           - data2evidence/d2e-flows
       GIT_BRANCH_NAME:
-        default: main
+        default: develop
         description: Enter BranchName / ReleaseTagName
         required: true
         type: string
@@ -135,7 +135,7 @@ jobs:
 
       - name: delete-untagged-images
         uses: actions/delete-package-versions@v5
-        if: env.GIT_BRANCH_NAME == 'main'
+        if: env.GIT_BRANCH_NAME == 'develop'
         continue-on-error: true
         with:
           package-name: ${{ env.AZ_REG_REPOSITORY }}
