@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "docker build . -t ph/flow --platform=linux/amd64"
+    "build": "docker build . -t d2e-flows-local --build-arg GITHUB_PAT=${GITHUB_PAT} --platform=linux/amd64"
   },
   "repository": {
     "type": "git",
