@@ -74,7 +74,7 @@ jobs:
            fi
       - name: Delete Untagged Images 
         uses: actions/delete-package-versions@v5
-        if: github.ref_name == 'develop'
+        if: github.ref_name == 'main'
         continue-on-error: true
         with: 
           package-name: 'd2e-flows'
