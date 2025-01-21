@@ -90,10 +90,16 @@ def serialize_to_json(data):
     if isinstance(data, pd.DataFrame):
         json_df = data.to_json(orient="records", default_handler=str)
         return json_df
-    elif isinstance(data, dict):
+    elif isinstance(data, dict): # how prefect task results are handled
         for key, value in data.items():
             if isinstance(data[key], pd.DataFrame):
                 data[key] = serialize_to_json(value)
+            # for python objects (will always return true)
+            if isinstance(data[key], object):
+                # TODO: Check if the contents of obj need to be serialized
+                # Either pickle
+                # or return obj name
+                data[key] = object.__class__.__name__
         return data
     elif hasattr(data, 'rid') and hasattr(data, 'rclass') and hasattr(data, 'r_repr'):
         return data.r_repr()
