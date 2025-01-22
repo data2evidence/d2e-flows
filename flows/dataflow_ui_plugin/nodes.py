@@ -39,20 +39,18 @@ class Flow(Node):
 
 class Result:
     def __init__(self, error: bool, data, node: Node, task_run_context):
-        # Accessible by other nodes
         self.error = error
         self.node = node
-        self.result_data = data # preserves the data type of the node
+        self.result = data # preserves the data type of the node result
         self.task_run_id = str(task_run_context.get("id"))
         self.task_run_name = str(task_run_context.get("name"))
         self.flow_run_id = str(task_run_context.get("flow_run_id"))
 
-        # Serialized as prefect results
-        # TODO: Create method to generate this and call when serializing to prefect result
-        self.data = {
-            "result": data,
-            "error": self.error,
-            "errorMessage": data if self.error else None,
+    def create_serializable_result(self):
+        return {
+            "result": serialize_to_json(self.result),
+            "error": self.error, 
+            "errorMessage": self.result if self.error else None,
             "nodeName": self.node.name
         }
 
@@ -96,7 +94,7 @@ class Py2TableNode(Node):
         # Todo: Remove scriptnode prefix coming from UI
         source_node = self.ui_map.get("source").split(".")[0]
         path = self.ui_map.get("path")
-        result_obj = _input.get(source_node).result_data
+        result_obj = _input.get(source_node).result
 
         if isinstance(result_obj, dict):
             # If result from input node is already a json
@@ -151,7 +149,7 @@ class SqlNode(Node):
                 result_df = con.execute(self.sql).fetch_df()
             else:
                 for nodename, input_node_result in _input.items():
-                    data = input_node_result.result_data
+                    data = input_node_result.result
 
                     # Register incoming dfs as tables using nodename
                     if isinstance(data, str):
@@ -275,7 +273,7 @@ class DbWriter(Node):
         self.schema_name = _node["dbtablename"].split(".")[0] # Todo: Add on UI side
         self.table_name = _node["dbtablename"].split(".")[1]
         self.database = _node["database"] 
-        self.dataframe = _node["dataframe"] # Todo: Remove on UI side(?)
+        # self.dataframe = _node["dataframe"] # Todo: Add/Remove on UI side
         self.use_cache_db = False
 
     def test(self, _input: dict[str, Result], task_run_context):
@@ -293,7 +291,7 @@ class DbWriter(Node):
         try:
             # Todo: check if this node only accepts one node input
             for key, value in _input.items(): # This accepts only one node 
-                result_obj_df = value.result_data
+                result_obj_df = value.result
                 result_obj_df.to_sql(
                     self.table_name, con=dbconn, index=False, if_exists="append", schema=self.schema_name
                 )
@@ -357,12 +355,12 @@ class SqlQueryNode(Node):
         else:
             self.testsqlquery = _node["sqlquery"]
         self.params = {}
-        self._is_select = _node["is_select"]
+        self._is_select = _node.get("is_select", False)
         if "params" in _node:
             self.params = _node["params"]
         self.database = _node["database"]
-        self.schema = _node["schema"]
-        self.use_cache_db = _node["use_cache_db"]
+        self.schema = "cdmdefault" #_node["schema"] # TODO: add on ui side
+        self.use_cache_db = False
 
 
     def __compile_with_params(self, sqlquery: str, bind_params: dict) -> str:
@@ -380,14 +378,13 @@ class SqlQueryNode(Node):
                                    schema_name=self.schema).tenant_configs
             con = ibis.postgres.connect(database=self.database,
                                         host=tenant_configs.host,
-                                        user=tenant_configs.readUser,
-                                        password=tenant_configs.readPassword.get_secret_value())
-            retrieved_params = {param: _input[node].result_data 
+                                        user=tenant_configs.adminUser,
+                                        password=tenant_configs.adminPassword.get_secret_value())
+            retrieved_params = {param: _input[node].result 
                                 for param, node in self.params.items()}
             
             compiled_query = self.__compile_with_params(sqlquery, retrieved_params)
-            
-            result = con.sql(compiled_query)
+            result = con.raw_sql(compiled_query)
             if self._is_select:
                 return result.to_pandas()
             return
@@ -435,7 +432,7 @@ class DataMappingNode(Node):
                                  if mapping["output_table"]==target_table]
             for source_table in source_table_list:
                 source_node = self.source_node_dfs.get(source_table)
-                source_table_df = _input[source_node].result_data
+                source_table_df = _input[source_node].result
                 ibis_mem_tables[source_table] = con.register(table_name=source_table, source=source_table_df)
             
             # create a base select statement by joining all input tables
@@ -600,6 +597,5 @@ def generate_node_task(nodename, node, nodetype):
 
 
 def serialize_result_to_json(result: Result):
-    print(f"result.data is {result.data}")
-
-    return serialize_to_json(result.data)
+    result_to_store = result.create_serializable_result()
+    return result_to_store
