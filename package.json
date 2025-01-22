@@ -1898,6 +1898,53 @@
               }
             }
           }
+        },
+        {
+          "name": "mimic_load_plugin",
+          "type": "mimic",
+          "entrypoint": "flows.mimic_load_plugin.flow.mimic_load_plugin",
+          "image": "ph/flow:latest",
+          "image_pull_policy": "Never",
+          "tags": [
+            "mimiciv"
+          ],
+          "parameter_openapi_schema": {
+            "title": "Parameters",
+            "type": "object",
+            "properties": {
+                "options": {
+                    "$ref": "#/definitions/MimicLoadOptionsType",
+                    "position": 0,
+                    "title": "options"
+                }
+            },
+            "required": ["options"],
+            "definitions": {
+                "MimicLoadOptionsType": {
+                    "properties": {
+                        "mimic_dir": {
+                            "title": "Mimic Dir",
+                            "type": "string"
+                        },
+                        "database_code": {
+                            "title": "Database Code",
+                            "type": "string"
+                        },
+                        "schema_name": {
+                            "title": "Schema Name",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "mimic_dir",
+                        "database_code",
+                        "schema_name"
+                    ],
+                    "title": "MimicLoadOptionsType",
+                    "type": "object"
+                }
+            }
+          }
         }
       ]
     }
