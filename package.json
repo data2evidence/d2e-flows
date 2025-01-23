@@ -1903,8 +1903,8 @@
           "name": "mimic_load_plugin",
           "type": "mimic",
           "entrypoint": "flows.mimic_load_plugin.flow.mimic_load_plugin",
-          "image": "ph/flow:latest",
-          "image_pull_policy": "Never",
+          "image": "ghcr.io/data2evidence/d2e-flow/base:develop",
+          "image_pull_policy": "IfNotPresent",
           "tags": [
             "mimiciv"
           ],
@@ -1929,16 +1929,11 @@
                         "database_code": {
                             "title": "Database Code",
                             "type": "string"
-                        },
-                        "schema_name": {
-                            "title": "Schema Name",
-                            "type": "string"
                         }
                     },
                     "required": [
                         "mimic_dir",
-                        "database_code",
-                        "schema_name"
+                        "database_code"
                     ],
                     "title": "MimicLoadOptionsType",
                     "type": "object"

@@ -10,7 +10,6 @@ PostgresIndexSql = 'flows/mimic_load_plugin/external/index.sql'
 class MimicLoadOptionsType(BaseModel):
     mimic_dir: str
     database_code: str
-    schema_name: str
 
     @property
     def use_cache_db(self) -> str:
