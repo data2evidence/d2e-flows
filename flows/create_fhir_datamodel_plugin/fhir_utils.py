@@ -1,7 +1,7 @@
 from flows.create_fhir_datamodel_plugin.types import *
 
 
-def get_property_for_table(duckdb_data_types: dict[str, DuckDBDataTypes] , 
+def get_property_for_table(duckdb_data_types: dict[str, DuckDBDataTypes], 
                            data_structure: dict, property: str, 
                            property_type: str = None) -> str:
     """
@@ -50,60 +50,27 @@ def get_fhir_datamodel(duckdb_data_types: dict[str, DuckDBDataTypes],
 
 
 def get_nested_property(fhir_schema_json: FhirSchemaJsonType, 
-                        property: str,
                         property_path: str, 
-                        property_details: PropertyDefinitionType, 
-                        heirarchy: str) -> str:
+                        property_details: PropertyDefinitionType) -> str:
     
     # Todo: Add to data types once defined in fhir.schema.json
     if property_path == "integer64":
         return "number"
     
+    # Get referenced definition from property_path
     if property_details.ref and property_path is not None:
         sub_properties = fhir_schema_json.definitions.get(property_path)
         if sub_properties.properties:
-            sub_properties.parsedProperties = dict()
-            for sub_property in sub_properties.properties:
-                if sub_property[0] != "_":
-                    sub_property_details = sub_properties.properties[sub_property]
-                    sub_property_path =  get_property_path(sub_property_details)
-                    if is_custom_type(sub_property_path):
-                        sub_properties.parsedProperties[sub_property] = ['string']
-                    elif sub_property_path == 'Meta' or sub_property_path == 'Extension':
-                        sub_properties.parsedProperties[sub_property] = 'json'
-                    else:
-                        #Check if the property is already covered previously
-                        if sub_property_path != None and heirarchy.find(sub_property_path) > -1:
-                            sub_properties.parsedProperties[sub_property] = dict()
-                        else:
-                            new_heirarchy = heirarchy + ("/" + sub_property_path if sub_property_path != None else "")
-                            sub_properties.parsedProperties[sub_property] = get_nested_property(fhir_schema_json, sub_property, sub_property_path, sub_property_details, new_heirarchy)
-            return sub_properties.parsedProperties
+            return "json" # json if there are nested properties
         else:
             return sub_properties.type if sub_properties.type else "string"
-    elif property_details.type and  property_details.type == 'array':
-        if 'enum' in property_details.items:
-            return ['string']
+    elif property_details.type and property_details.type == "array":
+        if "enum" in property_details.items:
+            return ["string"]
         elif property_path != None:
-            sub_properties = fhir_schema_json.definitions[property_path]
-            if 'properties' in sub_properties:
-                sub_properties.parsedProperties = dict()
-                for sub_property in sub_properties.properties:
-                    if sub_property[0:1] != "_":
-                        sub_property_details = sub_properties.properties[sub_property]
-                        sub_property_path =  get_property_path(sub_property_details)
-                        if is_custom_type(sub_property_path):
-                            sub_properties.parsedProperties[sub_property] = ['string']
-                        elif sub_property_path == 'Meta' or sub_property_path == 'Extension':
-                            sub_properties.parsedProperties[sub_property] = 'json'
-                        else:
-                            #Check if the property is already covered previously
-                            if sub_property_path != None and heirarchy.find(sub_property_path) > -1:
-                                sub_properties.parsedProperties[sub_property] = dict()
-                            else:
-                                newHeirarchy = heirarchy + ("/" + sub_property_path if sub_property_path != None else "")
-                                sub_properties.parsedProperties[sub_property] = get_nested_property(fhir_schema_json, sub_property_path, sub_property_details, newHeirarchy)
-                return [sub_properties.parsedProperties]
+            sub_properties = fhir_schema_json.definitions.get(property_path)
+            if sub_properties.properties:
+                return "json"
             else:
                 return [sub_properties.type] if sub_properties.type else ["string"]
     elif property_details.enum:

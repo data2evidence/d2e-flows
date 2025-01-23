@@ -19,7 +19,7 @@ def create_fhir_datamodel_plugin(options: CreateFhirDataModelOptions):
     database_code = options.database_code
     schema_name = options.schema_name
     vocab_schema = options.vocab_schema
-    
+
     schema_path = Variable.get("fhir_schema_file") + '/fhir.schema.json'
     with open(schema_path, "r") as file:
 
@@ -86,7 +86,6 @@ def extract_definition_and_create_table(fhir_schema_json: FhirSchemaJsonType,
         try:
             # Get fhir definition and nested definitions from fhir.schema.json[definitions]
             parsed_fhir_definition = get_fhir_table_structure(fhir_schema_json, resource)
-            logger.debug(parsed_fhir_definition)
 
             # Convert fhir definition into a columns
             duckdb_table_structure = get_duckdb_column_string(duckdb_data_types,
@@ -139,10 +138,8 @@ def get_fhir_table_structure(fhir_schema_json: FhirSchemaJsonType,
                     propery_path = get_property_path(property_definition)
                     if is_custom_type(propery_path):
                         fhir_table_definition.parsedProperties[property] = ['string']
-                    elif propery_path in ["Meta", "Extension"]:
-                        fhir_table_definition.parsedProperties[property] = 'json'
                     else:
-                        fhir_table_definition.parsedProperties[property] = get_nested_property(fhir_schema_json, property, propery_path, fhir_table_definition.properties[property], propery_path)
+                        fhir_table_definition.parsedProperties[property] = get_nested_property(fhir_schema_json, propery_path, fhir_table_definition.properties[property])
             return fhir_table_definition.parsedProperties
         else:
             raise ValueError(f"The input FHIR resource {fhir_definition_name} has no properties defined")
