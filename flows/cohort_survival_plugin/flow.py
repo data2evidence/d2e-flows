@@ -12,24 +12,82 @@ from flows.cohort_survival_plugin.types import CohortSurvivalOptionsType
 
 from shared_utils.dao.DBDao import DBDao
 
+
+def prepend_libpaths(commands, r_libs_user_directory):
+    """
+    Prepend the .libPaths() update to each Rscript command in the list and print skipped commands.
+
+    Args:
+        commands (list): List of Rscript commands as strings.
+        r_libs_user_directory (str): The custom library path to prepend.
+
+    Returns:
+        list: Updated commands with .libPaths() prepended.
+    """
+    libpaths_prefix = f".libPaths(c('{r_libs_user_directory}', .libPaths())); "
+    updated_commands = []
+
+    for cmd in commands:
+        # Extract package name from the command
+        package_start = cmd.find("'") + 1
+        package_end = cmd.find("'", package_start)
+        package_name = cmd[package_start:package_end]
+
+        # Extract version if specified in the command
+        version_start = cmd.find("version=")
+        if version_start != -1:
+            version_start += len("version='")
+            version_end = cmd.find("'", version_start)
+            desired_version = cmd[version_start:version_end]
+        else:
+            desired_version = None
+
+        # Extract the original install logic (everything after "Rscript -e ")
+        install_logic = cmd.split("Rscript -e ")[1].strip('"')
+
+        # Check if "force=TRUE" is in the command
+        force_install = "force=TRUE" in cmd
+
+        # Construct the updated command with version check
+        if desired_version:
+            version_different = f"(\'{desired_version}\' != as.character(packageVersion(\'{package_name}\')))"
+        else:
+            version_different = "FALSE"  # No version check if version is not specified
+
+        # Combine all checks: requireNamespace, version, and force
+        updated_cmd = (
+            f'Rscript -e "{libpaths_prefix}'
+            f'if (!requireNamespace(\'{package_name}\') || ({version_different} && {"TRUE" if force_install else "FALSE"})) {{ {install_logic} }} '
+            f'else {{ message(\'Skipping installation for {package_name}, already installed and matches the required version.\') }}"'
+        )
+
+        updated_commands.append(updated_cmd)
+    
+    return updated_commands
+
+
+
+
 @task
 def setup_plugin():
     r_libs_user_directory = Variable.get("r_libs_user")
     if r_libs_user_directory:
-        ShellOperation(
-            commands=[
-                f"Rscript -e \"remotes::install_version('snakecase', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('broom', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('visOmopResults', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('dbplyr', version='2.4.0', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('rjson', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('omopgenerics', version='0.2.1', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('CDMConnector', version='1.4.0', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('PatientProfiles', version='1.1.1', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('CohortSurvival', version='0.5.1', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-                f"Rscript -e \"remotes::install_version('RPostgres', version='1.4.5', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
-            ]
-        ).run()
+        commands = [
+            f"Rscript -e \"remotes::install_version('snakecase', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('broom', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('dbplyr', version='2.4.0', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('rjson', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('CDMConnector', version='1.4.0', quiet=TRUE, upgrade='never', force=FALSE, dependencies=NA, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('PatientProfiles', version='1.0.0', quiet=TRUE, upgrade='never', force=FALSE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('CohortSurvival', version='0.5.1', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('RPostgres', version='1.4.5', quiet=TRUE, upgrade='never', force=FALSE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            # force=TRUE used to override the packages PatientProfiles installs which versions are too high
+            # force=TRUE packages should be put at the end of this list
+            f"Rscript -e \"remotes::install_version('visOmopResults', version='0.3.0', quiet=TRUE, upgrade='never', force=TRUE, dependencies=TRUE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+            f"Rscript -e \"remotes::install_version('omopgenerics', version='0.2.1', quiet=TRUE, upgrade='never', force=TRUE, dependencies=FALSE, repos='https://cloud.r-project.org', lib='{r_libs_user_directory}')\"",
+        ]
+        updated_commands = prepend_libpaths(commands, r_libs_user_directory)
+        ShellOperation(commands=updated_commands).run()
     else:
         raise ValueError("Prefect variable: 'r_libs_user' is empty.")
 
@@ -111,22 +169,6 @@ def generate_cohort_survival_data(
 
                     # Begin transaction to run below 2 queries as is required for cohort survival but are not needed to be commited to database
                     DBI::dbBegin(pg_con)
-                    # Remove these when cohorts functionality are improved
-                    query <- sprintf("
-                        UPDATE cohort
-                        SET cohort_start_date = death_date, cohort_end_date = death.death_date
-                        FROM death
-                        WHERE subject_id = death.person_id
-                        AND death_date IS NOT NULL
-                        AND COHORT_DEFINITION_ID=%d", outcome_cohort_definition_id)
-                    DBI::dbExecute(pg_con, query)
-
-                    query <- sprintf("
-                        UPDATE cohort
-                        SET cohort_end_date = cohort_start_date
-                        WHERE COHORT_DEFINITION_ID=%d", target_cohort_definition_id)
-                        
-                    DBI::dbExecute(pg_con, query)
 
                     # cdm_from_con is from CDMConnection
                     cdm <- CDMConnector::cdm_from_con(
