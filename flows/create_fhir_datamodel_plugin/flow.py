@@ -1,4 +1,5 @@
 import json
+import duckdb
 import sqlalchemy as sql
 
 from prefect import flow, task
@@ -88,9 +89,9 @@ def extract_definition_and_create_table(fhir_schema_json: FhirSchemaJsonType,
             parsed_fhir_definition = get_fhir_table_structure(fhir_schema_json, resource)
 
             # Convert fhir definition into a columns
-            duckdb_table_structure = get_duckdb_column_string(duckdb_data_types,
-                                                                parsed_fhir_definition,
-                                                                True)
+            duckdb_table_structure = get_duckdb_column_string(duckdb_data_types=duckdb_data_types,
+                                                              data_structure=parsed_fhir_definition,
+                                                              concat_columns=True)
             
             # Execute create table statement in duckdb file
             table_name = resource + "Fhir"
@@ -151,11 +152,15 @@ def create_fhir_table(fhir_table_definition: str,
                       dbdao: DBDao, 
                       schema_name: str,
                       table_name: str):
+    
+    duckdb_filepath = f"{Variable.get('duckdb_data_folder')}/{dbdao.database_code}_{dbdao.schema_name}"
+    
     logger = get_run_logger()
-    engine = dbdao.engine
-    with engine.connect() as connection:
+
+    with duckdb.connect(duckdb_filepath) as connection:
         try:
-            create_fhir_datamodel_table = sql.text(f"create table {schema_name}.{table_name} ({fhir_table_definition})")
+            # created in main schema
+            create_fhir_datamodel_table = f"create table {table_name} ({fhir_table_definition})"
             logger.debug(create_fhir_datamodel_table)
             connection.execute(create_fhir_datamodel_table)
         except Exception as e:
@@ -175,7 +180,6 @@ def get_duckdb_column_string(duckdb_data_types: dict[str, DuckDBDataTypes],
     for property in data_structure:
         if property[0] != "_":
             list_of_table_columns.append(get_fhir_datamodel(duckdb_data_types, data_structure, property))
-    #Add extra columns
     list_of_table_columns.append("isActive BOOLEAN")
     list_of_table_columns.append("createAt TIMESTAMP")
     list_of_table_columns.append("lastUpdateAt TIMESTAMP")

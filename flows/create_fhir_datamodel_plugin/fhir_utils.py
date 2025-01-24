@@ -23,11 +23,10 @@ def get_fhir_datamodel(duckdb_data_types: dict[str, DuckDBDataTypes],
     """
     Generates the a string of columns to be created for the fhir resource table
     """
-    if (type(data_structure[property]) == str or type(data_structure[property]) == bool or type(data_structure[property]) == int):
+
+    if data_structure[property] in list(FHIR_TO_DUCKDB.keys()):
         return get_property_for_table(duckdb_data_types, data_structure, property)
     else:
-        list_of_table_columns = []
-        is_array = False
         # Nested extension objects are set as {}
         if type(data_structure[property]) == dict and len(data_structure[property].keys()) == 0:
             return get_property_for_table(duckdb_data_types=duckdb_data_types, 
@@ -36,17 +35,14 @@ def get_fhir_datamodel(duckdb_data_types: dict[str, DuckDBDataTypes],
                                           property_type=duckdb_data_types['string'])
         else:
             current_property = data_structure[property]
-            # Is array?
+
+            # If property in fhir.schema.json is of type 'array' and doesn't have nested properties
             if type(data_structure[property]) == list:
-                is_array = True
                 current_property = data_structure[property][0]
             # For properties with array of strings
-            if type(data_structure[property]) == list and (type(current_property) == str or type(current_property) == bool or type(current_property) == int):
+            if type(data_structure[property]) == list and current_property in list(FHIR_TO_DUCKDB.keys()):
                 return get_property_for_table(duckdb_data_types, data_structure, property, duckdb_data_types[current_property])+'[]'
-            else:
-                for child_property in current_property:
-                    list_of_table_columns.append(get_fhir_datamodel(duckdb_data_types, current_property, child_property))
-                return get_property_for_table(duckdb_data_types, data_structure, property, get_fhir_datamodel_for_object(list_of_table_columns, is_array))
+
 
 
 def get_nested_property(fhir_schema_json: FhirSchemaJsonType, 
@@ -106,9 +102,4 @@ def get_property_path(property_definition: PropertyDefinitionType) -> str | None
     elif property_definition.items and "$ref" in property_definition.items:
         return property_definition.items["$ref"].split("/")[-1]
     return None
-
-
-def get_fhir_datamodel_for_object(list_of_object_columns: str, is_array: bool) -> str:
-    return f"struct({', '.join(list_of_object_columns)}){'[]' if is_array else ''}"
-
 
