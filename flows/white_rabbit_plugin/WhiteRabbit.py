@@ -1,13 +1,12 @@
-from subprocess import Popen, PIPE, STDOUT, CalledProcessError
-import requests
-import time
-import signal
-import os
-import sys
 from pydantic import ValidationError
 from prefect.variables import Variable
 from prefect.blocks.system import Secret
 from prefect.logging import get_run_logger
+from prefect_shell import ShellOperation
+import requests
+import time
+import signal
+import os
 from flows.white_rabbit_plugin.types import ServiceCredentials
 
 
@@ -32,39 +31,35 @@ class WhiteRabbit:
     def start(self):
         try:
             self.logger.info("Running command to start white rabbit...")
-            process = Popen(['java', '-jar', '/app.jar'],
-                            env=self.service_credentials.model_dump(
-                                mode='json'),
-                            stderr=STDOUT, stdout=PIPE,
-                            text=True)
-                
-        except CalledProcessError as cpe:
-            self.logger.error(f"Failed to start service: {cpe}")
-            raise CalledProcessError(cpe)
+            process = ShellOperation(commands=['java -jar /app.jar'],
+                                     env=self.service_credentials.model_dump(mode='json')).trigger()
+        except Exception as e:
+            self.logger.error(f"Failed to start service: {e}")
+            raise Exception(e)
         else:
-            self.logger.info("Successfully run command to start white rabbit service")
-        
+            self.logger.info(
+                "Successfully run command to start white rabbit service")
+
         while not self.health_check():
             time.sleep(3)
-        
         self.logger.info("white rabbit service is ready to accept requests")
         self.process = process
-        return process # maybe not needed here
+        return process  # maybe not needed here
 
     def health_check(self):
         try:
-            response = requests.get("http://localhost:8000/white-rabbit/api/info")
+            response = requests.get(
+                "http://localhost:8000/white-rabbit/api/info")
+
             return response.status_code == 200
         except requests.RequestException as e:
             self.logger.error(f"service is not ready: {e}")
             return False
-        
+
     def stop(self):
-        if self.process.pid:
+        if self.process.return_code is None:  # returns none if process is still running
             os.kill(os.getpgid(self.process.pid), signal.SIGTERM)
             self.logger.info("White rabbit service is terminated")
-            
-            
 # for line in iter(process.stdout.readline, ''):
 #             line = line.replace('\r', '').replace('\n', '')
 #             logger.info(line)
