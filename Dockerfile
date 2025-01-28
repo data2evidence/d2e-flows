@@ -233,5 +233,8 @@ RUN pip install -r requirements.txt
 COPY --chown=docker:docker --chmod=711 ./shared_utils shared_utils
 COPY --chown=docker:docker --chmod=711 ./flows flows
 
+# Create folder for mimic database files
+RUN mkdir ./mimic_omop
+RUN chown docker:docker ./mimic_omop
 
 USER docker
