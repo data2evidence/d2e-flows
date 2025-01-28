@@ -1,20 +1,25 @@
 from prefect import flow, task
 from prefect.logging import get_run_logger
 from flows.white_rabbit_plugin.WhiteRabbit import WhiteRabbit
+from flows.white_rabbit_plugin.types import WhiteRabbitRequestType
+
+
+@task(log_prints=True)
+def setup_plugin(white_rabbit: WhiteRabbit):
+    white_rabbit.start()
+    return white_rabbit
+
+
+@task(log_prints=True)
+def stop(white_rabbit: WhiteRabbit):
+    white_rabbit.stop()
+    return
 
 
 @flow(log_prints=True)
-def white_rabbit_plugin():
+def white_rabbit_plugin(options: WhiteRabbitRequestType):
     logger = get_run_logger()
-    logger.info("white rabbit flow")
-    logger.info("white rabbit flow")    
+    logger.info("triggering white rabbit flow")
     white_rabbit = WhiteRabbit()
-    white_rabbit.start() # should pass this to a task
-
-
-'''
-create own block with postgres credentials and perseus host
-start app.jar and inject those env variables 
-
-start flow with the env variables already inside
-'''
+    setup_plugin(white_rabbit)
+    white_rabbit.handle_request(options)

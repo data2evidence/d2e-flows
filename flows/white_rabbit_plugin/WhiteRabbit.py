@@ -1,19 +1,20 @@
+import requests
+from requests.exceptions import HTTPError
+import time
+import json
 from pydantic import ValidationError
 from prefect.variables import Variable
 from prefect.blocks.system import Secret
 from prefect.logging import get_run_logger
 from prefect_shell import ShellOperation
-import requests
-import time
-import signal
-import os
-from flows.white_rabbit_plugin.types import ServiceCredentials
+from flows.white_rabbit_plugin.types import ServiceCredentials, WhiteRabbitRequestType
+from shared_utils.api.OpenIdAPI import OpenIdAPI
 
 
 class WhiteRabbit:
     def __init__(self):
         self.logger = get_run_logger()
-
+        self.white_rabbit_endpoint = "http://localhost:8000/white-rabbit/api"
         try:
             service_credentials = ServiceCredentials(
                 PG__DB_NAME=Variable.get("pg_db_name"),
@@ -44,7 +45,6 @@ class WhiteRabbit:
             time.sleep(3)
         self.logger.info("white rabbit service is ready to accept requests")
         self.process = process
-        return process  # maybe not needed here
 
     def health_check(self):
         try:
@@ -56,11 +56,21 @@ class WhiteRabbit:
             self.logger.error(f"service is not ready: {e}")
             return False
 
-    def stop(self):
-        if self.process.return_code is None:  # returns none if process is still running
-            os.kill(os.getpgid(self.process.pid), signal.SIGTERM)
-            self.logger.info("White rabbit service is terminated")
-# for line in iter(process.stdout.readline, ''):
-#             line = line.replace('\r', '').replace('\n', '')
-#             logger.info(line)
-#             sys.stdout.flush()
+    def handle_request(self, options: WhiteRabbitRequestType):
+
+        options.headers.update(
+            {
+                "Authorization": f"Bearer {OpenIdAPI().getClientCredentialToken()}"
+            }
+        )
+
+        result = requests.post(
+            url=f"{self.white_rabbit_endpoint}{options.url}",
+            headers=options.headers,
+            data=json.dumps(options.data))
+
+        if ((result.status_code >= 400) and (result.status_code < 600)):
+            raise Exception(
+                f"White Rabbbit failed to complete request, {result.content}")
+        else:
+            return result.json()
